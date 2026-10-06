@@ -1,5 +1,5 @@
 //@version=6
-strategy("BTC RBO v74 Actionable Fibonacci Entries (Perpetual)", shorttitle="BTC RBO v74 Fib", overlay=true, pyramiding=3, initial_capital=100000, default_qty_type=strategy.fixed, default_qty_value=1, margin_long=100, margin_short=100, max_lines_count=500, max_boxes_count=500, max_labels_count=500, use_bar_magnifier=true, commission_type=strategy.commission.percent, commission_value=0.06, slippage=2, process_orders_on_close=false)
+strategy("BTC RBO v75 Cost-Aware Fibonacci Entries (Perpetual)", shorttitle="BTC RBO v75 Fib", overlay=true, pyramiding=3, initial_capital=100000, default_qty_type=strategy.fixed, default_qty_value=1, margin_long=100, margin_short=100, max_lines_count=500, max_boxes_count=500, max_labels_count=500, use_bar_magnifier=true, commission_type=strategy.commission.percent, commission_value=0.06, slippage=2, process_orders_on_close=false)
 
 // --- LIBRARY IMPORT ---
 // External dependency: access to traderjoeb/PropFirm_News_Dates/6 is required.
@@ -256,13 +256,13 @@ fvgTouchRefreshBars = input.int(2, title="Recent FVG Touch Window (Bars)", minva
 
 // 12. Position Sizing & Risk
 grp_risk = "Position Sizing & Risk"
-useDynamicSizingInt = input.int(1, title="Use Dynamic Sizing (0=Off, 1=On)", minval=0, maxval=1, group=grp_risk, tooltip="0 = Use fixed BTC quantity. 1 = Auto-calculate position size based on Risk Per Trade % and Stop Loss distance.")
+useDynamicSizingInt = input.int(1, title="Use Dynamic Sizing (0=Off, 1=On)", minval=0, maxval=1, group=grp_risk, tooltip="0 = Use fixed base-coin quantity. 1 = Auto-calculate position size based on Risk Per Trade % and Stop Loss distance.")
 useDynamicSizing = useDynamicSizingInt == 1
 riskPerTrade = input.float(0.3, title="Risk Per Trade (%)", step=0.05, group=grp_risk, tooltip="Percentage of total equity to risk per trade. Position sizing is calculated dynamically based on the stop loss distance.")
 useDynamicRiskScoreInt = input.int(1, title="Scale Risk by FVG Score (0=No, 1=Yes)", minval=0, maxval=1, group=grp_risk, tooltip="If Yes, risk is dynamically scaled based on the FVG strength score.")
 useDynamicRiskScore = useDynamicRiskScoreInt == 1
-maxBtcQty = input.float(1.0, "Max/Fixed BTC Quantity", minval=0.00000001, group=grp_risk, tooltip="For linear BTC perpetual charts with quantity in BTC. Fixed quantity when dynamic sizing is off; maximum when on. Also capped to available equity at 1x margin.")
-btcQtyStep = input.float(0.001, "BTC Quantity Step", minval=0.00000001, group=grp_risk, tooltip="Set to your exchange quantity increment in BTC; orders smaller than one step are skipped.")
+maxBtcQty = input.float(1.0, "Max/Fixed Base Quantity", minval=0.00000001, group=grp_risk, tooltip="For linear perpetual charts with quantity in the base coin. Fixed quantity when dynamic sizing is off; maximum when on. Also capped to available equity at 1x margin.")
+btcQtyStep = input.float(0.001, "Base Quantity Step", minval=0.00000001, group=grp_risk, tooltip="Set to your exchange base-coin quantity increment; orders smaller than one step are skipped.")
 
 // 13. Experimental FVG Combo Risk Caps
 grp_directional_quality_risk = "Experimental: FVG Combo Risk Caps"
@@ -334,7 +334,8 @@ exportDataToComments = input.bool(false, title="Export Data to Comments (For CSV
 
 // 16. Execution & Webhooks
 grp_exec = "Execution & Webhooks"
-webhookTicker = input.string("BTCUSDT", title="Webhook Market Symbol", group=grp_exec, tooltip="Set the exact BTC perpetual market identifier accepted by your execution service. Chart quantities and webhook quantities must both be in BTC; derivatives support depends on the service.")
+webhookTickerOverride = input.string("", title="Webhook Market Symbol Override", group=grp_exec, tooltip="Empty uses chart base coin + quote currency (BTCUSDT, ETHUSDT). Set an override when your execution service requires a different perpetual identifier. Verify derivatives support and base-coin quantity units before using alerts.")
+webhookTicker = webhookTickerOverride == "" ? syminfo.basecurrency + syminfo.currency : webhookTickerOverride
 webhookStopMode = input.int(1, title="Webhook Broker Stop Mode (0=None, 1=ESL Failsafe)", minval=0, maxval=1, group=grp_exec, tooltip="0 = No broker stop. 1 = Places a fixed Emergency Stop Loss (ESL) at entry. On partial exits, the resting stop is cancelled and reapplied 3 seconds later against the remaining position. REQUIREMENT: enable 'Use Per-Trade Hard Stop' and set a positive limit.")
 exitPlacementDelay = input.int(500, title="TP/SL Placement Delay (ms)", group=grp_exec, tooltip="Wait this many milliseconds after entering a trade before placing TP/SL orders. Prevents broker rejections on rapid entries/exits.")
 
@@ -536,7 +537,19 @@ bool isValidSwingTimeframe = timeframe.in_seconds(timeframe.period) <= timeframe
 bool inSession = isValidTimeframe and not isNewsDay and not isFomcDecisionWindow and not isWindowExcluded and not isNearingWindow and is_allowed_dow and not max_losses_hit and not isBlockedSession and (not useTimeRestrictions or not na(time(timeframe.period, allowedSession + ":1234567", "America/New_York")))
 bool isEod = useTimeRestrictions and useEodLiquidation and not na(time(timeframe.period, eodTimeStr + ":1234567", "America/New_York"))
 
-// Linear BTC perpetual quantity helpers; inverse contracts are not supported.
+// Fee assumptions must match Strategy Properties; Pine cannot read those settings.
+grp_costs = "Execution Costs & Entry Quality"
+useCostFilter = input.bool(true, "Filter Entries by Trading Costs", group=grp_costs, tooltip="Skip entries whose first planned profit distance is too small relative to estimated round-trip fees and slippage. Does not predict profitability.")
+estFeePct = input.float(0.06, "Estimated Fee Per Side (%)", minval=0.0, step=0.01, group=grp_costs)
+estSlippageTicks = input.int(2, "Estimated Slippage Per Side (Ticks)", minval=0, group=grp_costs)
+minTargetCostRatio = input.float(1.5, "Minimum Target / Round-Trip Cost", minval=1.0, step=0.1, group=grp_costs)
+includeCostsInRisk = input.bool(true, "Include Estimated Costs in Risk Sizing", group=grp_costs)
+useCostBreakeven = input.bool(true, "Include Estimated Costs in Break-Even", group=grp_costs, tooltip="Applies when a break-even mode is enabled. Includes estimated fees and slippage plus the existing tick offset.")
+
+f_roundtrip_cost(float price) =>
+    price * (estFeePct / 100.0) * 2.0 + syminfo.mintick * estSlippageTicks * 2.0
+
+// Linear base-coin quantities; inverse contracts are not supported.
 f_floor_qty(float q) =>
     math.round(math.floor(math.max(0.0, q) / btcQtyStep + 1e-9) * btcQtyStep, 8)
 
@@ -544,6 +557,17 @@ f_position_qty(float raw, float price) =>
     float requested = useDynamicSizing ? math.min(raw, maxBtcQty) : maxBtcQty
     float affordable = price > 0 and syminfo.pointvalue > 0 ? math.max(0.0, strategy.equity) / (price * syminfo.pointvalue * 1.001) : 0.0
     f_floor_qty(math.min(requested, affordable))
+
+// Use the same gate for each entry path; retain sizing estimates for setup drawings.
+f_entry_qty(float raw, float price, float stop, float atr, bool isLong) =>
+    float riskDistance = math.abs(price - stop)
+    bool validStop = not na(stop) and price > 0 and (isLong ? stop < price : stop > price)
+    float costs = f_roundtrip_cost(price)
+    float distanceBase = exitDistanceType == 1 ? atr : riskDistance
+    float firstTarget = partialMode > 0 or exitStrategyType == "Bar-by-Bar Trail" ? distanceBase * tp1Target : useTrailingStop ? distanceBase * trailActivation : riskDistance * riskReward
+    bool costOk = not useCostFilter or (not na(firstTarget) and firstTarget >= costs * minTargetCostRatio)
+    float adjustedRaw = includeCostsInRisk and useDynamicSizing and riskDistance > 0 ? raw * riskDistance / (riskDistance + costs) : raw
+    validStop and costOk ? f_position_qty(adjustedRaw, price) : 0.0
 
 // Calculate Partial Quantities
 f_get_qtys(float qty) =>
@@ -597,7 +621,7 @@ f_tp_json(bool is_entry, string debug_str, string uuid, float sl_price_val = na,
         
     string action_str = "{{strategy.order.action}}" // TradingView automatically assigns "buy" or "sell" even for exits
     string core_fields = '{\n  "ticker": "' + webhookTicker + '",\n  "action": "' + action_str + '"' + sentiment_block + ',\n  "orderType": "' + order_type + '",\n  "price": {{close}}' + limit_block + ',\n  "quantity": {{strategy.order.contracts}},\n  "time": "{{timenow}}"' + sl_block + cancel_block + ','
-    string extras_fields = '\n  "extras": {\n    "strategy_version": "v74-BTC",\n    "order_id": "{{strategy.order.id}}",\n    "position_after_trade": "{{strategy.market_position}}",\n    "trade_uuid": "' + uuid + '",\n    "debug": "' + debug_str + '"\n  }\n}'
+    string extras_fields = '\n  "extras": {\n    "strategy_version": "v75-CostAware",\n    "order_id": "{{strategy.order.id}}",\n    "position_after_trade": "{{strategy.market_position}}",\n    "trade_uuid": "' + uuid + '",\n    "debug": "' + debug_str + '"\n  }\n}'
     core_fields + extras_fields
 
 
@@ -2286,7 +2310,7 @@ if entryType == 1 and waiting_bullish_pullback and inSession and strategy.positi
     float riskAmount = strategy.equity * (f_get_risk(pending_long_score) * long_quality_risk_multiplier / 100)
     float qtyRaw = risk > 0 ? f_floor_qty(riskAmount / (risk * syminfo.pointvalue)) : 0.0
     if not useDynamicSizing or qtyRaw >= btcQtyStep
-        float qty = f_position_qty(qtyRaw, req_pen_price)
+        float qty = f_entry_qty(qtyRaw, req_pen_price, sl_price, chart_atr, true)
         trade_entry_qty := qty
         string dbg = "Limit Entry Long @ " + str.tostring(req_pen_price) + " | Score: " + str.tostring(active_fvg_score, "#.##") + " | Vol: " + str.tostring(pending_long_vol_score, "#.##") + " | VWAP: " + str.tostring(math.abs(pending_long_vwap_dist), "#.##") + " | ATR: " + str.tostring(pending_long_atr, "#.##")
         if qty > 0
@@ -2317,7 +2341,7 @@ if entryType == 1 and waiting_bearish_pullback and inSession and strategy.positi
     float riskAmount = strategy.equity * (f_get_risk(pending_short_score) * short_quality_risk_multiplier / 100)
     float qtyRaw = risk > 0 ? f_floor_qty(riskAmount / (risk * syminfo.pointvalue)) : 0.0
     if not useDynamicSizing or qtyRaw >= btcQtyStep
-        float qty = f_position_qty(qtyRaw, req_pen_price)
+        float qty = f_entry_qty(qtyRaw, req_pen_price, sl_price, chart_atr, false)
         trade_entry_qty := qty
         string dbg = "Limit Entry Short @ " + str.tostring(req_pen_price) + " | Score: " + str.tostring(active_fvg_score, "#.##") + " | Vol: " + str.tostring(pending_short_vol_score, "#.##") + " | VWAP: " + str.tostring(math.abs(pending_short_vwap_dist), "#.##") + " | ATR: " + str.tostring(pending_short_atr, "#.##")
         if qty > 0
@@ -2382,7 +2406,7 @@ if waiting_long_rejection_limit and inSession and strategy.position_size <= 0 an
     float riskAmount = strategy.equity * (f_get_risk(pending_long_score) * long_quality_risk_multiplier / 100)
     float qtyRaw = risk > 0 ? f_floor_qty(riskAmount / (risk * syminfo.pointvalue)) : 0.0
     if not useDynamicSizing or qtyRaw >= btcQtyStep
-        float qty = f_position_qty(qtyRaw, ep)
+        float qty = f_entry_qty(qtyRaw, ep, sl_price, chart_atr, true)
         trade_entry_qty := qty
         string dbg = "Rejection Limit Long @ " + str.tostring(ep) + " | Score: " + str.tostring(active_fvg_score, "#.##") + " | Vol: " + str.tostring(pending_long_vol_score, "#.##") + " | VWAP: " + str.tostring(math.abs(pending_long_vwap_dist), "#.##") + " | ATR: " + str.tostring(pending_long_atr, "#.##")
         if qty > 0
@@ -2414,7 +2438,7 @@ if waiting_short_rejection_limit and inSession and strategy.position_size >= 0 a
     float riskAmount = strategy.equity * (f_get_risk(pending_short_score) * short_quality_risk_multiplier / 100)
     float qtyRaw = risk > 0 ? f_floor_qty(riskAmount / (risk * syminfo.pointvalue)) : 0.0
     if not useDynamicSizing or qtyRaw >= btcQtyStep
-        float qty = f_position_qty(qtyRaw, ep)
+        float qty = f_entry_qty(qtyRaw, ep, sl_price, chart_atr, false)
         trade_entry_qty := qty
         string dbg = "Rejection Limit Short @ " + str.tostring(ep) + " | Score: " + str.tostring(active_fvg_score, "#.##") + " | Vol: " + str.tostring(pending_short_vol_score, "#.##") + " | VWAP: " + str.tostring(math.abs(pending_short_vwap_dist), "#.##") + " | ATR: " + str.tostring(pending_short_atr, "#.##")
         if qty > 0
@@ -2657,7 +2681,7 @@ if long_cond or fib_direct_long_cond
     float riskAmount = strategy.equity * (actualLongRisk / 100)
     float qtyRaw = risk > 0 ? f_floor_qty(riskAmount / (risk * syminfo.pointvalue)) : 0.0
     if not useDynamicSizing or qtyRaw >= btcQtyStep
-        float qty = f_position_qty(qtyRaw, close)
+        float qty = f_entry_qty(qtyRaw, close, sl_price, chart_atr, true)
         trade_entry_qty := qty
         string dbg = (fib_direct_long_cond ? "FIB Action Long @ " : "Market Entry Long @ ") + str.tostring(close) + " | Score: " + str.tostring(active_fvg_score, "#.##") + " | Vol: " + str.tostring(pending_long_vol_score, "#.##") + " | VWAP: " + str.tostring(math.abs(pending_long_vwap_dist), "#.##") + " | ATR: " + str.tostring(pending_long_atr, "#.##")
         if qty > 0
@@ -2690,7 +2714,7 @@ if short_cond or fib_direct_short_cond
     float riskAmount = strategy.equity * (actualShortRisk / 100)
     float qtyRaw = risk > 0 ? f_floor_qty(riskAmount / (risk * syminfo.pointvalue)) : 0.0
     if not useDynamicSizing or qtyRaw >= btcQtyStep
-        float qty = f_position_qty(qtyRaw, close)
+        float qty = f_entry_qty(qtyRaw, close, sl_price, chart_atr, false)
         trade_entry_qty := qty
         string dbg = (fib_direct_short_cond ? "FIB Action Short @ " : "Market Entry Short @ ") + str.tostring(close) + " | Score: " + str.tostring(active_fvg_score, "#.##") + " | Vol: " + str.tostring(pending_short_vol_score, "#.##") + " | VWAP: " + str.tostring(math.abs(pending_short_vwap_dist), "#.##") + " | ATR: " + str.tostring(pending_short_atr, "#.##")
         if qty > 0
@@ -2815,7 +2839,9 @@ if strategy.position_size > 0
             reason_sl_long := "Step BE Hit (TP1)"
         eff_sl_exit_long := na(eff_sl_exit_long) ? partial_tp1_price : math.max(eff_sl_exit_long, partial_tp1_price)
     else if beTriggered
-        float be_price = strategy.opentrades.entry_price(0) + (beOffsetTicks * syminfo.mintick)
+        float be_entry = strategy.opentrades.entry_price(0)
+        float be_cost = useCostBreakeven ? (be_entry * 2.0 * estFeePct / 100.0 + syminfo.mintick * estSlippageTicks * 2.0) / math.max(0.000001, 1.0 - estFeePct / 100.0) : 0.0
+        float be_price = math.ceil((be_entry + be_cost + beOffsetTicks * syminfo.mintick) / syminfo.mintick) * syminfo.mintick
         if na(eff_sl_exit_long) or be_price > eff_sl_exit_long
             reason_sl_long := "Breakeven SL"
         eff_sl_exit_long := na(eff_sl_exit_long) ? be_price : math.max(eff_sl_exit_long, be_price)
@@ -2843,7 +2869,9 @@ if strategy.position_size < 0
             reason_sl_short := "Step BE Hit (TP1)"
         eff_sl_exit_short := na(eff_sl_exit_short) ? partial_tp1_price : math.min(eff_sl_exit_short, partial_tp1_price)
     else if beTriggered
-        float be_price = strategy.opentrades.entry_price(0) - (beOffsetTicks * syminfo.mintick)
+        float be_entry = strategy.opentrades.entry_price(0)
+        float be_cost = useCostBreakeven ? (be_entry * 2.0 * estFeePct / 100.0 + syminfo.mintick * estSlippageTicks * 2.0) / (1.0 + estFeePct / 100.0) : 0.0
+        float be_price = math.floor((be_entry - be_cost - beOffsetTicks * syminfo.mintick) / syminfo.mintick) * syminfo.mintick
         if na(eff_sl_exit_short) or be_price < eff_sl_exit_short
             reason_sl_short := "Breakeven SL"
         eff_sl_exit_short := na(eff_sl_exit_short) ? be_price : math.min(eff_sl_exit_short, be_price)
@@ -3165,7 +3193,7 @@ bool is_short_partial = tp_current_pos_size < 0 and tp_last_pos_size < 0 and tp_
 
 if (is_long_partial or is_short_partial) and webhookStopMode == 1
     float active_webhook_sl = array.get(active_webhook_sl_arr, 0)
-    float remaining_qty = f_floor_qty(math.abs(tp_current_pos_size))
+    float remaining_qty = math.round(math.abs(tp_current_pos_size), 8)
     if remaining_qty > 0 and not na(active_webhook_sl)
         string stop_json = f_replacement_stop_json(remaining_qty, active_webhook_sl)
         alert(stop_json, alert.freq_all)

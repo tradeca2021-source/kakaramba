@@ -1,11 +1,18 @@
-BTC RBO v74 conversion
+RBO v75: cost-aware linear crypto perpetual strategy
 
-Paste the entire BTC_RBO_v74_Fib.pine file into TradingView Pine Editor. Use a linear BTCUSDT/BTCUSD perpetual chart whose strategy quantity is in BTC. Inverse and exchange contract-unit markets require separate sizing conversion.
+BTC_RBO_v74_Fib.pine retains its filename for compatibility; its strategy title is now v75. Paste the entire file into TradingView Pine Editor. Use a linear BTCUSDT/ETHUSDT perpetual chart whose strategy quantity is in the base coin. Inverse contracts and markets sized in exchange contract units require separate sizing conversion.
 
-Defaults: 24-hour permitted session, all seven weekdays enabled, blocked intraday sessions off, EOD liquidation off, New York midnight risk-day reset, 0.001 BTC quantity step, 1 BTC max/fixed size, 1x margin, 0.06% commission per fill, two chart ticks slippage. News filters and original FVG/Fibonacci/ORB/risk logic are retained. NY and London ORBs remain time-based signals. Daily VWAP follows the chart daily anchor.
+Changes from v74:
+- Entry cost filter covers all six entry paths. The first planned target must cover at least 1.5 times estimated round-trip fees/slippage. Bar-by-bar mode uses its TP1 activation distance. Disable the filter to compare baseline behavior.
+- Dynamic sizing includes estimated execution costs within the existing risk budget. Fixed sizing retains its quantity cap.
+- Break-even prices cover estimated round-trip costs when a break-even mode is enabled; the original mode remains off by default. Both directions round outward to chart ticks.
+- Empty Webhook Market Symbol Override uses chart base + quote currency, avoiding BTC orders from an ETH chart. Configure an override for execution services using different identifiers. Verify perpetual support and quantity units.
+- Replacement-stop alerts preserve actual fractional remaining quantity.
 
-Set the quantity step and commission for your exchange. Set Webhook Market Symbol to the exact identifier your execution service accepts; verify it supports your perpetual exchange and BTC-unit quantities. The original TradersPost payload structure remains. Funding fees are not modeled.
+Estimated Fee Per Side (0.06%) and Estimated Slippage Per Side (2 ticks) must match Strategy Properties. Pine cannot read those Properties values. Estimates exclude funding, spread and actual fill variation. Entry checks use current ATR; exit distances use ATR at fill. A planned target passing the filter does not ensure a profitable trade, especially on early stops or reversal exits.
 
-External dependency: access to traderjoeb/PropFirm_News_Dates/6 is required. Publishing a copy under a different profile requires changing the import path.
+Defaults retained: all seven days, 24-hour allowed session, blocked intraday windows off, EOD liquidation off, New York midnight risk-day reset, 0.001 base-coin step, 1 base coin maximum/fixed size, 1x margin. Set step and size for the selected market. News filters and original FVG/Fibonacci/ORB logic remain. NY and London ORBs remain time-based signals; daily VWAP follows the chart anchor.
 
-Local static checks and 56 partial-allocation cases passed. TradingView compilation, backtesting, and broker webhook execution have not been performed here.
+External dependency: access to traderjoeb/PropFirm_News_Dates/6 is required. A copy published under another profile requires updating the import path.
+
+Validation: static coverage of all six entry paths; mathematical checks that cost-adjusted BTC/ETH break-even prices cover modeled fees/slippage and dynamic sizing stays within the modeled risk budget; git diff whitespace check. TradingView compilation, new backtests and broker webhook execution have not been performed. No improved return is claimed.
