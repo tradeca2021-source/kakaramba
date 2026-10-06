@@ -16,3 +16,5 @@ Defaults retained: all seven days, 24-hour allowed session, blocked intraday win
 External dependency: access to traderjoeb/PropFirm_News_Dates/6 is required. A copy published under another profile requires updating the import path.
 
 Validation: static coverage of all six entry paths; mathematical checks that cost-adjusted BTC/ETH break-even prices cover modeled fees/slippage and dynamic sizing stays within the modeled risk budget; git diff whitespace check. TradingView compilation, new backtests and broker webhook execution have not been performed. No improved return is claimed.
+
+Current default candidate for BTCUSDT perpetual, 1-minute: minimum target/cost ratio 2.0, ADX 25, minimum FVG score 55, minimum Fib Action score 55, risk 0.15%, score-based risk scaling off, wick-based hard stops. These are recommended trial defaults, not a backtest-verified optimum. ATR targets, trailing settings and enabled trading days are retained. Existing TradingView strategy instances may retain previous input values: reset settings or add a fresh instance to use these defaults.

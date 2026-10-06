@@ -110,7 +110,7 @@ propFirmDrawdownLimit = input.float(3000, title="Prop Firm Trailing Drawdown ($)
 grp_trend = "Trend & Confirmation Filters"
 useAdxFilterInt = input.int(1, title="Use ADX Trend Filter (0=Off, 1=On)", minval=0, maxval=1, group=grp_trend, tooltip="0 = Off. 1 = On (Only takes trades if the ADX value is >= the minimum threshold).")
 adxLength = input.int(14, title="ADX Length", group=grp_trend, tooltip="Number of bars used in the ADX calculation. 14 is the standard default.")
-adxThreshold = input.int(20, title="ADX Minimum Threshold", group=grp_trend, tooltip="Only take trades if the ADX is ABOVE this value. (20-25 is typical for confirming a trend).")
+adxThreshold = input.int(25, title="ADX Minimum Threshold", group=grp_trend, tooltip="Only take trades if the ADX is ABOVE this value. (20-25 is typical for confirming a trend).")
 useVwapFilterInt = input.int(1, title="Use VWAP Filter (0=Off, 1=On)", minval=0, maxval=1, group=grp_trend, tooltip="1 = Only take Longs if close > VWAP. Only take Shorts if close < VWAP.")
 useVwapFilter = useVwapFilterInt == 1
 vwapType = input.string("Daily (24/7)", title="VWAP Type", options=["RTH (Anchored 09:30 AM)", "Session Auto-Anchor (03:00 / 09:30)", "Daily (24/7)"], group=grp_trend, tooltip="Determines how VWAP is anchored. Session Auto-Anchor resets at the NY or London open depending on current time.")
@@ -229,14 +229,14 @@ showFibConfluence = input.bool(true, title="Show Active Fibonacci", group=grp_fi
 showFibSignals = input.bool(true, title="Show Fib BUY/SELL Confluence Markers", group=grp_fib)
 useFibActionEntry = input.bool(true, title="Allow FIB BUY/SELL Continuation Entry", group=grp_fib, tooltip="When enabled, a Fib-qualified FVG may enter on a strong continuation confirmation without requiring a deep FVG penetration. All session, VWAP, ADX, exhaustion, ORB-extension, risk and prop-firm guards still apply.")
 fibActionConfirmBars = input.int(4, title="Fib Action Confirmation Window (Bars)", minval=1, maxval=20, group=grp_fib, tooltip="Maximum bars after the Fib-qualified FVG arms in which a continuation BUY/SELL may trigger.")
-fibActionMinScore = input.float(50.0, title="Minimum Score for Fib Action Entry", minval=0.0, maxval=100.0, step=1.0, group=grp_fib)
+fibActionMinScore = input.float(55.0, title="Minimum Score for Fib Action Entry", minval=0.0, maxval=100.0, step=1.0, group=grp_fib)
 fibActionBodyAtr = input.float(0.15, title="Minimum Confirmation Body (ATR)", minval=0.0, maxval=2.0, step=0.05, group=grp_fib, tooltip="Requires the continuation confirmation candle body to have meaningful displacement. 0.15 ATR is intentionally moderate for BTC.")
 fibActionRequireGolden = input.bool(false, title="Require Golden-Zone Alignment for Fib Action Entry", group=grp_fib, tooltip="Off = directional Fib alignment is enough. On = only FVGs overlapping the Fib continuation/Golden Zone can use the fast actionable entry path.")
 
 // 10. FVG Qualification & Constraints
 grp_fvg = "FVG Qualification & Constraints"
 atrLength = input.int(14, "ATR Length", minval=1, group=grp_fvg, tooltip="The length used for ATR calculations across the entire strategy (FVG Score, Stop Loss, and Take Profits). 14 is standard, but 30 or 60 may be better for 1-minute charts.")
-minFvgScore = input.int(45, "Minimum FVG Strength (0-100)", group=grp_fvg, tooltip="Scores FVGs based on ATR, Volume, and Displacement Ratio. 50 is a good baseline. 75+ is extremely strong.")
+minFvgScore = input.int(55, "Minimum FVG Strength (0-100)", group=grp_fvg, tooltip="Scores FVGs based on ATR, Volume, and Displacement Ratio. 50 is a good baseline. 75+ is extremely strong.")
 fvgVolWeight = input.int(32, "FVG Volume Weight (%)", minval=0, maxval=100, group=grp_fvg, tooltip="Percentage of the FVG Score that comes from volume.")
 fvgDispWeight = input.int(24, "FVG Displacement Weight (%)", minval=0, maxval=100, group=grp_fvg, tooltip="Percentage of the FVG Score that comes from displacement (candle body size vs wicks). The remaining percentage automatically goes to ATR.")
 fvgWindow = input.int(6, "FVG Search Window (Bars)", group=grp_fvg, tooltip="How many bars after the breakout can the FVG form before the setup is cancelled?")
@@ -258,8 +258,8 @@ fvgTouchRefreshBars = input.int(2, title="Recent FVG Touch Window (Bars)", minva
 grp_risk = "Position Sizing & Risk"
 useDynamicSizingInt = input.int(1, title="Use Dynamic Sizing (0=Off, 1=On)", minval=0, maxval=1, group=grp_risk, tooltip="0 = Use fixed base-coin quantity. 1 = Auto-calculate position size based on Risk Per Trade % and Stop Loss distance.")
 useDynamicSizing = useDynamicSizingInt == 1
-riskPerTrade = input.float(0.3, title="Risk Per Trade (%)", step=0.05, group=grp_risk, tooltip="Percentage of total equity to risk per trade. Position sizing is calculated dynamically based on the stop loss distance.")
-useDynamicRiskScoreInt = input.int(1, title="Scale Risk by FVG Score (0=No, 1=Yes)", minval=0, maxval=1, group=grp_risk, tooltip="If Yes, risk is dynamically scaled based on the FVG strength score.")
+riskPerTrade = input.float(0.15, title="Risk Per Trade (%)", step=0.05, group=grp_risk, tooltip="Percentage of total equity to risk per trade. Position sizing is calculated dynamically based on the stop loss distance.")
+useDynamicRiskScoreInt = input.int(0, title="Scale Risk by FVG Score (0=No, 1=Yes)", minval=0, maxval=1, group=grp_risk, tooltip="If Yes, risk is dynamically scaled based on the FVG strength score.")
 useDynamicRiskScore = useDynamicRiskScoreInt == 1
 maxBtcQty = input.float(1.0, "Max/Fixed Base Quantity", minval=0.00000001, group=grp_risk, tooltip="For linear perpetual charts with quantity in the base coin. Fixed quantity when dynamic sizing is off; maximum when on. Also capped to available equity at 1x margin.")
 btcQtyStep = input.float(0.001, "Base Quantity Step", minval=0.00000001, group=grp_risk, tooltip="Set to your exchange base-coin quantity increment; orders smaller than one step are skipped.")
@@ -285,7 +285,7 @@ nyOrbSlMult = input.float(1.0, title="NY ORB ATR Stop Modifier", step=0.1, group
 bool is_ny_orb_window = not na(time(timeframe.period, nyOrbValidSession, "America/New_York"))
 bool is_ldn_orb_window = not na(time(timeframe.period, londonOrbValidSession, "America/New_York"))
 float effAtrStopMult = is_ny_orb_window ? (atrStopMult * nyOrbSlMult) : (is_ldn_orb_window ? (atrStopMult * ldnOrbSlMult) : atrStopMult)
-stopLossBehavior = input.int(0, title="Stop Loss Behavior (0=On Candle Close, 1=Hard Stop on Wick)", minval=0, maxval=1, group=grp_risk, tooltip="0 = Stop Loss only triggers if the 1m candle closes past the stop price. 1 = Instant market exit on wick (Hard Stop).")
+stopLossBehavior = input.int(1, title="Stop Loss Behavior (0=On Candle Close, 1=Hard Stop on Wick)", minval=0, maxval=1, group=grp_risk, tooltip="0 = Stop Loss only triggers if the 1m candle closes past the stop price. 1 = Instant market exit on wick (Hard Stop).")
 
 // 14. Exits, Partials & Trailing Stop
 grp_exits = "Exits, Partials & Trailing Stop"
@@ -542,7 +542,7 @@ grp_costs = "Execution Costs & Entry Quality"
 useCostFilter = input.bool(true, "Filter Entries by Trading Costs", group=grp_costs, tooltip="Skip entries whose first planned profit distance is too small relative to estimated round-trip fees and slippage. Does not predict profitability.")
 estFeePct = input.float(0.06, "Estimated Fee Per Side (%)", minval=0.0, step=0.01, group=grp_costs)
 estSlippageTicks = input.int(2, "Estimated Slippage Per Side (Ticks)", minval=0, group=grp_costs)
-minTargetCostRatio = input.float(1.5, "Minimum Target / Round-Trip Cost", minval=1.0, step=0.1, group=grp_costs)
+minTargetCostRatio = input.float(2.0, "Minimum Target / Round-Trip Cost", minval=1.0, step=0.1, group=grp_costs)
 includeCostsInRisk = input.bool(true, "Include Estimated Costs in Risk Sizing", group=grp_costs)
 useCostBreakeven = input.bool(true, "Include Estimated Costs in Break-Even", group=grp_costs, tooltip="Applies when a break-even mode is enabled. Includes estimated fees and slippage plus the existing tick offset.")
 
