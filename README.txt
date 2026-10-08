@@ -1,3 +1,15 @@
+RBO v88: actionable trade / wait / skip decisions
+
+Top-right decision panel shows LONG/SHORT LIMIT SUBMITTED (awaiting an actual fill), LONG/SHORT OPEN, WAIT with no entry order, SKIP NOW with the engine reason, or canceled/waiting for another pair. It displays local confirmed structure and pending-change progress, exact frozen order entry/target/stop/quantity when active, and estimated net economics. Candidate-only prices are clearly marked as informational; they do not authorize an entry or indicate that an order was accepted. The panel describes the latest/current engine state, not every candle visible when scrolling history.
+
+Default take rules: a long requires bullish confirmed structure, a confirmed upward Fib, a resting front-run50% limit, no strong resistance obstructing its61.8% directional target, positive estimated target after costs, permitted time/risk gates and valid quantity/stop. A short uses the corresponding bearish rules with strong support checked. Source inputs can disable optional trend/SR/quality gates; read settings before interpreting decisions.
+
+Trend UP/DOWN markers reflect local chart-timeframe swing structure, not a guarantee about the whole multi-week trend. A rising chart can still contain locally confirmed bearish changes. Those markers are not entry signals. Raw FIB L/S triangles are candidates; BUY/SELL LIMIT labels are submission attempts; native TradingView order markers show actual fills.
+
+WAIT/SKIP NOW/CANCELED labels mark closed-bar changes in the engine's reason and provide full reason plus candidate/canceled-order prices on hover. They do not annotate every rejected pair or every bar; the latest80 decision labels are retained. SKIP NOW is a current rejection, not a promise that a temporarily blocked pair will never retry. Cancel labels reference the canceled order side/prices, even if the latest candidate has changed. Both panel and decision labels can be hidden in Chart & Dashboard.
+
+Trading logic is unchanged from v87. Source comparison and whitespace checks verify the entry-management function remains identical. Native TradingView compilation, fills and profitability are not newly verified. Previous notes follow:
+
 RBO v87: optional deviation-confirmed Fib anchors from the supplied Fib Swing v4
 
 Useful ideas in the uploaded script: filter smaller swing legs by reversal size, separate provisional extreme tracking from locked anchors, retain distinct times/bars for high/low, and make Fib boundaries visible. Its orders are disabled; its internal up/down tracking direction is not sufficient evidence of market trend. Original wick-based checks can create provisional intrabar changes and do not establish an instant/no-delay macro swing. Its observational61.8% pullback trade level also differs from our50% entry and directional61.8% profit target.

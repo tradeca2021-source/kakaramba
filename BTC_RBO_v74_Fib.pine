@@ -1,5 +1,5 @@
 //@version=6
-strategy("BTC RBO v87 Blind Fibonacci (Perpetual)", shorttitle="BTC RBO v87 Fib", overlay=true, pyramiding=3, initial_capital=100000, default_qty_type=strategy.fixed, default_qty_value=1, margin_long=100, margin_short=100, max_lines_count=500, max_boxes_count=500, max_labels_count=500, use_bar_magnifier=true, commission_type=strategy.commission.percent, commission_value=0.06, slippage=2, process_orders_on_close=false)
+strategy("BTC RBO v88 Blind Fibonacci (Perpetual)", shorttitle="BTC RBO v88 Fib", overlay=true, pyramiding=3, initial_capital=100000, default_qty_type=strategy.fixed, default_qty_value=1, margin_long=100, margin_short=100, max_lines_count=500, max_boxes_count=500, max_labels_count=500, use_bar_magnifier=true, commission_type=strategy.commission.percent, commission_value=0.06, slippage=2, process_orders_on_close=false)
 
 // --- LIBRARY IMPORT ---
 // External dependency: access to traderjoeb/PropFirm_News_Dates/6 is required.
@@ -195,6 +195,8 @@ showStrongSr = input.bool(true, "Show Nearest Strong Support / Resistance", grou
 grp_ui = "Chart & Dashboard"
 
 showPropFirmMetrics = input.bool(true, title="Show Prop Firm Metrics Dashboard", group=grp_ui)
+showTradeDecisionPanel = input.bool(true, "Show Trade / Wait / Skip Panel", group=grp_ui)
+showFibDecisionLabels = input.bool(true, "Show Changes in Fib Wait / Skip Reason", group=grp_ui, tooltip="Labels mark when the engine's reason changes, not every bar or every candidate. SKIP NOW means blocked at that calculation; temporary blockers may retry until expiry. Limit labels remain separate from actual TradingView fill markers.")
 
 showStopLine = input.bool(true, title="Show Stop Loss", group=grp_ui, tooltip="Shows the stop loss line that cancels a setup or exits a position")
 
@@ -489,7 +491,7 @@ f_tp_json(bool is_entry, string debug_str, string uuid, float sl_price_val = na,
 
     string action_str = "{{strategy.order.action}}" // TradingView automatically assigns "buy" or "sell" even for exits
     string core_fields = '{\n  "ticker": "' + webhookTicker + '",\n  "action": "' + action_str + '"' + sentiment_block + ',\n  "orderType": "' + order_type + '",\n  "price": {{close}}' + limit_block + ',\n  "quantity": {{strategy.order.contracts}},\n  "time": "{{timenow}}"' + sl_block + cancel_block + ','
-    string extras_fields = '\n  "extras": {\n    "strategy_version": "v87-BlindFib",\n    "order_id": "{{strategy.order.id}}",\n    "position_after_trade": "{{strategy.market_position}}",\n    "trade_uuid": "' + uuid + '",\n    "debug": "' + debug_str + '"\n  }\n}'
+    string extras_fields = '\n  "extras": {\n    "strategy_version": "v88-BlindFib",\n    "order_id": "{{strategy.order.id}}",\n    "position_after_trade": "{{strategy.market_position}}",\n    "trade_uuid": "' + uuid + '",\n    "debug": "' + debug_str + '"\n  }\n}'
     core_fields + extras_fields
 
 
@@ -999,6 +1001,25 @@ current_trade_uuid := result_f_manage_blind_fib_current_trade_uuid
 trade_entry_qty := result_f_manage_blind_fib_trade_entry_qty
 fibEntryStatus := result_f_manage_blind_fib_fibEntryStatus
 
+// Historical decisions are engine outcomes, not a second independent signal.
+// Limit their number and draw only changes of reason to reduce chart clutter.
+var label[] fibDecisionLabels = array.new_label()
+bool fibReasonChanged = fibEntryStatus != fibEntryStatus[1]
+if showFibDecisionLabels and barstate.isconfirmed and fibCandidateReady and fib_order_dir == 0 and strategy.position_size == 0 and fibReasonChanged
+    bool isWaitReason = str.startswith(fibEntryStatus, "Waiting:")
+    bool isSkipReason = str.startswith(fibEntryStatus, "Blocked:")
+    bool isCancelReason = str.startswith(fibEntryStatus, "Canceled:")
+    if isWaitReason or isSkipReason or isCancelReason
+        string shortReason = str.contains(fibEntryStatus, "trend") ? "trend" : str.contains(fibEntryStatus, "S/R") ? "S/R" : str.contains(fibEntryStatus, "cost") or str.contains(fibEntryStatus, "fees") or str.contains(fibEntryStatus, "reward/risk") ? "economics" : str.contains(fibEntryStatus, "50%") ? "50% crossed" : str.contains(fibEntryStatus, "quantity") ? "size" : str.contains(fibEntryStatus, "expired") or str.contains(fibEntryStatus, "timeout") ? "expiry" : "safety / levels"
+        int decisionDir = isCancelReason ? nz(fib_order_dir[1], blindCandidateDir) : blindCandidateDir
+        float decisionEntry = isCancelReason ? fib_order_entry[1] : fibCandidateEntry
+        float decisionTarget = isCancelReason ? fib_order_target[1] : fibCandidateTarget
+        string decisionLabelText = (isCancelReason ? "CANCELED" : isWaitReason ? "WAIT" : "SKIP NOW") + " " + (decisionDir == 1 ? "LONG" : "SHORT") + "\n" + shortReason
+        label decisionLabel = label.new(bar_index, decisionDir == 1 ? low : high, decisionLabelText, style=decisionDir == 1 ? label.style_label_up : label.style_label_down, color=isWaitReason ? color.new(color.gray, 25) : color.new(color.orange, 25), textcolor=color.white, size=size.tiny, tooltip=fibEntryStatus + "\n" + (isCancelReason ? "Canceled order entry " : "Candidate entry ") + str.tostring(decisionEntry, format.mintick) + " | Target " + str.tostring(decisionTarget, format.mintick))
+        array.push(fibDecisionLabels, decisionLabel)
+        if array.size(fibDecisionLabels) > 80
+            label.delete(array.shift(fibDecisionLabels))
+
 // Whole-chart diagnostics: overlapping gate counts describe each new pair at
 // confirmation, including pairs observed while another order is active.
 // Submissions and filled positions are separate; a plotted setup is not a fill.
@@ -1128,6 +1149,28 @@ float signalReward = blindCandidateDir == 1 ? fibCandidateTarget - fibCandidateE
 [visibleSrObstacle, visibleSrStrength] = f_sr_obstacle(economicsEntry, economicsTarget, economicsLong)
 [signalSrObstacle, signalSrStrength] = f_sr_obstacle(fibCandidateEntry, fibCandidateTarget, blindCandidateDir == 1)
 plot(showStrongSr ? visibleSrObstacle : na, "Strong S/R Target Obstacle Edge", color=color.orange, linewidth=2, style=plot.style_linebr)
+var table tradeDecisionTable = table.new(position.top_right, 1, 6, bgcolor=color.new(color.black, 15), border_width=1)
+if barstate.islast
+    if showTradeDecisionPanel
+        bool hasSubmittedLimit = fib_order_dir != 0
+        bool hasFilledPosition = strategy.position_size != 0
+        string tradeSide = hasFilledPosition ? (strategy.position_size > 0 ? "LONG" : "SHORT") : hasSubmittedLimit ? (fib_order_dir == 1 ? "LONG" : "SHORT") : (blindCandidateDir == 1 ? "LONG" : "SHORT")
+        string decisionTitle = hasFilledPosition ? tradeSide + " OPEN" : hasSubmittedLimit ? tradeSide + " LIMIT SUBMITTED — WAIT FOR FILL" : str.startswith(fibEntryStatus, "Blocked:") ? "SKIP NOW: " + tradeSide : str.startswith(fibEntryStatus, "Canceled:") ? "CANCELED — WAIT FOR A NEW PAIR" : "WAIT — NO ENTRY ORDER"
+        color decisionColor = hasFilledPosition ? color.lime : hasSubmittedLimit ? color.aqua : str.startswith(fibEntryStatus, "Blocked:") ? color.orange : color.silver
+        string localTrendText = confirmedTrendDir == 1 ? "bullish" : confirmedTrendDir == -1 ? "bearish" : "unknown"
+        if trendPendingDir != 0
+            localTrendText += " | change awaiting confirmation " + str.tostring(trendPendingCloses) + "/" + str.tostring(trendConfirmCloses)
+        table.cell(tradeDecisionTable, 0, 0, decisionTitle, text_color=decisionColor, text_size=size.normal)
+        table.cell(tradeDecisionTable, 0, 1, "Local structure: " + localTrendText, text_color=color.white, text_size=size.small)
+        string decisionLevels = not hasSubmittedLimit and not fibCandidateReady ? "No confirmed Fib candidate" : (hasSubmittedLimit ? "Order" : "Candidate only") + " | Entry " + str.tostring(economicsEntry, format.mintick) + " | Target " + str.tostring(economicsTarget, format.mintick)
+        table.cell(tradeDecisionTable, 0, 2, decisionLevels, text_color=color.white, text_size=size.small)
+        string decisionRisk = hasSubmittedLimit ? "Stop " + str.tostring(fib_order_stop, format.mintick) + " | Qty " + str.tostring(fib_order_qty) : "No active order: candidate prices are not an entry instruction"
+        table.cell(tradeDecisionTable, 0, 3, decisionRisk, text_color=color.silver, text_size=size.small)
+        table.cell(tradeDecisionTable, 0, 4, fibEntryStatus, text_color=decisionColor, text_size=size.small)
+        string decisionEconomics = na(visibleNetReward) ? "Waiting for valid economics" : "Estimated net target distance " + str.tostring(visibleNetReward, "0.00") + " | Net R/R " + str.tostring(visibleNetRatio, "0.0000")
+        table.cell(tradeDecisionTable, 0, 5, decisionEconomics, text_color=not na(visibleNetReward) and visibleNetReward <= 0 ? color.red : color.silver, text_size=size.small)
+    else
+        table.clear(tradeDecisionTable, 0, 0, 0, 5)
 float signalTargetCosts = (fibCandidateEntry + fibCandidateTarget) * estFeePct / 100.0 + syminfo.mintick * estSlippageTicks * 2.0
 var table status_tbl = table.new(position.bottom_right, 1, 16, bgcolor=color.new(color.black, 80), border_width=1, border_color=color.new(color.gray, 50))
 if barstate.islast
@@ -1152,7 +1195,7 @@ if barstate.islast
     table.cell(status_tbl, 0, 3, breakEvenText, text_color=not na(visibleNetReward) and visibleNetReward <= 0 ? color.red : color.silver, text_size=size.small)
     table.cell(status_tbl, 0, 4, "TP exits: " + str.tostring(targetExitCount) + " (net losers: " + str.tostring(losingTargetCount) + ") | SL exits: " + str.tostring(stopExitCount), text_color=color.white, text_size=size.small)
     table.cell(status_tbl, 0, 5, lastCompletedReason + (na(lastCompletedNet) ? "" : " | Net " + str.tostring(lastCompletedNet, "#.##")), text_color=not na(lastCompletedNet) and lastCompletedNet < 0 ? color.red : color.silver, text_size=size.small)
-    table.cell(status_tbl, 0, 6, "v87 | Pairs " + str.tostring(fibSetupCount) + " | Order attempts " + str.tostring(fibSubmittedCount) + " | Filled " + str.tostring(fibFilledCount), text_color=color.white, text_size=size.small)
+    table.cell(status_tbl, 0, 6, "v88 | Pairs " + str.tostring(fibSetupCount) + " | Order attempts " + str.tostring(fibSubmittedCount) + " | Filled " + str.tostring(fibFilledCount), text_color=color.white, text_size=size.small)
     table.cell(status_tbl, 0, 7, "At confirmation: crossed " + str.tostring(fibCrossedCount) + " | fee-blocked " + str.tostring(fibNetCostBlockedCount), text_color=color.orange, text_size=size.small)
     table.cell(status_tbl, 0, 8, "At confirmation: safety-blocked " + str.tostring(fibSafetyBlockedCount) + " | busy " + str.tostring(fibBusyCount) + " (counts overlap)", text_color=color.silver, text_size=size.small)
     float targetProgress = blindFibTargetRatio - 0.5
