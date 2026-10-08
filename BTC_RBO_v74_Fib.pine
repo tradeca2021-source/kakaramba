@@ -1,5 +1,5 @@
 //@version=6
-strategy("BTC RBO v83 Blind Fibonacci (Perpetual)", shorttitle="BTC RBO v83 Fib", overlay=true, pyramiding=3, initial_capital=100000, default_qty_type=strategy.fixed, default_qty_value=1, margin_long=100, margin_short=100, max_lines_count=500, max_boxes_count=500, max_labels_count=500, use_bar_magnifier=true, commission_type=strategy.commission.percent, commission_value=0.06, slippage=2, process_orders_on_close=false)
+strategy("BTC RBO v85 Blind Fibonacci (Perpetual)", shorttitle="BTC RBO v85 Fib", overlay=true, pyramiding=3, initial_capital=100000, default_qty_type=strategy.fixed, default_qty_value=1, margin_long=100, margin_short=100, max_lines_count=500, max_boxes_count=500, max_labels_count=500, use_bar_magnifier=true, commission_type=strategy.commission.percent, commission_value=0.06, slippage=2, process_orders_on_close=false)
 
 // --- LIBRARY IMPORT ---
 // External dependency: access to traderjoeb/PropFirm_News_Dates/6 is required.
@@ -141,6 +141,11 @@ maxBtcQty = input.float(1.0, "Max/Fixed Base Quantity", minval=0.00000001, group
 
 btcQtyStep = input.float(0.001, "Base Quantity Step", minval=0.00000001, group=grp_risk, tooltip="Set to your exchange base-coin quantity increment; orders smaller than one step are skipped.")
 
+// Never submit fractional lots below the chart's tradable minimum. Normalize
+// a custom step upward to a multiple of that minimum, retaining risk caps.
+float chartMinQty = not na(syminfo.mincontract) and syminfo.mincontract > 0 ? syminfo.mincontract : btcQtyStep
+float effectiveQtyStep = math.max(1.0, math.ceil(btcQtyStep / chartMinQty - 1e-9)) * chartMinQty
+
 atrLength = input.int(14, "ATR Length", minval=1, group=grp_risk, tooltip="ATR sampling length for the frozen blind entry stop.")
 
 atrStopMult = input.float(1.5, title="ATR Stop Loss Multiplier", group=grp_risk, tooltip="Multiplier of setup ATR for ATR-from-entry blind stops.")
@@ -165,6 +170,13 @@ float effAtrStopMult = is_ny_orb_window ? (atrStopMult * nyOrbSlMult) : (is_ldn_
 
 grp_trend = "VWAP"
 vwapType = input.string("Daily (24/7)", title="VWAP Type", options=["RTH (Anchored 09:30 AM)", "Session Auto-Anchor (03:00 / 09:30)", "Daily (24/7)"], group=grp_trend, tooltip="Determines how VWAP is anchored. Session Auto-Anchor resets at the NY or London open depending on current time.")
+
+grp_structure = "Confirmed Trend & Changes"
+useConfirmedTrend = input.bool(true, "Require Confirmed Trend Before Fib Entries", group=grp_structure, tooltip="Only long in confirmed bullish structure or short in confirmed bearish structure. Unknown structure and a possible change awaiting confirmation block new entries. Open trades retain their fixed brackets.")
+trendSwingBars = input.int(5, "Trend Swing Confirmation Bars", minval=1, maxval=50, group=grp_structure)
+trendConfirmCloses = input.int(2, "Consecutive Closes Beyond Swing to Confirm", minval=1, maxval=10, group=grp_structure, tooltip="Closed candles beyond a frozen confirmed swing level. A failed follow-through clears the possible change and retains the prior confirmed direction.")
+trendBreakTicks = input.int(2, "Trend Break Buffer (Ticks)", minval=0, maxval=100, group=grp_structure)
+showTrendChanges = input.bool(true, "Show Confirmed Trend Changes", group=grp_structure)
 
 
 grp_ui = "Chart & Dashboard"
@@ -425,7 +437,7 @@ f_net_economics(float entry, float target, float stop, bool isLong) =>
 
 // Linear base-coin quantities; inverse contracts are not supported.
 f_floor_qty(float q) =>
-    math.round(math.floor(math.max(0.0, q) / btcQtyStep + 1e-9) * btcQtyStep, 8)
+    math.round(math.floor(math.max(0.0, q) / effectiveQtyStep + 1e-9) * effectiveQtyStep, 8)
 
 f_position_qty(float raw, float price) =>
     float requested = useDynamicSizing ? math.min(raw, maxBtcQty) : maxBtcQty
@@ -464,7 +476,7 @@ f_tp_json(bool is_entry, string debug_str, string uuid, float sl_price_val = na,
 
     string action_str = "{{strategy.order.action}}" // TradingView automatically assigns "buy" or "sell" even for exits
     string core_fields = '{\n  "ticker": "' + webhookTicker + '",\n  "action": "' + action_str + '"' + sentiment_block + ',\n  "orderType": "' + order_type + '",\n  "price": {{close}}' + limit_block + ',\n  "quantity": {{strategy.order.contracts}},\n  "time": "{{timenow}}"' + sl_block + cancel_block + ','
-    string extras_fields = '\n  "extras": {\n    "strategy_version": "v83-BlindFib",\n    "order_id": "{{strategy.order.id}}",\n    "position_after_trade": "{{strategy.market_position}}",\n    "trade_uuid": "' + uuid + '",\n    "debug": "' + debug_str + '"\n  }\n}'
+    string extras_fields = '\n  "extras": {\n    "strategy_version": "v85-BlindFib",\n    "order_id": "{{strategy.order.id}}",\n    "position_after_trade": "{{strategy.market_position}}",\n    "trade_uuid": "' + uuid + '",\n    "debug": "' + debug_str + '"\n  }\n}'
     core_fields + extras_fields
 
 
@@ -513,6 +525,54 @@ if dailyKillswitch or not inSession
 
 
 chart_atr = ta.atr(atrLength)
+
+// Structure is evaluated only on closed bars against previously known pivots.
+// Freeze the break level while confirming; a newly detected pivot cannot move it.
+float trendPivotHigh = ta.pivothigh(high, trendSwingBars, trendSwingBars)
+float trendPivotLow = ta.pivotlow(low, trendSwingBars, trendSwingBars)
+var float trendKnownHigh = na
+var float trendKnownLow = na
+var int confirmedTrendDir = 0
+var int trendPendingDir = 0
+var float trendPendingLevel = na
+var int trendPendingCloses = 0
+bool trendConfirmedThisBar = false
+if barstate.isconfirmed
+    if trendPendingDir != 0
+        bool followsBreak = trendPendingDir == 1 ? close > trendPendingLevel : close < trendPendingLevel
+        if followsBreak
+            trendPendingCloses += 1
+        else
+            trendPendingDir := 0
+            trendPendingLevel := na
+            trendPendingCloses := 0
+    if trendPendingDir == 0
+        bool initialRangeReady = not na(trendKnownHigh) and not na(trendKnownLow) and trendKnownHigh > trendKnownLow
+        float bullBreak = trendKnownHigh + trendBreakTicks * syminfo.mintick
+        float bearBreak = trendKnownLow - trendBreakTicks * syminfo.mintick
+        // Once direction is known, its opposite swing is sufficient for change
+        // detection even if the independently updated reference bounds invert.
+        bool canConfirmBull = confirmedTrendDir == -1 or (confirmedTrendDir == 0 and initialRangeReady)
+        bool canConfirmBear = confirmedTrendDir == 1 or (confirmedTrendDir == 0 and initialRangeReady)
+        int possibleDir = canConfirmBull and not na(trendKnownHigh) and close > bullBreak ? 1 : canConfirmBear and not na(trendKnownLow) and close < bearBreak ? -1 : 0
+        if possibleDir != 0
+            trendPendingDir := possibleDir
+            trendPendingLevel := possibleDir == 1 ? bullBreak : bearBreak
+            trendPendingCloses := 1
+    if trendPendingDir != 0 and trendPendingCloses >= trendConfirmCloses
+        confirmedTrendDir := trendPendingDir
+        trendPendingDir := 0
+        trendPendingLevel := na
+        trendPendingCloses := 0
+        trendConfirmedThisBar := true
+    if not na(trendPivotHigh)
+        trendKnownHigh := trendPivotHigh
+    if not na(trendPivotLow)
+        trendKnownLow := trendPivotLow
+bool trendLongAllowed = not useConfirmedTrend or (confirmedTrendDir == 1 and trendPendingDir == 0)
+bool trendShortAllowed = not useConfirmedTrend or (confirmedTrendDir == -1 and trendPendingDir == 0)
+plotshape(showTrendChanges and trendConfirmedThisBar and confirmedTrendDir == 1, title="Bullish Trend Confirmed", text="TREND UP", style=shape.labelup, location=location.belowbar, color=color.teal, textcolor=color.white, size=size.tiny)
+plotshape(showTrendChanges and trendConfirmedThisBar and confirmedTrendDir == -1, title="Bearish Trend Confirmed", text="TREND DOWN", style=shape.labeldown, location=location.abovebar, color=color.maroon, textcolor=color.white, size=size.tiny)
 
 
 float fibImpulseHigh = ta.highest(high, fibLookback)
@@ -656,8 +716,9 @@ f_manage_blind_fib() =>
             bool expired = blindFibTimeout > 0 and bar_index - state_blind_order_bar > blindFibTimeout
             bool invalidated = state_fib_order_dir == 1 ? low <= state_fib_order_stop : high >= state_fib_order_stop
             bool vwap_ok = state_fib_order_dir == 1 ? long_vwap_ok : short_vwap_ok
-            if not safety_ok or not vwap_ok or expired or invalidated
-                state_fibEntryStatus := expired ? "Canceled: pending order timeout" : invalidated ? "Canceled: stop invalidation" : "Canceled: session / risk / VWAP gate"
+            bool order_trend_ok = state_fib_order_dir == 1 ? trendLongAllowed : trendShortAllowed
+            if not safety_ok or not vwap_ok or not order_trend_ok or expired or invalidated
+                state_fibEntryStatus := expired ? "Canceled: pending order timeout" : invalidated ? "Canceled: stop invalidation" : not order_trend_ok ? "Canceled: trend unconfirmed / opposite" : "Canceled: session / risk / VWAP gate"
                 strategy.cancel(state_fib_order_dir == 1 ? "Long" : "Short")
                 strategy.cancel(state_fib_order_dir == 1 ? "Blind Fib Long Exit" : "Blind Fib Short Exit")
                 state_fib_order_dir := 0
@@ -674,6 +735,7 @@ f_manage_blind_fib() =>
             int confirmation_bar = terminal_bar + (blindUseSwings ? blindFibPivotBars : 0)
             bool candidate_expired = bar_index - confirmation_bar > blindFibMaxAge
             bool is_long = blindCandidateDir == 1
+            bool trend_ok = is_long ? trendLongAllowed : trendShortAllowed
             float impulse_range = blindCandidateHigh - blindCandidateLow
             float midpoint = (blindCandidateHigh + blindCandidateLow) * 0.5
             float ep = math.round_to_mintick(midpoint + (is_long ? 1 : -1) * blindFibEntryTicks * syminfo.mintick)
@@ -697,13 +759,13 @@ f_manage_blind_fib() =>
             bool net_target_ok = not requirePositiveNetTarget or expectedNetReward > 0
             bool net_rr_ok = minNetRewardRisk == 0 or (not na(expectedNetRatio) and expectedNetRatio >= minNetRewardRisk)
 
-            state_fibEntryStatus := candidate_expired ? "Blocked: Fib candidate expired" : not resting_limit ? "Waiting: price beyond 50%; retry until expiry" : na(chart_atr) ? "Waiting: ATR warm-up" : not valid_levels ? "Blocked: invalid stop/target distance" : not isValidTimeframe ? "Blocked: use a 1-15 minute chart" : dailyKillswitch ? "Blocked: daily P&L limit" : max_losses_hit ? "Blocked: consecutive-loss limit" : not safety_ok ? "Blocked: session / day / news restriction" : not (is_long ? long_vwap_ok : short_vwap_ok) ? "Blocked: optional VWAP alignment" : not net_target_ok ? "Blocked: target cannot cover fees / slippage" : not net_rr_ok ? "Blocked: net reward/risk below minimum" : not cost_ok ? "Blocked: target below estimated cost filter" : qty < btcQtyStep ? "Blocked: quantity below exchange step" : "Ready: submit 50% limit"
+            state_fibEntryStatus := candidate_expired ? "Blocked: Fib candidate expired" : not trend_ok ? "Waiting: confirmed trend must match Fib direction" : not resting_limit ? "Waiting: price beyond 50%; retry until expiry" : na(chart_atr) ? "Waiting: ATR warm-up" : not valid_levels ? "Blocked: invalid stop/target distance" : not isValidTimeframe ? "Blocked: use a 1-15 minute chart" : dailyKillswitch ? "Blocked: daily P&L limit" : max_losses_hit ? "Blocked: consecutive-loss limit" : not safety_ok ? "Blocked: session / day / news restriction" : not (is_long ? long_vwap_ok : short_vwap_ok) ? "Blocked: optional VWAP alignment" : not net_target_ok ? "Blocked: target cannot cover fees / slippage" : not net_rr_ok ? "Blocked: net reward/risk below minimum" : not cost_ok ? "Blocked: target below estimated cost filter" : qty < effectiveQtyStep ? "Blocked: sizing below effective quantity step" : "Ready: submit 50% limit"
             // A crossed midpoint is temporary: confirmation may occur during the
             // retracement. Keep this current pair eligible for a future resting
             // limit; do not pretend the earlier touch was tradable.
             if candidate_expired or (not na(chart_atr) and not valid_levels)
                 state_blind_last_attempt_id := impulse_id
-            if not candidate_expired and safety_ok and (is_long ? long_vwap_ok : short_vwap_ok) and resting_limit and valid_levels and net_target_ok and net_rr_ok and cost_ok and qty >= btcQtyStep
+            if not candidate_expired and trend_ok and safety_ok and (is_long ? long_vwap_ok : short_vwap_ok) and resting_limit and valid_levels and net_target_ok and net_rr_ok and cost_ok and qty >= effectiveQtyStep
                 if usePerTradeHardStop and perTradeHardStopLimit > 0
                     float cap_distance = strategy.equity * perTradeHardStopLimit / 100.0 / (qty * syminfo.pointvalue)
                     float cap_stop = is_long ? math.ceil((ep - cap_distance) / syminfo.mintick) * syminfo.mintick : math.floor((ep + cap_distance) / syminfo.mintick) * syminfo.mintick
@@ -725,10 +787,10 @@ f_manage_blind_fib() =>
                     state_trade_entry_qty := qty
                     string dir = is_long ? "Long" : "Short"
                     string sentiment = is_long ? "bullish" : "bearish"
-                    string dbg = "Blind Fib 50% | Entry " + str.tostring(ep) + " | Target " + str.tostring(target) + " | EstNetRR " + str.tostring(expectedNetRatio, "#.##")
+                    string dbg = "Blind Fib 50% | Entry " + str.tostring(ep) + " | Target " + str.tostring(target) + " | EstNetRR " + str.tostring(expectedNetRatio, "0.0000") + " | EstNetTargetDistance " + str.tostring(expectedNetReward, "0.00")
                     f_execute_entry(dir, ep, stop, qty, dbg, dbg, state_fib_order_uuid, sentiment, "limit")
                     if showFibSignals
-                        label.new(bar_index, ep, is_long ? "50% BUY LIMIT" : "50% SELL LIMIT", style=is_long ? label.style_label_up : label.style_label_down, color=is_long ? color.lime : color.red, textcolor=color.white, size=size.small)
+                        label.new(bar_index, ep, (is_long ? "50% BUY LIMIT" : "50% SELL LIMIT") + "\nQty " + str.tostring(qty), style=is_long ? label.style_label_up : label.style_label_down, color=is_long ? color.lime : color.red, textcolor=color.white, size=size.small)
                 else
                     state_fibEntryStatus := "Blocked: hard-loss cap leaves no valid stop"
         // Entry and full bracket are submitted together; no delayed protection or moving levels.
@@ -881,7 +943,7 @@ float signalPriorVolume = ta.sma(volume, 20)[1]
 float signalRelativeVolume = not na(volume) and signalPriorVolume > 0 ? volume / signalPriorVolume : na
 float signalReward = blindCandidateDir == 1 ? fibCandidateTarget - fibCandidateEntry : fibCandidateEntry - fibCandidateTarget
 float signalTargetCosts = (fibCandidateEntry + fibCandidateTarget) * estFeePct / 100.0 + syminfo.mintick * estSlippageTicks * 2.0
-var table status_tbl = table.new(position.bottom_right, 1, 13, bgcolor=color.new(color.black, 80), border_width=1, border_color=color.new(color.gray, 50))
+var table status_tbl = table.new(position.bottom_right, 1, 15, bgcolor=color.new(color.black, 80), border_width=1, border_color=color.new(color.gray, 50))
 if barstate.islast
     string status_txt = "Bot Online"
     color status_col = color.lime
@@ -896,13 +958,15 @@ if barstate.islast
         status_col := color.orange
     table.cell(status_tbl, 0, 0, status_txt, text_color=status_col, text_size=size.normal)
     table.cell(status_tbl, 0, 1, fibEntryStatus, text_color=color.white, text_size=size.small)
-    string economicsText = na(visibleNetRatio) ? "Waiting for valid Fib / ATR" : "Est. net reward/risk: " + str.tostring(visibleNetRatio, "#.##")
+    float visibleGrossReward = economicsLong ? economicsTarget - economicsEntry : economicsEntry - economicsTarget
+    float visibleTargetCosts = visibleGrossReward - visibleNetReward
+    string economicsText = na(visibleNetRatio) ? "Waiting for valid Fib / ATR" : "Est. net R/R: " + str.tostring(visibleNetRatio, "0.0000") + " | Target distance: gross " + str.tostring(visibleGrossReward, "0.00") + " / costs " + str.tostring(visibleTargetCosts, "0.00") + " / net " + str.tostring(visibleNetReward, "0.00")
     string breakEvenText = na(visibleNetReward) ? "" : visibleNetReward <= 0 ? "Target loses after estimated costs" : "Est. break-even win rate: " + str.tostring(visibleBreakEven, "#.0") + "%"
     table.cell(status_tbl, 0, 2, economicsText, text_color=not na(visibleNetRatio) and visibleNetRatio < 0 ? color.red : color.white, text_size=size.small)
     table.cell(status_tbl, 0, 3, breakEvenText, text_color=not na(visibleNetReward) and visibleNetReward <= 0 ? color.red : color.silver, text_size=size.small)
     table.cell(status_tbl, 0, 4, "TP exits: " + str.tostring(targetExitCount) + " (net losers: " + str.tostring(losingTargetCount) + ") | SL exits: " + str.tostring(stopExitCount), text_color=color.white, text_size=size.small)
     table.cell(status_tbl, 0, 5, lastCompletedReason + (na(lastCompletedNet) ? "" : " | Net " + str.tostring(lastCompletedNet, "#.##")), text_color=not na(lastCompletedNet) and lastCompletedNet < 0 ? color.red : color.silver, text_size=size.small)
-    table.cell(status_tbl, 0, 6, "v83 | Pairs " + str.tostring(fibSetupCount) + " | Limits sent " + str.tostring(fibSubmittedCount) + " | Filled " + str.tostring(fibFilledCount), text_color=color.white, text_size=size.small)
+    table.cell(status_tbl, 0, 6, "v85 | Pairs " + str.tostring(fibSetupCount) + " | Order attempts " + str.tostring(fibSubmittedCount) + " | Filled " + str.tostring(fibFilledCount), text_color=color.white, text_size=size.small)
     table.cell(status_tbl, 0, 7, "At confirmation: crossed " + str.tostring(fibCrossedCount) + " | fee-blocked " + str.tostring(fibNetCostBlockedCount), text_color=color.orange, text_size=size.small)
     table.cell(status_tbl, 0, 8, "At confirmation: safety-blocked " + str.tostring(fibSafetyBlockedCount) + " | busy " + str.tostring(fibBusyCount) + " (counts overlap)", text_color=color.silver, text_size=size.small)
     float targetProgress = blindFibTargetRatio - 0.5
@@ -915,6 +979,8 @@ if barstate.islast
     table.cell(status_tbl, 0, 11, contextText, text_color=color.silver, text_size=size.small)
     string selectedBlocks = ""
     if fibCandidateReady
+        if blindCandidateDir == 1 ? not trendLongAllowed : not trendShortAllowed
+            selectedBlocks += "confirmed trend; "
         if blindCandidateDir == 1 ? close < fibCandidateEntry : close > fibCandidateEntry
             selectedBlocks += "midpoint crossed; "
         if requirePositiveNetTarget and signalReward <= signalTargetCosts
@@ -923,8 +989,14 @@ if barstate.islast
             selectedBlocks += "cost filter; "
         if not inSession or dailyKillswitch or isEod or isFomcLiquidationTime or isNearingWindow
             selectedBlocks += "safety; "
-    string selectedChecksText = not fibCandidateReady ? "Selected candidate checks: waiting for anchors" : selectedBlocks == "" ? "Selected midpoint/cost/safety checks: clear (other gates may apply)" : "Selected candidate blockers: " + selectedBlocks
+    string selectedChecksText = not fibCandidateReady ? "Selected candidate checks: waiting for anchors" : selectedBlocks == "" ? "Selected trend/midpoint/cost/safety checks: clear (other gates may apply)" : "Selected candidate blockers: " + selectedBlocks
     table.cell(status_tbl, 0, 12, selectedChecksText, text_color=selectedBlocks == "" ? color.silver : color.orange, text_size=size.small)
+    float chartAffordableQty = fibCandidateReady ? f_position_qty(maxBtcQty, fibCandidateEntry) : na
+    string chartText = "Chart " + syminfo.tickerid + " (" + syminfo.type + ") | Point value " + str.tostring(syminfo.pointvalue) + " | Min qty " + str.tostring(chartMinQty) + " | Step " + str.tostring(effectiveQtyStep) + " | Size cap at 1x " + (na(chartAffordableQty) ? "n/a" : str.tostring(chartAffordableQty))
+    table.cell(status_tbl, 0, 13, chartText, text_color=not na(chartAffordableQty) and chartAffordableQty < effectiveQtyStep ? color.orange : color.silver, text_size=size.small)
+    string directionText = confirmedTrendDir == 1 ? "BULLISH" : confirmedTrendDir == -1 ? "BEARISH" : "UNKNOWN"
+    string pendingText = trendPendingDir == 0 ? "" : " | Possible " + (trendPendingDir == 1 ? "bullish" : "bearish") + " change " + str.tostring(trendPendingCloses) + "/" + str.tostring(trendConfirmCloses) + " closes beyond " + str.tostring(trendPendingLevel, format.mintick)
+    table.cell(status_tbl, 0, 14, "Confirmed trend: " + directionText + pendingText + " | Entry gate " + (useConfirmedTrend ? "ON" : "OFF"), text_color=trendPendingDir != 0 or confirmedTrendDir == 0 ? color.orange : confirmedTrendDir == 1 ? color.lime : color.red, text_size=size.small)
 
 
 
