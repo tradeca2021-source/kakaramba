@@ -1,5 +1,5 @@
 //@version=6
-strategy("BTC RBO v82 Blind Fibonacci (Perpetual)", shorttitle="BTC RBO v82 Fib", overlay=true, pyramiding=3, initial_capital=100000, default_qty_type=strategy.fixed, default_qty_value=1, margin_long=100, margin_short=100, max_lines_count=500, max_boxes_count=500, max_labels_count=500, use_bar_magnifier=true, commission_type=strategy.commission.percent, commission_value=0.06, slippage=2, process_orders_on_close=false)
+strategy("BTC RBO v83 Blind Fibonacci (Perpetual)", shorttitle="BTC RBO v83 Fib", overlay=true, pyramiding=3, initial_capital=100000, default_qty_type=strategy.fixed, default_qty_value=1, margin_long=100, margin_short=100, max_lines_count=500, max_boxes_count=500, max_labels_count=500, use_bar_magnifier=true, commission_type=strategy.commission.percent, commission_value=0.06, slippage=2, process_orders_on_close=false)
 
 // --- LIBRARY IMPORT ---
 // External dependency: access to traderjoeb/PropFirm_News_Dates/6 is required.
@@ -464,7 +464,7 @@ f_tp_json(bool is_entry, string debug_str, string uuid, float sl_price_val = na,
 
     string action_str = "{{strategy.order.action}}" // TradingView automatically assigns "buy" or "sell" even for exits
     string core_fields = '{\n  "ticker": "' + webhookTicker + '",\n  "action": "' + action_str + '"' + sentiment_block + ',\n  "orderType": "' + order_type + '",\n  "price": {{close}}' + limit_block + ',\n  "quantity": {{strategy.order.contracts}},\n  "time": "{{timenow}}"' + sl_block + cancel_block + ','
-    string extras_fields = '\n  "extras": {\n    "strategy_version": "v82-BlindFib",\n    "order_id": "{{strategy.order.id}}",\n    "position_after_trade": "{{strategy.market_position}}",\n    "trade_uuid": "' + uuid + '",\n    "debug": "' + debug_str + '"\n  }\n}'
+    string extras_fields = '\n  "extras": {\n    "strategy_version": "v83-BlindFib",\n    "order_id": "{{strategy.order.id}}",\n    "position_after_trade": "{{strategy.market_position}}",\n    "trade_uuid": "' + uuid + '",\n    "debug": "' + debug_str + '"\n  }\n}'
     core_fields + extras_fields
 
 
@@ -773,7 +773,7 @@ if barstate.isconfirmed and newFibSeries
         fibCrossedCount += 1
     if requirePositiveNetTarget and diagnosticReward <= diagnosticCosts
         fibNetCostBlockedCount += 1
-    if not inSession or dailyKillswitch or isEod or isFomcLiquidationTime
+    if not inSession or dailyKillswitch or isEod or isFomcLiquidationTime or isNearingWindow
         fibSafetyBlockedCount += 1
     if nz(fib_order_dir[1]) != 0 or strategy.position_size != 0
         fibBusyCount += 1
@@ -826,12 +826,14 @@ float trailing_threshold = math.min(strategy.initial_capital, peak_closed_equity
 lowest_buffer := math.min(lowest_buffer, closed_equity - trailing_threshold)
 
 
-bool isOffline = dailyKillswitch or hardStopHit or maxProfitHit or max_losses_hit or isNewsDay or isFomcDecisionWindow or isWindowExcluded or isNearingWindow or isEod or isBlockedSession or (useTimeRestrictions and not inSession)
+bool isOffline = not isValidTimeframe or dailyKillswitch or hardStopHit or maxProfitHit or max_losses_hit or isNewsDay or isFomcDecisionWindow or isWindowExcluded or isNearingWindow or isEod or isBlockedSession or (useTimeRestrictions and not inSession)
 var bool wasOffline = true
 
 if isOffline and not wasOffline
     string offline_reason = "Bot Offline"
-    if maxProfitHit
+    if not isValidTimeframe
+        offline_reason := "Offline: Use a 1-15 minute chart"
+    else if maxProfitHit
         offline_reason := "Offline: Daily Max Profit Hit"
     else if hardStopHit
         offline_reason := "Offline: Daily Liquidation Hit"
@@ -870,11 +872,23 @@ bool economicsLong = fib_order_dir != 0 ? fib_order_dir == 1 : blindCandidateDir
 float economicsRawStop = blindFibStopMode == "Beyond Impulse Origin" ? (economicsLong ? blindCandidateLow - blindFibStopTicks * syminfo.mintick : blindCandidateHigh + blindFibStopTicks * syminfo.mintick) : economicsEntry + (economicsLong ? -1 : 1) * chart_atr * effAtrStopMult
 float economicsStop = fib_order_dir != 0 ? fib_order_stop : economicsLong ? math.floor(economicsRawStop / syminfo.mintick) * syminfo.mintick : math.ceil(economicsRawStop / syminfo.mintick) * syminfo.mintick
 [visibleNetReward, visibleNetRisk, visibleNetRatio, visibleBreakEven] = f_net_economics(economicsEntry, economicsTarget, economicsStop, economicsLong)
-var table status_tbl = table.new(position.bottom_right, 1, 11, bgcolor=color.new(color.black, 80), border_width=1, border_color=color.new(color.gray, 50))
+// Context readings do not impose new entry gates. RVOL uses the preceding
+// 20 bars, excluding the current bar. These are current readings, not frozen
+// setup observations and not order-book or order-flow data.
+float signalRangeAtr = fibCandidateReady and chart_atr > 0 ? (blindCandidateHigh - blindCandidateLow) / chart_atr : na
+float signalEntryVwapAtr = fibCandidateReady and chart_atr > 0 and not na(vwapValue) ? (fibCandidateEntry - vwapValue) / chart_atr : na
+float signalPriorVolume = ta.sma(volume, 20)[1]
+float signalRelativeVolume = not na(volume) and signalPriorVolume > 0 ? volume / signalPriorVolume : na
+float signalReward = blindCandidateDir == 1 ? fibCandidateTarget - fibCandidateEntry : fibCandidateEntry - fibCandidateTarget
+float signalTargetCosts = (fibCandidateEntry + fibCandidateTarget) * estFeePct / 100.0 + syminfo.mintick * estSlippageTicks * 2.0
+var table status_tbl = table.new(position.bottom_right, 1, 13, bgcolor=color.new(color.black, 80), border_width=1, border_color=color.new(color.gray, 50))
 if barstate.islast
     string status_txt = "Bot Online"
     color status_col = color.lime
-    if dailyKillswitch or hardStopHit or max_losses_hit or maxProfitHit
+    if not isValidTimeframe
+        status_txt := "Bot Offline: use a 1-15 minute chart"
+        status_col := color.orange
+    else if dailyKillswitch or hardStopHit or max_losses_hit or maxProfitHit
         status_txt := "Bot Offline"
         status_col := maxProfitHit ? color.lime : color.red
     else if isOffline
@@ -888,7 +902,7 @@ if barstate.islast
     table.cell(status_tbl, 0, 3, breakEvenText, text_color=not na(visibleNetReward) and visibleNetReward <= 0 ? color.red : color.silver, text_size=size.small)
     table.cell(status_tbl, 0, 4, "TP exits: " + str.tostring(targetExitCount) + " (net losers: " + str.tostring(losingTargetCount) + ") | SL exits: " + str.tostring(stopExitCount), text_color=color.white, text_size=size.small)
     table.cell(status_tbl, 0, 5, lastCompletedReason + (na(lastCompletedNet) ? "" : " | Net " + str.tostring(lastCompletedNet, "#.##")), text_color=not na(lastCompletedNet) and lastCompletedNet < 0 ? color.red : color.silver, text_size=size.small)
-    table.cell(status_tbl, 0, 6, "v82 | Pairs " + str.tostring(fibSetupCount) + " | Limits sent " + str.tostring(fibSubmittedCount) + " | Filled " + str.tostring(fibFilledCount), text_color=color.white, text_size=size.small)
+    table.cell(status_tbl, 0, 6, "v83 | Pairs " + str.tostring(fibSetupCount) + " | Limits sent " + str.tostring(fibSubmittedCount) + " | Filled " + str.tostring(fibFilledCount), text_color=color.white, text_size=size.small)
     table.cell(status_tbl, 0, 7, "At confirmation: crossed " + str.tostring(fibCrossedCount) + " | fee-blocked " + str.tostring(fibNetCostBlockedCount), text_color=color.orange, text_size=size.small)
     table.cell(status_tbl, 0, 8, "At confirmation: safety-blocked " + str.tostring(fibSafetyBlockedCount) + " | busy " + str.tostring(fibBusyCount) + " (counts overlap)", text_color=color.silver, text_size=size.small)
     float targetProgress = blindFibTargetRatio - 0.5
@@ -896,6 +910,21 @@ if barstate.islast
     string rangeText = fibCandidateReady ? "Current pair range " + str.tostring(blindCandidateHigh - blindCandidateLow, "#.##") + " | approx. fee break-even range " + str.tostring(approxRequiredRange, "#.##") : "Waiting for confirmed anchors"
     table.cell(status_tbl, 0, 9, rangeText, text_color=color.silver, text_size=size.small)
     table.cell(status_tbl, 0, 10, "Net-target gate " + (requirePositiveNetTarget ? "ON" : "OFF") + " | Cost filter " + (useCostFilter ? "ON" : "OFF") + " | Pivot bars " + str.tostring(blindFibPivotBars), text_color=color.silver, text_size=size.small)
+    string vwapEntryText = na(signalEntryVwapAtr) ? "n/a" : math.abs(fibCandidateEntry - vwapValue) < syminfo.mintick ? "at VWAP" : blindCandidateDir * signalEntryVwapAtr > 0 ? "aligned" : "opposed"
+    string contextText = "Current pair range/ATR " + (na(signalRangeAtr) ? "n/a" : str.tostring(signalRangeAtr, "#.##")) + " | 50% vs VWAP " + vwapEntryText + " | Current RVOL " + (na(signalRelativeVolume) ? "n/a" : str.tostring(signalRelativeVolume, "#.##"))
+    table.cell(status_tbl, 0, 11, contextText, text_color=color.silver, text_size=size.small)
+    string selectedBlocks = ""
+    if fibCandidateReady
+        if blindCandidateDir == 1 ? close < fibCandidateEntry : close > fibCandidateEntry
+            selectedBlocks += "midpoint crossed; "
+        if requirePositiveNetTarget and signalReward <= signalTargetCosts
+            selectedBlocks += "net-target costs; "
+        if useCostFilter and signalReward < f_roundtrip_cost(fibCandidateEntry) * minTargetCostRatio
+            selectedBlocks += "cost filter; "
+        if not inSession or dailyKillswitch or isEod or isFomcLiquidationTime or isNearingWindow
+            selectedBlocks += "safety; "
+    string selectedChecksText = not fibCandidateReady ? "Selected candidate checks: waiting for anchors" : selectedBlocks == "" ? "Selected midpoint/cost/safety checks: clear (other gates may apply)" : "Selected candidate blockers: " + selectedBlocks
+    table.cell(status_tbl, 0, 12, selectedChecksText, text_color=selectedBlocks == "" ? color.silver : color.orange, text_size=size.small)
 
 
 

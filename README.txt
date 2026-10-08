@@ -1,3 +1,19 @@
+RBO v83: signal context from three independent agent reviews
+
+New informational readings: current confirmed-pair range / current ATR, planned front-run 50% entry alignment relative to current VWAP, and current bar volume divided by the previous 20-bar volume SMA. Warm-up or unavailable values display n/a. RVOL is exchange volume, not order flow. These readings change over time and are not frozen at setup confirmation. They do not introduce new entry filters or establish better profitability. The existing optional VWAP entry gate still checks current close; the new VWAP reading describes planned-entry location separately.
+
+The dashboard also shows simultaneous selected midpoint, net-target-cost, optional cost-filter and safety blockers. This avoids the first midpoint reason hiding a fee rejection. "Clear" applies only to these selected checks; expiry, valid stop/size, optional VWAP and minimum net-RR can still block submission. Fixed two diagnostic defects: near-news pre-liquidation windows now count as safety-blocked pairs, and unsupported chart timeframes show Offline even if time restrictions are disabled.
+
+Review findings and priorities:
+- Every new opposite pivot replaces the sole current candidate. A waiting pair can disappear before its retry age expires. A bounded collection of independently tracked pairs is the next structural improvement to consider, with explicit origin invalidation, expiry and selection rules; v83 does not change that policy.
+- Raw FIB L/S triangles identify confirmed candidates. BUY/SELL LIMIT labels indicate submissions, and native TradingView order markers identify actual fills. Additional mandatory indicators would further reduce trades.
+- A positive modeled target can still have a high estimated break-even win rate. No new optimum ATR, VWAP, volume or net-RR threshold is established.
+- Webhook fill-triggered limits and the broker emergency stop differ from the resting Fib bracket simulated by TradingView; live execution requires separate validation.
+
+Local validation checks verify unchanged execution engine/defaults, corrected status/safety conditions, and indicator/blocker arithmetic. Native TradingView compilation, market replay and performance improvement remain unverified. Use separate development/evaluation periods to compare fill rate, completed parent positions, net profit factor, net expectancy, drawdown and fees before enabling new filters.
+
+Previous version notes follow:
+
 RBO v82: retry a pair whose midpoint was crossed at confirmation
 
 The user confirmed the current chart status is "Skipped: midpoint already crossed". The prior engine marked that pair consumed before any order was submitted. That prevented a later eligible entry on the same pair even after price returned to the resting-limit side.
