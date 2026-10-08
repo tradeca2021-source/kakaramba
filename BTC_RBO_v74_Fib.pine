@@ -1,5 +1,5 @@
 //@version=6
-strategy("BTC RBO v75 Cost-Aware Fibonacci Entries (Perpetual)", shorttitle="BTC RBO v75 Fib", overlay=true, pyramiding=3, initial_capital=100000, default_qty_type=strategy.fixed, default_qty_value=1, margin_long=100, margin_short=100, max_lines_count=500, max_boxes_count=500, max_labels_count=500, use_bar_magnifier=true, commission_type=strategy.commission.percent, commission_value=0.06, slippage=2, process_orders_on_close=false)
+strategy("BTC RBO v77 Blind Fibonacci (Perpetual)", shorttitle="BTC RBO v77 Fib", overlay=true, pyramiding=3, initial_capital=100000, default_qty_type=strategy.fixed, default_qty_value=1, margin_long=100, margin_short=100, max_lines_count=500, max_boxes_count=500, max_labels_count=500, use_bar_magnifier=true, commission_type=strategy.commission.percent, commission_value=0.06, slippage=2, process_orders_on_close=false)
 
 // --- LIBRARY IMPORT ---
 // External dependency: access to traderjoeb/PropFirm_News_Dates/6 is required.
@@ -96,7 +96,7 @@ dailyHardStopLimit = input.float(1000, title="Daily Loss Liquidation Threshold (
 useDailyProfitKillswitchInt = input.int(0, title="Use Daily Profit Killswitch (0=No, 1=Yes)", minval=0, maxval=1, group=grp_compliance, tooltip="If Yes, stops trading and closes open positions when daily profit target is hit.")
 useDailyProfitKillswitch = useDailyProfitKillswitchInt == 1
 dailyProfitLimit = input.float(2800, title="Daily Profit Limit ($ or %)", group=grp_compliance, tooltip="Target profit for the day.")
-usePerTradeProfitKillswitchInt = input.int(0, title="Use Per-Trade Profit Killswitch (0=No, 1=Yes)", minval=0, maxval=1, group=grp_compliance, tooltip="If Yes, instantly exits the trade if the single-trade profit hits the limit.")
+usePerTradeProfitKillswitchInt = input.int(0, title="Use Per-Trade Profit Killswitch (0=No, 1=Yes)", minval=0, maxval=1, group=grp_compliance, tooltip="Legacy mode caps resting targets. Fib 50/61.8 mode closes at market if total trade P&L reaches this cap on a strategy calculation (normally candle close).")
 usePerTradeProfitKillswitch = usePerTradeProfitKillswitchInt == 1
 perTradeProfitLimit = input.float(2800, title="Per-Trade Profit Limit ($ or %)", group=grp_compliance, tooltip="Target profit for a single trade.")
 usePerTradeHardStopInt = input.int(1, title="Use Per-Trade Hard Stop (0=No, 1=Yes)", minval=0, maxval=1, group=grp_compliance, tooltip="If Yes, instantly market sells the trade if the single-trade loss exceeds the Per-Trade Hard Stop Limit, regardless of candle close.")
@@ -217,6 +217,20 @@ maxSweepDuration = input.int(22, title="Max Sweep Duration (Bars)", minval=0, gr
 
 // 9B. Fibonacci Confluence Engine
 grp_fib = "Fibonacci Confluence Engine"
+fibExecutionMode = input.string("Blind 50% Limit / Fib Target", title="Fibonacci Execution Mode", options=["Blind 50% Limit / Fib Target", "50% Entry / 61.8% Target", "Legacy FVG Entries / Multi-Target"], group=grp_fib, tooltip="Blind mode places a frozen midpoint limit without FVG, reaction, ORB, ADX or higher-timeframe trend confirmation. Schedule/news and risk safeguards still apply. The other modes preserve v76 and legacy behavior.")
+useBlindFibExecution = fibExecutionMode == "Blind 50% Limit / Fib Target"
+useFibLevelExecution = fibExecutionMode != "Legacy FVG Entries / Multi-Target"
+blindFibEntryTicks = input.int(2, "Blind Entry Front-Run (Ticks)", minval=0, maxval=100, group=grp_fib, tooltip="Long limit above 50%; short limit below 50%. Exchange chart tick size is used.")
+blindFibTargetTicks = input.int(2, "Blind Target Front-Run (Ticks)", minval=0, maxval=100, group=grp_fib, tooltip="Long exit below the Fib target; short exit above it.")
+blindFibUseVwap = input.bool(false, "Blind Mode: Require VWAP Alignment", group=grp_fib, tooltip="Optional long-above/short-below VWAP gate; off permits both directions without a trend filter.")
+blindFibStopMode = input.string("ATR from Entry", "Blind Mode: Stop Placement", options=["ATR from Entry", "Beyond Impulse Origin"], group=grp_fib, tooltip="ATR stop uses setup ATR x ATR Stop Multiplier. Origin stop is below the long impulse low / above the short impulse high. Neither choice is inferred from the screenshot.")
+blindFibStopTicks = input.int(2, "Blind Origin Stop Buffer (Ticks)", minval=1, maxval=100, group=grp_fib)
+blindFibTimeout = input.int(30, "Blind Pending Timeout (Bars, 0=Off)", minval=0, group=grp_fib)
+blindFibAnchorMode = input.string("Confirmed Swing Pair", "Blind Mode: Impulse Anchors", options=["Rolling Lookback", "Confirmed Swing Pair"], group=grp_fib, tooltip="Rolling preserves the existing lookback extrema. Swing pairs use chronologically ordered confirmed pivots, known only after the right-side bars close. Default uses confirmed swing pairs on the chart timeframe.")
+blindFibPivotBars = input.int(3, "Blind Swing Confirmation Bars", minval=1, maxval=50, group=grp_fib)
+blindFibTargetRatio = input.float(0.618, "Blind Directional Target Ratio", minval=0.501, maxval=3.0, step=0.001, group=grp_fib, tooltip="Directional progress from impulse origin: long low + range x ratio; short high - range x ratio. 0.618 is the requested profit target; it is directional progress, not a pullback retracement level.")
+blindFibCleanChart = input.bool(true, "Blind Mode: Hide Legacy Drawings", group=grp_fib, tooltip="Hides legacy ORB, daily/HTF levels, debug FVG drawings and ESL lines. Keeps actual frozen entry, gold profit target and stop; VWAP has its own visibility input.")
+hideLegacyDrawings = useBlindFibExecution and blindFibCleanChart
 useFibConfluenceInt = input.int(1, title="Use Fibonacci Confluence (0=Off, 1=On)", minval=0, maxval=1, group=grp_fib, tooltip="Adds directional Fibonacci context to FVG/ORB/Swing setups. Balanced mode blocks counter-impulse and badly overextended setups without requiring every trade to touch 61.8%.")
 useFibConfluence = useFibConfluenceInt == 1
 fibMode = input.string("Weighted", title="Fib Confluence Mode", options=["Weighted", "Strict Golden Zone"], group=grp_fib, tooltip="Weighted = Fibonacci improves setup quality without requiring a Golden Zone touch. Only severe invalidation/overextension is blocked. Strict Golden Zone = direction + FVG midpoint must overlap the 23.6%-61.8% continuation zone.")
@@ -317,18 +331,18 @@ exitDistanceType = input.int(1, title="Distance Calculation (0=R-Mult, 1=ATR)", 
 grp_ui = "UI & Dashboard"
 showPropFirmMetrics = input.bool(true, title="Show Prop Firm Metrics Dashboard", group=grp_ui)
 showTradeBoxes = input.bool(true, title="Draw Trade Risk/Reward Boxes", group=grp_ui)
-showOrbBox = input.bool(true, title="Show ORB Zone Box", group=grp_ui)
+showOrbBox = input.bool(true, title="Show ORB Zone Box", group=grp_ui) and not hideLegacyDrawings
 extendOrbBox = input.bool(true, title="Extend ORB Box to Valid Session End", group=grp_ui, tooltip="If true, the ORB box will draw forward until the ORB Valid Session expires (e.g. 12:00 PM), and then stop.")
 showSetupIndicators = input.bool(true, title="Show Setup Indicators", group=grp_ui, tooltip="Shows a valid setup and when it becomes invalid")
 showStopLine = input.bool(true, title="Show Stop Loss", group=grp_ui, tooltip="Shows the stop loss line that cancels a setup or exits a position")
-showEslLine = input.bool(true, title="Show Emergency SL (ESL)", group=grp_ui, tooltip="Shows a red dashed line representing your per-trade hard stop (failsafe) distance.")
+showEslLine = input.bool(true, title="Show Emergency SL (ESL)", group=grp_ui, tooltip="Shows a red dashed line representing your per-trade hard stop (failsafe) distance.") and not hideLegacyDrawings
 showVwapLine = input.bool(true, title="Show VWAP Line", group=grp_ui)
 showOfflineDots = input.bool(true, title="Show Online/Offline Dots", group=grp_ui, tooltip="Shows a red or green dot with a tooltip when the bot changes its online/offline status.")
 
 // 15. Debug
 grp_debug = "DEBUG"
-showOrbBreaks = input.bool(false, title="Show ORB breaks", group=grp_debug, tooltip="Display a 💥 emoji on the candle that breaks the ORB.")
-showAllFvgs = input.bool(false, title="Show All FVGs", group=grp_debug, tooltip="Draws a box for every single FVG that forms today, regardless of strength or breakout rules.")
+showOrbBreaks = input.bool(false, title="Show ORB breaks", group=grp_debug, tooltip="Display a 💥 emoji on the candle that breaks the ORB.") and not hideLegacyDrawings
+showAllFvgs = input.bool(false, title="Show All FVGs", group=grp_debug, tooltip="Draws a box for every single FVG that forms today, regardless of strength or breakout rules.") and not hideLegacyDrawings
 showFvgTooltips = input.bool(false, title="Show FVG Score Tooltips", group=grp_debug, tooltip="Displays a tooltip breaking down the gap's strength when hovering over the FVG box.")
 exportDataToComments = input.bool(false, title="Export Data to Comments (For CSV)", group=grp_debug, tooltip="If true, trade comments will be replaced with a JSON string of all internal metrics. Use this to export the List of Trades to CSV for deep analysis.")
 
@@ -1127,7 +1141,7 @@ if low < current_dl and (not ignorePremarketDailyHL or in_daily_session)
         dl_established := false
         cdl_line := na
 
-if useDailyHl
+if useDailyHl and not hideLegacyDrawings
     if not dh_established and (time - time_of_dh) >= (dailyConfirmMins * 60 * 1000)
         dh_established := true
         cdh_line := line.new(x1=time_of_dh, y1=current_dh, x2=time, y2=current_dh, xloc=xloc.bar_time, color=color.green, style=line.style_dashed, width=1, extend=extend.right)
@@ -1141,7 +1155,7 @@ if not na(htf_ph) and nz(ph_time) != nz(last_drawn_ph_time)
     last_drawn_ph_time := ph_time
     if not na(bsl_line)
         line.delete(bsl_line)
-    if isValidSwingTimeframe
+    if isValidSwingTimeframe and not hideLegacyDrawings
         bsl_line := line.new(x1=ph_time, y1=bsl, x2=time, y2=bsl, xloc=xloc.bar_time, color=color.green, style=line.style_solid, width=2, extend=extend.right)
 
 // Track most recent structural swing lows
@@ -1150,7 +1164,7 @@ if not na(htf_pl) and nz(pl_time) != nz(last_drawn_pl_time)
     last_drawn_pl_time := pl_time
     if not na(ssl_line)
         line.delete(ssl_line)
-    if isValidSwingTimeframe
+    if isValidSwingTimeframe and not hideLegacyDrawings
         ssl_line := line.new(x1=pl_time, y1=ssl, x2=time, y2=ssl, xloc=xloc.bar_time, color=color.red, style=line.style_solid, width=2, extend=extend.right)
 
 // Global Chart Variables
@@ -1165,8 +1179,9 @@ float fibImpulseLow = ta.lowest(low, fibLookback)
 int fibHighAgo = ta.highestbars(high, fibLookback)
 int fibLowAgo = ta.lowestbars(low, fibLookback)
 float fibImpulseRange = math.max(fibImpulseHigh - fibImpulseLow, syminfo.mintick)
-bool fibBullImpulse = fibHighAgo < fibLowAgo
-bool fibBearImpulse = fibLowAgo < fibHighAgo
+// highestbars/lowestbars return signed offsets: 0 is more recent than -N.
+bool fibBullImpulse = fibHighAgo > fibLowAgo
+bool fibBearImpulse = fibLowAgo > fibHighAgo
 float fibTol = chart_atr * fibToleranceAtr
 
 float fibBull23 = fibImpulseHigh - fibImpulseRange * 0.236
@@ -1197,14 +1212,14 @@ bool fibShortDirectionalOK = fibBearImpulse and close[1] <= fibBear79 + fibTol a
 bool fibLongHardOK = not useFibConfluence or close[1] <= fibLongMaxPrice + fibTol
 bool fibShortHardOK = not useFibConfluence or close[1] >= fibShortMinPrice - fibTol
 
-plot(showFibConfluence and fibBullImpulse ? fibImpulseHigh : na, "Fib Bull 0% / High", color=color.new(color.aqua, 15), linewidth=1, style=plot.style_linebr)
-plot(showFibConfluence and fibBullImpulse ? fibBull38 : na, "Fib Bull 38.2", color=color.new(color.yellow, 35), linewidth=1, style=plot.style_linebr)
-plot(showFibConfluence and fibBullImpulse ? fibBull50 : na, "Fib Bull 50", color=color.new(color.orange, 25), linewidth=1, style=plot.style_linebr)
-plot(showFibConfluence and fibBullImpulse ? fibBull62 : na, "Fib Bull 61.8", color=color.new(color.yellow, 5), linewidth=2, style=plot.style_linebr)
-plot(showFibConfluence and fibBearImpulse ? fibImpulseLow : na, "Fib Bear 0% / Low", color=color.new(color.fuchsia, 15), linewidth=1, style=plot.style_linebr)
-plot(showFibConfluence and fibBearImpulse ? fibBear38 : na, "Fib Bear 38.2", color=color.new(color.yellow, 35), linewidth=1, style=plot.style_linebr)
-plot(showFibConfluence and fibBearImpulse ? fibBear50 : na, "Fib Bear 50", color=color.new(color.orange, 25), linewidth=1, style=plot.style_linebr)
-plot(showFibConfluence and fibBearImpulse ? fibBear62 : na, "Fib Bear 61.8", color=color.new(color.yellow, 5), linewidth=2, style=plot.style_linebr)
+plot(showFibConfluence and not useFibLevelExecution and fibBullImpulse ? fibImpulseHigh : na, "Fib Bull 0% / High", color=color.new(color.aqua, 15), linewidth=1, style=plot.style_linebr)
+plot(showFibConfluence and not useFibLevelExecution and fibBullImpulse ? fibBull38 : na, "Fib Bull 38.2", color=color.new(color.yellow, 35), linewidth=1, style=plot.style_linebr)
+plot(showFibConfluence and not useFibLevelExecution and fibBullImpulse ? fibBull50 : na, "Fib Bull 50", color=color.new(color.orange, 25), linewidth=1, style=plot.style_linebr)
+plot(showFibConfluence and not useFibLevelExecution and fibBullImpulse ? fibBull62 : na, "Fib Bull 61.8", color=color.new(color.yellow, 5), linewidth=2, style=plot.style_linebr)
+plot(showFibConfluence and not useFibLevelExecution and fibBearImpulse ? fibImpulseLow : na, "Fib Bear 0% / Low", color=color.new(color.fuchsia, 15), linewidth=1, style=plot.style_linebr)
+plot(showFibConfluence and not useFibLevelExecution and fibBearImpulse ? fibBear38 : na, "Fib Bear 38.2", color=color.new(color.yellow, 35), linewidth=1, style=plot.style_linebr)
+plot(showFibConfluence and not useFibLevelExecution and fibBearImpulse ? fibBear50 : na, "Fib Bear 50", color=color.new(color.orange, 25), linewidth=1, style=plot.style_linebr)
+plot(showFibConfluence and not useFibLevelExecution and fibBearImpulse ? fibBear62 : na, "Fib Bear 61.8", color=color.new(color.yellow, 5), linewidth=2, style=plot.style_linebr)
 chart_vol_ma = ta.sma(volume, 20)[1]
 chart_b_gap = low - high[2]
 chart_br_gap = low[2] - high
@@ -1292,6 +1307,45 @@ if ny_bear_break
     ny_broken_orb_low := old_ny_orb_low
 if london_bear_break
     lnd_broken_orb_low := old_lnd_orb_low
+
+// Blind anchor candidates are detected causally; no backdated orders at pivot bars.
+float blindPivotHigh = ta.pivothigh(high, blindFibPivotBars, blindFibPivotBars)
+float blindPivotLow = ta.pivotlow(low, blindFibPivotBars, blindFibPivotBars)
+var float blindLastHigh = na
+var float blindLastLow = na
+var int blindLastHighBar = na
+var int blindLastLowBar = na
+var float blindSwingHigh = na
+var float blindSwingLow = na
+var int blindSwingHighBar = na
+var int blindSwingLowBar = na
+var int blindSwingDir = 0
+if barstate.isconfirmed
+    // Simultaneous high/low pivots have ambiguous ordering: update reference points only.
+    if not na(blindPivotHigh) and na(blindPivotLow) and not na(blindLastLowBar) and bar_index - blindFibPivotBars > blindLastLowBar and blindPivotHigh > blindLastLow
+        blindSwingHigh := blindPivotHigh
+        blindSwingLow := blindLastLow
+        blindSwingHighBar := bar_index - blindFibPivotBars
+        blindSwingLowBar := blindLastLowBar
+        blindSwingDir := 1
+    if not na(blindPivotLow) and na(blindPivotHigh) and not na(blindLastHighBar) and bar_index - blindFibPivotBars > blindLastHighBar and blindPivotLow < blindLastHigh
+        blindSwingHigh := blindLastHigh
+        blindSwingLow := blindPivotLow
+        blindSwingHighBar := blindLastHighBar
+        blindSwingLowBar := bar_index - blindFibPivotBars
+        blindSwingDir := -1
+    if not na(blindPivotHigh)
+        blindLastHigh := blindPivotHigh
+        blindLastHighBar := bar_index - blindFibPivotBars
+    if not na(blindPivotLow)
+        blindLastLow := blindPivotLow
+        blindLastLowBar := bar_index - blindFibPivotBars
+bool blindUseSwings = blindFibAnchorMode == "Confirmed Swing Pair"
+float blindCandidateHigh = blindUseSwings ? blindSwingHigh : fibImpulseHigh
+float blindCandidateLow = blindUseSwings ? blindSwingLow : fibImpulseLow
+int blindCandidateHighBar = blindUseSwings ? blindSwingHighBar : bar_index + fibHighAgo
+int blindCandidateLowBar = blindUseSwings ? blindSwingLowBar : bar_index + fibLowAgo
+int blindCandidateDir = blindUseSwings ? blindSwingDir : fibBullImpulse ? 1 : fibBearImpulse ? -1 : 0
 
 // VWAP Filter
 bool is_new_ny = hour(time, "America/New_York") == 9 and minute(time, "America/New_York") == 30
@@ -1458,6 +1512,16 @@ if london_bull_break and inSession
 if london_bear_break and inSession
     lnd_bar_of_bear_break_orb := bar_index
 
+// The order snapshot survives changing rolling impulse anchors and same-bar fills.
+var int fib_order_dir = 0
+var float fib_order_entry = na
+var float fib_order_target = na
+var float fib_order_stop = na
+var float fib_order_qty = na
+var int fib_order_closed_count = na
+var string fib_order_uuid = ""
+var int blind_order_bar = na
+var string blind_last_attempt_id = ""
 var string pending_long_uuid = ""
 var string pending_short_uuid = ""
 var int pending_long_fvg_time = na
@@ -1661,7 +1725,7 @@ f_get_directional_quality_risk_multiplier(bool is_long, float fvg_rvol, float fv
 
 // Opposing FVG Overrides
 
-if (is_flat_and_no_pending and inSession and not dailyKillswitch and long_min_rvol_ok and fibLongSetupOK and ((bull_fvg_trigger and (mostly_above_swing or mostly_above_daily or mostly_above_orb)) or (sweep_bull_fvg_trigger and useSweeps and mostly_above_sweep)))
+if (not useBlindFibExecution and is_flat_and_no_pending and inSession and not dailyKillswitch and long_min_rvol_ok and fibLongSetupOK and (not useFibLevelExecution or (barstate.isconfirmed and fibBullImpulse)) and ((bull_fvg_trigger and (mostly_above_swing or mostly_above_daily or mostly_above_orb)) or (sweep_bull_fvg_trigger and useSweeps and mostly_above_sweep)))
     audit_long_armed += 1
     waiting_bullish_pullback := true
     pending_long_max_pen_price := na
@@ -1734,6 +1798,11 @@ if (is_flat_and_no_pending and inSession and not dailyKillswitch and long_min_rv
     else if stopLossType == 5
         sl_price := req_pen_price - (chart_atr  * effAtrStopMult)
     
+    if useFibLevelExecution
+        // Directional progress from impulse low to high; target is ABOVE entry.
+        req_pen_price := math.round_to_mintick(pending_long_fib_low + (pending_long_fib_high - pending_long_fib_low) * 0.500)
+        sl_price := math.floor((req_pen_price - pending_long_atr * effAtrStopMult) / syminfo.mintick) * syminfo.mintick
+
     // History tracking - Do not delete
 
     if showStopLine
@@ -1774,8 +1843,8 @@ float fibShortQualityBonus = not useFibConfluence ? 0.0 : fibShortGoldenFvg ? fi
 bool fibShortSetupOK = not useFibConfluence or (fibShortHardOK and (fibMode == "Weighted" or (fibShortDirectionalOK and fibShortGoldenFvg)))
 float bear_score_with_fib = math.min(100.0, bear_score + fibShortQualityBonus)
 
-plotshape(showFibSignals and long_has_trigger_source and fibLongSetupOK and is_flat_and_no_pending and inSession, title="Fib BUY Confluence", text="FIB BUY", style=shape.labelup, location=location.belowbar, color=color.new(color.lime, 10), textcolor=color.black, size=size.tiny)
-plotshape(showFibSignals and short_has_trigger_source and fibShortSetupOK and is_flat_and_no_pending and inSession, title="Fib SELL Confluence", text="FIB SELL", style=shape.labeldown, location=location.abovebar, color=color.new(color.red, 10), textcolor=color.white, size=size.tiny)
+plotshape(not useBlindFibExecution and showFibSignals and long_has_trigger_source and fibLongSetupOK and is_flat_and_no_pending and inSession, title="Fib BUY Confluence", text="FIB BUY", style=shape.labelup, location=location.belowbar, color=color.new(color.lime, 10), textcolor=color.black, size=size.tiny)
+plotshape(not useBlindFibExecution and showFibSignals and short_has_trigger_source and fibShortSetupOK and is_flat_and_no_pending and inSession, title="Fib SELL Confluence", text="FIB SELL", style=shape.labeldown, location=location.abovebar, color=color.new(color.red, 10), textcolor=color.white, size=size.tiny)
 if barstate.isconfirmed and chart_br_gap > 0
     audit_short_raw += 1
     if bear_score < minFvgScore
@@ -1812,7 +1881,7 @@ f_draw_debug_fvgs()
 // ==========================================
 
     
-if (is_flat_and_no_pending and inSession and not dailyKillswitch and fibShortSetupOK and ((bear_fvg_trigger and (mostly_below_swing or mostly_below_daily or mostly_below_orb)) or (sweep_bear_fvg_trigger and useSweeps and mostly_below_sweep)))
+if (not useBlindFibExecution and is_flat_and_no_pending and inSession and not dailyKillswitch and fibShortSetupOK and (not useFibLevelExecution or (barstate.isconfirmed and fibBearImpulse)) and ((bear_fvg_trigger and (mostly_below_swing or mostly_below_daily or mostly_below_orb)) or (sweep_bear_fvg_trigger and useSweeps and mostly_below_sweep)))
     audit_short_armed += 1
     waiting_bearish_pullback := true
     pending_short_max_pen_price := na
@@ -1884,6 +1953,11 @@ if (is_flat_and_no_pending and inSession and not dailyKillswitch and fibShortSet
         sl_price := fvg_top + (chart_atr  * effAtrStopMult) 
     else if stopLossType == 5
         sl_price := req_pen_price + (chart_atr  * effAtrStopMult)
+
+    if useFibLevelExecution
+        // Directional progress from impulse high to low; target is BELOW entry.
+        req_pen_price := math.round_to_mintick(pending_short_fib_high - (pending_short_fib_high - pending_short_fib_low) * 0.500)
+        sl_price := math.ceil((req_pen_price + pending_short_atr * effAtrStopMult) / syminfo.mintick) * syminfo.mintick
 
     // History tracking - Do not delete
 
@@ -2242,7 +2316,7 @@ f_build_data_string(bool is_long, string base_comment, float _ep, float _sl) =>
         float return_15_bars_atr = chart_atr > 0 ? (close - close[15]) / chart_atr : na
         float vwap_slope_5_bars_atr = chart_atr > 0 ? (vwapValue - vwapValue[5]) / chart_atr : na
         string entry_session = is_ny_orb_window ? "NY_ORB" : is_ldn_orb_window ? "LONDON_ORB" : in_ny_valid_session ? "NY" : in_london_valid_session ? "LONDON" : "OTHER"
-        string entry_mode = entryType == 0 ? "Rejection" : entryType == 1 ? "BlindLimit" : "RejectionLimit"
+        string entry_mode = useFibLevelExecution ? "Fib50Limit" : entryType == 0 ? "Rejection" : entryType == 1 ? "BlindLimit" : "RejectionLimit"
         bool entry_vwap_ok = is_long ? vwapLongOk : vwapShortOk
         
 
@@ -2288,7 +2362,7 @@ var bool bbb_trail_active = false
 
 
 // Limit Order Logic
-if entryType == 1 and waiting_bullish_pullback and inSession and strategy.position_size <= 0 and not dailyKillswitch and vwapLongOk and adxOk and not long_exhaustion_triggered and not long_ny_orb_overextended and not long_pb_vol_blocked and not long_onh_trap_blocked and pending_long_fib_ok
+if not useFibLevelExecution and entryType == 1 and waiting_bullish_pullback and inSession and strategy.position_size <= 0 and not dailyKillswitch and vwapLongOk and adxOk and not long_exhaustion_triggered and not long_ny_orb_overextended and not long_pb_vol_blocked and not long_onh_trap_blocked and pending_long_fib_ok
     if stopLossType == 5
         sl_price := req_pen_price - (pending_long_atr  * effAtrStopMult)
         if showStopLine and not na(debug_sl_line)
@@ -2319,7 +2393,7 @@ if entryType == 1 and waiting_bullish_pullback and inSession and strategy.positi
         else
             f_cancel_all("Long")
 
-if entryType == 1 and waiting_bearish_pullback and inSession and strategy.position_size >= 0 and not dailyKillswitch and vwapShortOk and adxOk and not short_exhaustion_triggered and not short_ny_orb_overextended and pending_short_fib_ok
+if not useFibLevelExecution and entryType == 1 and waiting_bearish_pullback and inSession and strategy.position_size >= 0 and not dailyKillswitch and vwapShortOk and adxOk and not short_exhaustion_triggered and not short_ny_orb_overextended and pending_short_fib_ok
     if stopLossType == 5
         sl_price := req_pen_price + (pending_short_atr  * effAtrStopMult)
         if showStopLine and not na(debug_sl_line)
@@ -2364,17 +2438,17 @@ bool fibActionShortQuality = pending_short_fib_directional and (not fibActionReq
 bool fibLongContinuationConfirm = useFibActionEntry and waiting_bullish_pullback and bar_index > bar_of_bull_fvg and bar_index - bar_of_bull_fvg <= fibActionConfirmBars and fibActionLongQuality and pending_long_fib_ok and nz(pending_long_score, 0) >= fibActionMinScore and close > open and close > high[1] and close > req_pen_price and fibActionBody >= chart_atr * fibActionBodyAtr
 bool fibShortContinuationConfirm = useFibActionEntry and waiting_bearish_pullback and bar_index > bar_of_bear_fvg and bar_index - bar_of_bear_fvg <= fibActionConfirmBars and fibActionShortQuality and pending_short_fib_ok and nz(pending_short_score, 0) >= fibActionMinScore and close < open and close < low[1] and close < req_pen_price and fibActionBody >= chart_atr * fibActionBodyAtr
 
-long_cond = entryType == 0 and waiting_bullish_pullback and long_fvg_touch_ok and (close >= sl_price) and is_rejection_long and inSession and strategy.position_size <= 0 and not dailyKillswitch and vwapLongOk and adxOk and not long_exhaustion_triggered and not long_ny_orb_overextended and not long_pb_vol_blocked and not long_onh_trap_blocked and pending_long_fib_ok
-short_cond = entryType == 0 and waiting_bearish_pullback and short_fvg_touch_ok and (close <= sl_price) and is_rejection_short and inSession and strategy.position_size >= 0 and not dailyKillswitch and vwapShortOk and adxOk and not short_exhaustion_triggered and not short_ny_orb_overextended and pending_short_fib_ok
+long_cond = not useFibLevelExecution and entryType == 0 and waiting_bullish_pullback and long_fvg_touch_ok and (close >= sl_price) and is_rejection_long and inSession and strategy.position_size <= 0 and not dailyKillswitch and vwapLongOk and adxOk and not long_exhaustion_triggered and not long_ny_orb_overextended and not long_pb_vol_blocked and not long_onh_trap_blocked and pending_long_fib_ok
+short_cond = not useFibLevelExecution and entryType == 0 and waiting_bearish_pullback and short_fvg_touch_ok and (close <= sl_price) and is_rejection_short and inSession and strategy.position_size >= 0 and not dailyKillswitch and vwapShortOk and adxOk and not short_exhaustion_triggered and not short_ny_orb_overextended and pending_short_fib_ok
 
-bool fib_direct_long_cond = fibLongContinuationConfirm and inSession and strategy.position_size <= 0 and not dailyKillswitch and vwapLongOk and adxOk and not long_exhaustion_triggered and not long_ny_orb_overextended and not long_pb_vol_blocked and not long_onh_trap_blocked
-bool fib_direct_short_cond = fibShortContinuationConfirm and inSession and strategy.position_size >= 0 and not dailyKillswitch and vwapShortOk and adxOk and not short_exhaustion_triggered and not short_ny_orb_overextended
+bool fib_direct_long_cond = not useFibLevelExecution and fibLongContinuationConfirm and inSession and strategy.position_size <= 0 and not dailyKillswitch and vwapLongOk and adxOk and not long_exhaustion_triggered and not long_ny_orb_overextended and not long_pb_vol_blocked and not long_onh_trap_blocked
+bool fib_direct_short_cond = not useFibLevelExecution and fibShortContinuationConfirm and inSession and strategy.position_size >= 0 and not dailyKillswitch and vwapShortOk and adxOk and not short_exhaustion_triggered and not short_ny_orb_overextended
 
 plotshape(showFibSignals and fib_direct_long_cond, title="Actionable FIB BUY", text="BUY", style=shape.labelup, location=location.belowbar, color=color.new(color.lime, 0), textcolor=color.black, size=size.small)
 plotshape(showFibSignals and fib_direct_short_cond, title="Actionable FIB SELL", text="SELL", style=shape.labeldown, location=location.abovebar, color=color.new(color.red, 0), textcolor=color.white, size=size.small)
 
-bool long_rej_limit_cond = entryType == 2 and waiting_bullish_pullback and long_fvg_touch_ok and (close >= sl_price) and is_rejection_long and inSession and strategy.position_size <= 0 and not dailyKillswitch and vwapLongOk and adxOk and not long_exhaustion_triggered and not long_ny_orb_overextended and not long_pb_vol_blocked and not long_onh_trap_blocked and pending_long_fib_ok
-bool short_rej_limit_cond = entryType == 2 and waiting_bearish_pullback and short_fvg_touch_ok and (close <= sl_price) and is_rejection_short and inSession and strategy.position_size >= 0 and not dailyKillswitch and vwapShortOk and adxOk and not short_exhaustion_triggered and not short_ny_orb_overextended and pending_short_fib_ok
+bool long_rej_limit_cond = not useFibLevelExecution and entryType == 2 and waiting_bullish_pullback and long_fvg_touch_ok and (close >= sl_price) and is_rejection_long and inSession and strategy.position_size <= 0 and not dailyKillswitch and vwapLongOk and adxOk and not long_exhaustion_triggered and not long_ny_orb_overextended and not long_pb_vol_blocked and not long_onh_trap_blocked and pending_long_fib_ok
+bool short_rej_limit_cond = not useFibLevelExecution and entryType == 2 and waiting_bearish_pullback and short_fvg_touch_ok and (close <= sl_price) and is_rejection_short and inSession and strategy.position_size >= 0 and not dailyKillswitch and vwapShortOk and adxOk and not short_exhaustion_triggered and not short_ny_orb_overextended and pending_short_fib_ok
 
 if long_rej_limit_cond
     waiting_long_rejection_limit := true
@@ -2383,7 +2457,7 @@ if short_rej_limit_cond
     waiting_short_rejection_limit := true
     waiting_bearish_pullback := false
     
-if waiting_long_rejection_limit and inSession and strategy.position_size <= 0 and not dailyKillswitch and pending_long_fib_ok
+if not useFibLevelExecution and waiting_long_rejection_limit and inSession and strategy.position_size <= 0 and not dailyKillswitch and pending_long_fib_ok
     float ep = math.min(req_pen_price + syminfo.mintick, close)
     if stopLossType == 5
         sl_price := ep - (pending_long_atr  * effAtrStopMult)
@@ -2415,7 +2489,7 @@ if waiting_long_rejection_limit and inSession and strategy.position_size <= 0 an
         else
             f_cancel_all("Long")
 
-if waiting_short_rejection_limit and inSession and strategy.position_size >= 0 and not dailyKillswitch and pending_short_fib_ok
+if not useFibLevelExecution and waiting_short_rejection_limit and inSession and strategy.position_size >= 0 and not dailyKillswitch and pending_short_fib_ok
     float ep = math.max(req_pen_price - syminfo.mintick, close)
     if stopLossType == 5
         sl_price := ep + (pending_short_atr  * effAtrStopMult)
@@ -2492,6 +2566,184 @@ if (waiting_bearish_pullback or waiting_short_rejection_limit) and not (vwapShor
     pending_short_score := na
     pending_short_atr := na
 
+// ==========================
+// Frozen Fib 50% limit / directional 61.8% full-position bracket
+// ==========================
+if useFibLevelExecution and not useBlindFibExecution
+    // closedtrades also detects an entry + exit entirely within one chart bar.
+    bool fib_roundtrip_finished = fib_order_dir != 0 and strategy.position_size == 0 and strategy.closedtrades > nz(fib_order_closed_count, strategy.closedtrades)
+    if fib_roundtrip_finished
+        strategy.cancel("Fib 61.8 Long")
+        strategy.cancel("Fib 61.8 Short")
+        waiting_bullish_pullback := false
+        waiting_bearish_pullback := false
+        fib_order_dir := 0
+        fib_order_entry := na
+        fib_order_target := na
+        fib_order_stop := na
+        fib_order_qty := na
+        fib_order_uuid := ""
+
+    bool fib_long_guards = inSession and not dailyKillswitch and not isEod and not isFomcLiquidationTime and not isNearingWindow and vwapLongOk and adxOk and not long_exhaustion_triggered and not long_ny_orb_overextended and not long_pb_vol_blocked and not long_onh_trap_blocked and pending_long_fib_ok
+    bool fib_short_guards = inSession and not dailyKillswitch and not isEod and not isFomcLiquidationTime and not isNearingWindow and vwapShortOk and adxOk and not short_exhaustion_triggered and not short_ny_orb_overextended and pending_short_fib_ok
+    // Existing timeout, opposite-FVG and stop/FVG-close cancellations set waiting=false.
+    // Do not cancel the protective bracket of an already filled trade.
+    if fib_order_dir != 0 and strategy.position_size == 0
+        bool still_valid = fib_order_dir == 1 ? waiting_bullish_pullback and fib_long_guards : waiting_bearish_pullback and fib_short_guards
+        if not still_valid
+            strategy.cancel(fib_order_dir == 1 ? "Long" : "Short")
+            strategy.cancel(fib_order_dir == 1 ? "Fib 61.8 Long" : "Fib 61.8 Short")
+            waiting_bullish_pullback := false
+            waiting_bearish_pullback := false
+            fib_order_dir := 0
+            fib_order_entry := na
+            fib_order_target := na
+            fib_order_stop := na
+            fib_order_qty := na
+
+    if fib_order_dir == 0 and strategy.position_size == 0 and (waiting_bullish_pullback or waiting_bearish_pullback)
+        bool is_long = waiting_bullish_pullback
+        bool guards_ok = is_long ? fib_long_guards : fib_short_guards
+        float anchor_high = is_long ? pending_long_fib_high : pending_short_fib_high
+        float anchor_low = is_long ? pending_long_fib_low : pending_short_fib_low
+        float ep = req_pen_price
+        float target = math.round_to_mintick(is_long ? anchor_low + (anchor_high - anchor_low) * 0.618 : anchor_high - (anchor_high - anchor_low) * 0.618)
+        float risk_distance = math.abs(ep - sl_price)
+        float reward_distance = is_long ? target - ep : ep - target
+        float costs = f_roundtrip_cost(ep)
+        // The limit must be resting on the pullback side when FIRST submitted.
+        // Skip an already crossed level rather than turning it into a market entry.
+        bool resting_limit = is_long ? close > ep : close < ep
+        bool valid_levels = anchor_high > anchor_low and ep > 0 and (is_long ? sl_price < ep : sl_price > ep) and reward_distance >= syminfo.mintick
+        bool cost_ok = not useCostFilter or reward_distance >= costs * minTargetCostRatio
+        float score = is_long ? pending_long_score : pending_short_score
+        float quality_mult = is_long ? long_quality_risk_multiplier : short_quality_risk_multiplier
+        float risk_budget = strategy.equity * f_get_risk(score) * quality_mult / 100.0
+        float modeled_loss = risk_distance + (includeCostsInRisk ? costs : 0.0)
+        float raw_qty = modeled_loss > 0 ? risk_budget / (modeled_loss * syminfo.pointvalue) : 0.0
+        float qty = f_position_qty(raw_qty, ep)
+        if guards_ok and resting_limit and valid_levels and cost_ok and qty >= btcQtyStep
+            fib_order_dir := is_long ? 1 : -1
+            fib_order_entry := ep
+            fib_order_target := target
+            fib_order_stop := sl_price
+            fib_order_qty := qty
+            fib_order_closed_count := strategy.closedtrades
+            fib_order_uuid := is_long ? pending_long_uuid : pending_short_uuid
+            // Freeze the existing per-trade hard loss cap at submission, including fixed sizing.
+            if usePerTradeHardStop and perTradeHardStopLimit > 0
+                float cap_distance = strategy.equity * perTradeHardStopLimit / 100.0 / (qty * syminfo.pointvalue)
+                float cap_stop = is_long ? math.ceil((ep - cap_distance) / syminfo.mintick) * syminfo.mintick : math.floor((ep + cap_distance) / syminfo.mintick) * syminfo.mintick
+                fib_order_stop := is_long ? math.max(fib_order_stop, cap_stop) : math.min(fib_order_stop, cap_stop)
+            sl_price := fib_order_stop
+            current_trade_uuid := fib_order_uuid
+            trade_entry_qty := qty
+            string dir = is_long ? "Long" : "Short"
+            string sentiment = is_long ? "bullish" : "bearish"
+            string dbg = "Fib 50% Limit | Entry: " + str.tostring(ep) + " | Target 61.8%: " + str.tostring(target)
+            f_execute_entry(dir, ep, fib_order_stop, qty, f_build_data_string(is_long, f_entry_debug_suffix(is_long, ep, fib_order_stop, qty), ep, fib_order_stop), dbg, fib_order_uuid, sentiment, "limit")
+            if showFibSignals
+                label.new(bar_index, ep, is_long ? "FIB 50 BUY LIMIT" : "FIB 50 SELL LIMIT", style=is_long ? label.style_label_up : label.style_label_down, color=is_long ? color.lime : color.red, textcolor=color.white, size=size.small)
+        else
+            // No late retry with changed ATR/price; a fresh qualified setup is required.
+            waiting_bullish_pullback := false
+            waiting_bearish_pullback := false
+            f_draw_cancel_marker(is_long, not resting_limit ? "Fib 50% already crossed" : not cost_ok ? "Fib 61.8% target below cost threshold" : "Fib limit blocked by guards / size / levels")
+
+    // Submitted together with entry, then maintained unchanged: no live exit delay.
+    if fib_order_dir != 0
+        string dir = fib_order_dir == 1 ? "Long" : "Short"
+        string exit_id = fib_order_dir == 1 ? "Fib 61.8 Long" : "Fib 61.8 Short"
+        strategy.exit(exit_id, from_entry=dir, qty=fib_order_qty, limit=fib_order_target, stop=fib_order_stop, comment_profit="Fib 61.8% TP", comment_loss="Fib Fixed SL", alert_profit=f_tp_json(false, "Fib Full Exit 61.8%", fib_order_uuid + "-FIBTP"), alert_loss=f_tp_json(false, "Fib Fixed Stop", fib_order_uuid + "-FIBSL"))
+        if strategy.position_size != 0
+            waiting_bullish_pullback := false
+            waiting_bearish_pullback := false
+
+// Blind midpoint orders: independent of every legacy FVG setup/cancellation gate.
+if useBlindFibExecution
+    bool roundtrip_finished = fib_order_dir != 0 and strategy.position_size == 0 and strategy.closedtrades > nz(fib_order_closed_count, strategy.closedtrades)
+    if roundtrip_finished
+        strategy.cancel("Blind Fib Long Exit")
+        strategy.cancel("Blind Fib Short Exit")
+        fib_order_dir := 0
+        fib_order_entry := na
+        fib_order_target := na
+        fib_order_stop := na
+        fib_order_qty := na
+        fib_order_uuid := ""
+    bool safety_ok = inSession and not dailyKillswitch and not isEod and not isFomcLiquidationTime and not isNearingWindow
+    bool long_vwap_ok = not blindFibUseVwap or (not na(vwapValue) and close > vwapValue)
+    bool short_vwap_ok = not blindFibUseVwap or (not na(vwapValue) and close < vwapValue)
+    if fib_order_dir != 0 and strategy.position_size == 0
+        bool expired = blindFibTimeout > 0 and bar_index - blind_order_bar > blindFibTimeout
+        bool invalidated = fib_order_dir == 1 ? low <= fib_order_stop : high >= fib_order_stop
+        bool vwap_ok = fib_order_dir == 1 ? long_vwap_ok : short_vwap_ok
+        if not safety_ok or not vwap_ok or expired or invalidated
+            strategy.cancel(fib_order_dir == 1 ? "Long" : "Short")
+            strategy.cancel(fib_order_dir == 1 ? "Blind Fib Long Exit" : "Blind Fib Short Exit")
+            fib_order_dir := 0
+            fib_order_entry := na
+            fib_order_target := na
+            fib_order_stop := na
+            fib_order_qty := na
+            fib_order_uuid := ""
+    string impulse_id = str.tostring(blindCandidateLowBar) + ":" + str.tostring(blindCandidateHighBar) + ":" + str.tostring(blindCandidateDir)
+    bool new_impulse = blindCandidateDir != 0 and not na(blindCandidateLowBar) and not na(blindCandidateHighBar) and impulse_id != blind_last_attempt_id
+    if barstate.isconfirmed and not roundtrip_finished and fib_order_dir == 0 and strategy.position_size == 0 and new_impulse
+        // Each anchor pair gets one attempt. A timeout, filter veto or exit never re-arms it.
+        blind_last_attempt_id := impulse_id
+        bool is_long = blindCandidateDir == 1
+        float impulse_range = blindCandidateHigh - blindCandidateLow
+        float midpoint = (blindCandidateHigh + blindCandidateLow) * 0.5
+        float ep = math.round_to_mintick(midpoint + (is_long ? 1 : -1) * blindFibEntryTicks * syminfo.mintick)
+        float raw_target = is_long ? blindCandidateLow + impulse_range * blindFibTargetRatio : blindCandidateHigh - impulse_range * blindFibTargetRatio
+        float target = math.round_to_mintick(raw_target + (is_long ? -1 : 1) * blindFibTargetTicks * syminfo.mintick)
+        float raw_stop = blindFibStopMode == "Beyond Impulse Origin" ? (is_long ? blindCandidateLow - blindFibStopTicks * syminfo.mintick : blindCandidateHigh + blindFibStopTicks * syminfo.mintick) : ep + (is_long ? -1 : 1) * chart_atr * effAtrStopMult
+        float stop = is_long ? math.floor(raw_stop / syminfo.mintick) * syminfo.mintick : math.ceil(raw_stop / syminfo.mintick) * syminfo.mintick
+        float reward = is_long ? target - ep : ep - target
+        float risk_distance = math.abs(ep - stop)
+        float costs = f_roundtrip_cost(ep)
+        bool cost_ok = not useCostFilter or reward >= costs * minTargetCostRatio
+        bool resting_limit = is_long ? close > ep : close < ep
+        bool valid_levels = impulse_range > 0 and ep > 0 and stop > 0 and target > 0 and risk_distance >= syminfo.mintick and reward >= syminfo.mintick and (is_long ? stop < ep : stop > ep)
+        float risk_budget = strategy.equity * f_get_risk(na) / 100.0
+        float modeled_loss = risk_distance + (includeCostsInRisk ? costs : 0.0)
+        float raw_qty = modeled_loss > 0 ? risk_budget / (modeled_loss * syminfo.pointvalue) : 0.0
+        float qty = f_position_qty(raw_qty, ep)
+        if safety_ok and (is_long ? long_vwap_ok : short_vwap_ok) and resting_limit and valid_levels and cost_ok and qty >= btcQtyStep
+            if usePerTradeHardStop and perTradeHardStopLimit > 0
+                float cap_distance = strategy.equity * perTradeHardStopLimit / 100.0 / (qty * syminfo.pointvalue)
+                float cap_stop = is_long ? math.ceil((ep - cap_distance) / syminfo.mintick) * syminfo.mintick : math.floor((ep + cap_distance) / syminfo.mintick) * syminfo.mintick
+                stop := is_long ? math.max(stop, cap_stop) : math.min(stop, cap_stop)
+            // Never submit a zero-distance bracket after tightening a very small loss cap.
+            if is_long ? stop <= ep - syminfo.mintick : stop >= ep + syminfo.mintick
+                fib_order_dir := is_long ? 1 : -1
+                fib_order_entry := ep
+                fib_order_target := target
+                fib_order_stop := stop
+                fib_order_qty := qty
+                fib_order_closed_count := strategy.closedtrades
+                fib_order_uuid := "BLIND-" + impulse_id + "-" + str.tostring(time)
+                blind_order_bar := bar_index
+                sl_price := stop
+                current_trade_uuid := fib_order_uuid
+                trade_entry_qty := qty
+                string dir = is_long ? "Long" : "Short"
+                string sentiment = is_long ? "bullish" : "bearish"
+                string dbg = "Blind Fib 50% | Entry " + str.tostring(ep) + " | Target " + str.tostring(target)
+                f_execute_entry(dir, ep, stop, qty, dbg, dbg, fib_order_uuid, sentiment, "limit")
+                if showFibSignals
+                    label.new(bar_index, ep, is_long ? "50% BUY LIMIT" : "50% SELL LIMIT", style=is_long ? label.style_label_up : label.style_label_down, color=is_long ? color.lime : color.red, textcolor=color.white, size=size.small)
+    // Entry and full bracket are submitted together; no delayed protection or moving levels.
+    if fib_order_dir != 0
+        string dir = fib_order_dir == 1 ? "Long" : "Short"
+        string exit_id = fib_order_dir == 1 ? "Blind Fib Long Exit" : "Blind Fib Short Exit"
+        strategy.exit(exit_id, from_entry=dir, qty=fib_order_qty, limit=fib_order_target, stop=fib_order_stop, comment_profit="Blind Fib PT", comment_loss="Blind Fib SL", alert_profit=f_tp_json(false, "Blind Fib Full Target", fib_order_uuid + "-FIBTP"), alert_loss=f_tp_json(false, "Blind Fib Fixed Stop", fib_order_uuid + "-FIBSL"))
+
+plot(showFibConfluence and useFibLevelExecution and fib_order_dir != 0 ? fib_order_entry : na, "Frozen Fib 50% Entry", color=color.orange, linewidth=2, style=plot.style_linebr)
+plot(showFibConfluence and useFibLevelExecution and fib_order_dir != 0 ? fib_order_target : na, "Frozen Fib Profit Target", color=color.rgb(212, 175, 55), linewidth=2, style=plot.style_linebr)
+plot(showStopLine and useFibLevelExecution and fib_order_dir != 0 ? fib_order_stop : na, "Frozen Fib Stop", color=color.fuchsia, linewidth=1, style=plot.style_linebr)
+
 var float tp_price = na
 var float trail_act_price = na
 var float trail_offset_ticks = na
@@ -2552,7 +2804,7 @@ if just_entered_long or just_entered_short
 else if strategy.position_size == 0
     trade_netprofit_before_entry := na
 
-if just_entered_long
+if just_entered_long and not useFibLevelExecution
     trade_entry_equity := closed_equity_before_trade
     trade_fvg_score := nz(pending_long_score, active_fvg_score)
     float execution_price = strategy.opentrades.entry_price(0)
@@ -2605,7 +2857,7 @@ if just_entered_long
                 trail_act_line := line.new(x1=bar_index, y1=trail_act_price, x2=bar_index + 1, y2=trail_act_price, color=color.new(color.orange, 0), style=line.style_solid, width=1)
                 trail_act_label := label.new(x=bar_index + 1, y=trail_act_price, text="Trail Act", color=color.new(color.white, 100), style=label.style_label_left, textcolor=color.new(color.orange, 0), size=size.small)
 
-if just_entered_short
+if just_entered_short and not useFibLevelExecution
     trade_entry_equity := closed_equity_before_trade
     trade_fvg_score := nz(pending_short_score, active_fvg_score)
     float execution_price = strategy.opentrades.entry_price(0)
@@ -2724,6 +2976,19 @@ if short_cond or fib_direct_short_cond
             f_cancel_all("Short")
     waiting_bearish_pullback := false
 
+// Dedicated mode owns stop/target and never uses legacy partial/BE/trailing exits.
+if useFibLevelExecution and strategy.position_size != 0 and fib_order_dir != 0
+    trade_sl_price := fib_order_stop
+    tp_price := fib_order_target
+    trade_entry_qty := fib_order_qty
+    current_trade_uuid := fib_order_uuid
+    trade_fvg_score := fib_order_dir == 1 ? pending_long_score : pending_short_score
+    if just_entered_long or just_entered_short
+        trade_entry_equity := closed_equity_before_trade
+    partial_tp1_hit := false
+    partial_tp2_hit := false
+    trail_act_hit := false
+
 float profit_cap_limit = usePerTradeProfitKillswitch and not na(tp_price) ? tp_price : na
 float long_tp1_exit_limit = usePerTradeProfitKillswitch and not na(tp_price) ? math.min(partial_tp1_price, tp_price) : partial_tp1_price
 float long_tp2_exit_limit = usePerTradeProfitKillswitch and not na(tp_price) ? math.min(partial_tp2_price, tp_price) : partial_tp2_price
@@ -2733,7 +2998,7 @@ float short_tp2_exit_limit = usePerTradeProfitKillswitch and not na(tp_price) ? 
 // ==========================
 // Break-Even & Partial TP State
 // ==========================
-if strategy.position_size > 0
+if not useFibLevelExecution and strategy.position_size > 0
     bool tp1_filled = false
     if exitStrategyType == "Bar-by-Bar Trail"
         tp1_filled := high >= long_tp1_exit_limit
@@ -2748,7 +3013,7 @@ if strategy.position_size > 0
     if not na(trail_act_price) and trail_cond
         trail_act_hit := true
 
-if strategy.position_size < 0
+if not useFibLevelExecution and strategy.position_size < 0
     bool tp1_filled = false
     if exitStrategyType == "Bar-by-Bar Trail"
         tp1_filled := low <= short_tp1_exit_limit
@@ -2771,8 +3036,8 @@ if strategy.position_size < 0
 
 // Close-based Stop Loss & Opposing FVG Emergency Exit
 
-bool opp_fvg_kill_long = (exitOnOppFvgInt == 1 and bear_fvg_trigger) or (exitOnOppFvgInt == 2 and bear_fvg_trigger and bear_score >= (trade_fvg_score * oppFvgStrengthFactor))
-bool opp_fvg_kill_short = (exitOnOppFvgInt == 1 and bull_fvg_trigger) or (exitOnOppFvgInt == 2 and bull_fvg_trigger and bull_score >= (trade_fvg_score * oppFvgStrengthFactor))
+bool opp_fvg_kill_long = not useBlindFibExecution and ((exitOnOppFvgInt == 1 and bear_fvg_trigger) or (exitOnOppFvgInt == 2 and bear_fvg_trigger and bear_score >= (trade_fvg_score * oppFvgStrengthFactor)))
+bool opp_fvg_kill_short = not useBlindFibExecution and ((exitOnOppFvgInt == 1 and bull_fvg_trigger) or (exitOnOppFvgInt == 2 and bull_fvg_trigger and bull_score >= (trade_fvg_score * oppFvgStrengthFactor)))
 
 
 if strategy.position_size > 0 and (close < trade_sl_price or opp_fvg_kill_long)
@@ -2905,13 +3170,19 @@ float trade_remaining_qty = math.abs(strategy.position_size)
 float trade_entry_price = strategy.position_size != 0 ? strategy.opentrades.entry_price(0) : na
 float trade_initial_risk_dollars = strategy.position_size != 0 and not na(trade_entry_price) and not na(trade_sl_price) ? math.abs(trade_entry_price - trade_sl_price) * nz(trade_entry_qty, trade_remaining_qty) * syminfo.pointvalue : na
 
+// Preserve the optional profit safety cap without moving the fixed Fib target.
+if useFibLevelExecution and strategy.position_size != 0 and usePerTradeProfitKillswitch and perTradeProfitLimit > 0
+    float fib_profit_cap = dailyLimitType == "Percentage %" ? nz(trade_entry_equity, strategy.equity) * perTradeProfitLimit / 100.0 : perTradeProfitLimit
+    if trade_total_pnl >= fib_profit_cap
+        f_close_all(strategy.position_size > 0 ? "Long" : "Short", "Fib Profit Safety Cap", f_tp_json(false, "Fib Trade Profit Cap", current_trade_uuid + "-CAP"))
+
 float runner_trail_price = trail_act_price
 float runner_trail_offset_ticks = trail_offset_ticks
 
 var bool exits_placed = false
 if strategy.position_size == 0
     exits_placed := false
-if canPlaceExits
+if canPlaceExits and not useFibLevelExecution
     if not exits_placed and strategy.position_size != 0
         [q1, q2, qR] = f_get_qtys(trade_entry_qty)
         trade_q1 := q1
