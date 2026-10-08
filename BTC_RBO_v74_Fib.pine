@@ -2660,85 +2660,114 @@ if useFibLevelExecution and not useBlindFibExecution
             waiting_bearish_pullback := false
 
 // Blind midpoint orders: independent of every legacy FVG setup/cancellation gate.
-if useBlindFibExecution
-    bool roundtrip_finished = fib_order_dir != 0 and strategy.position_size == 0 and strategy.closedtrades > nz(fib_order_closed_count, strategy.closedtrades)
-    if roundtrip_finished
-        strategy.cancel("Blind Fib Long Exit")
-        strategy.cancel("Blind Fib Short Exit")
-        fib_order_dir := 0
-        fib_order_entry := na
-        fib_order_target := na
-        fib_order_stop := na
-        fib_order_qty := na
-        fib_order_uuid := ""
-    bool safety_ok = inSession and not dailyKillswitch and not isEod and not isFomcLiquidationTime and not isNearingWindow
-    bool long_vwap_ok = not blindFibUseVwap or (not na(vwapValue) and close > vwapValue)
-    bool short_vwap_ok = not blindFibUseVwap or (not na(vwapValue) and close < vwapValue)
-    if fib_order_dir != 0 and strategy.position_size == 0
-        bool expired = blindFibTimeout > 0 and bar_index - blind_order_bar > blindFibTimeout
-        bool invalidated = fib_order_dir == 1 ? low <= fib_order_stop : high >= fib_order_stop
-        bool vwap_ok = fib_order_dir == 1 ? long_vwap_ok : short_vwap_ok
-        if not safety_ok or not vwap_ok or expired or invalidated
-            strategy.cancel(fib_order_dir == 1 ? "Long" : "Short")
-            strategy.cancel(fib_order_dir == 1 ? "Blind Fib Long Exit" : "Blind Fib Short Exit")
-            fib_order_dir := 0
-            fib_order_entry := na
-            fib_order_target := na
-            fib_order_stop := na
-            fib_order_qty := na
-            fib_order_uuid := ""
-    string impulse_id = str.tostring(blindCandidateLowBar) + ":" + str.tostring(blindCandidateHighBar) + ":" + str.tostring(blindCandidateDir)
-    bool new_impulse = blindCandidateDir != 0 and not na(blindCandidateLowBar) and not na(blindCandidateHighBar) and impulse_id != blind_last_attempt_id
-    if barstate.isconfirmed and not roundtrip_finished and fib_order_dir == 0 and strategy.position_size == 0 and new_impulse
-        // Each anchor pair gets one attempt. A timeout, filter veto or exit never re-arms it.
-        blind_last_attempt_id := impulse_id
-        bool is_long = blindCandidateDir == 1
-        float impulse_range = blindCandidateHigh - blindCandidateLow
-        float midpoint = (blindCandidateHigh + blindCandidateLow) * 0.5
-        float ep = math.round_to_mintick(midpoint + (is_long ? 1 : -1) * blindFibEntryTicks * syminfo.mintick)
-        float raw_target = is_long ? blindCandidateLow + impulse_range * blindFibTargetRatio : blindCandidateHigh - impulse_range * blindFibTargetRatio
-        float target = math.round_to_mintick(raw_target + (is_long ? -1 : 1) * blindFibTargetTicks * syminfo.mintick)
-        float raw_stop = blindFibStopMode == "Beyond Impulse Origin" ? (is_long ? blindCandidateLow - blindFibStopTicks * syminfo.mintick : blindCandidateHigh + blindFibStopTicks * syminfo.mintick) : ep + (is_long ? -1 : 1) * chart_atr * effAtrStopMult
-        float stop = is_long ? math.floor(raw_stop / syminfo.mintick) * syminfo.mintick : math.ceil(raw_stop / syminfo.mintick) * syminfo.mintick
-        float reward = is_long ? target - ep : ep - target
-        float risk_distance = math.abs(ep - stop)
-        float costs = f_roundtrip_cost(ep)
-        bool cost_ok = not useCostFilter or reward >= costs * minTargetCostRatio
-        bool resting_limit = is_long ? close > ep : close < ep
-        bool valid_levels = impulse_range > 0 and ep > 0 and stop > 0 and target > 0 and risk_distance >= syminfo.mintick and reward >= syminfo.mintick and (is_long ? stop < ep : stop > ep)
-        float risk_budget = strategy.equity * f_get_risk(na) / 100.0
-        float modeled_loss = risk_distance + (includeCostsInRisk ? costs : 0.0)
-        float raw_qty = modeled_loss > 0 ? risk_budget / (modeled_loss * syminfo.pointvalue) : 0.0
-        float qty = f_position_qty(raw_qty, ep)
-        if safety_ok and (is_long ? long_vwap_ok : short_vwap_ok) and resting_limit and valid_levels and cost_ok and qty >= btcQtyStep
-            if usePerTradeHardStop and perTradeHardStopLimit > 0
-                float cap_distance = strategy.equity * perTradeHardStopLimit / 100.0 / (qty * syminfo.pointvalue)
-                float cap_stop = is_long ? math.ceil((ep - cap_distance) / syminfo.mintick) * syminfo.mintick : math.floor((ep + cap_distance) / syminfo.mintick) * syminfo.mintick
-                stop := is_long ? math.max(stop, cap_stop) : math.min(stop, cap_stop)
-            // Never submit a zero-distance bracket after tightening a very small loss cap.
-            if is_long ? stop <= ep - syminfo.mintick : stop >= ep + syminfo.mintick
-                fib_order_dir := is_long ? 1 : -1
-                fib_order_entry := ep
-                fib_order_target := target
-                fib_order_stop := stop
-                fib_order_qty := qty
-                fib_order_closed_count := strategy.closedtrades
-                fib_order_uuid := "BLIND-" + impulse_id + "-" + str.tostring(time)
-                blind_order_bar := bar_index
-                sl_price := stop
-                current_trade_uuid := fib_order_uuid
-                trade_entry_qty := qty
-                string dir = is_long ? "Long" : "Short"
-                string sentiment = is_long ? "bullish" : "bearish"
-                string dbg = "Blind Fib 50% | Entry " + str.tostring(ep) + " | Target " + str.tostring(target)
-                f_execute_entry(dir, ep, stop, qty, dbg, dbg, fib_order_uuid, sentiment, "limit")
-                if showFibSignals
-                    label.new(bar_index, ep, is_long ? "50% BUY LIMIT" : "50% SELL LIMIT", style=is_long ? label.style_label_up : label.style_label_down, color=is_long ? color.lime : color.red, textcolor=color.white, size=size.small)
-    // Entry and full bracket are submitted together; no delayed protection or moving levels.
-    if fib_order_dir != 0
-        string dir = fib_order_dir == 1 ? "Long" : "Short"
-        string exit_id = fib_order_dir == 1 ? "Blind Fib Long Exit" : "Blind Fib Short Exit"
-        strategy.exit(exit_id, from_entry=dir, qty=fib_order_qty, limit=fib_order_target, stop=fib_order_stop, comment_profit="Blind Fib PT", comment_loss="Blind Fib SL", alert_profit=f_tp_json(false, "Blind Fib Full Target", fib_order_uuid + "-FIBTP"), alert_loss=f_tp_json(false, "Blind Fib Fixed Stop", fib_order_uuid + "-FIBSL"))
+// Compiler-size refactor: preserve execution point and return scalar state.
+f_manage_blind_fib() =>
+    int state_fib_order_dir = fib_order_dir
+    float state_fib_order_entry = fib_order_entry
+    float state_fib_order_target = fib_order_target
+    float state_fib_order_stop = fib_order_stop
+    float state_fib_order_qty = fib_order_qty
+    string state_fib_order_uuid = fib_order_uuid
+    int state_fib_order_closed_count = fib_order_closed_count
+    string state_blind_last_attempt_id = blind_last_attempt_id
+    int state_blind_order_bar = blind_order_bar
+    float state_sl_price = sl_price
+    string state_current_trade_uuid = current_trade_uuid
+    float state_trade_entry_qty = trade_entry_qty
+    if useBlindFibExecution
+        bool roundtrip_finished = state_fib_order_dir != 0 and strategy.position_size == 0 and strategy.closedtrades > nz(state_fib_order_closed_count, strategy.closedtrades)
+        if roundtrip_finished
+            strategy.cancel("Blind Fib Long Exit")
+            strategy.cancel("Blind Fib Short Exit")
+            state_fib_order_dir := 0
+            state_fib_order_entry := na
+            state_fib_order_target := na
+            state_fib_order_stop := na
+            state_fib_order_qty := na
+            state_fib_order_uuid := ""
+        bool safety_ok = inSession and not dailyKillswitch and not isEod and not isFomcLiquidationTime and not isNearingWindow
+        bool long_vwap_ok = not blindFibUseVwap or (not na(vwapValue) and close > vwapValue)
+        bool short_vwap_ok = not blindFibUseVwap or (not na(vwapValue) and close < vwapValue)
+        if state_fib_order_dir != 0 and strategy.position_size == 0
+            bool expired = blindFibTimeout > 0 and bar_index - state_blind_order_bar > blindFibTimeout
+            bool invalidated = state_fib_order_dir == 1 ? low <= state_fib_order_stop : high >= state_fib_order_stop
+            bool vwap_ok = state_fib_order_dir == 1 ? long_vwap_ok : short_vwap_ok
+            if not safety_ok or not vwap_ok or expired or invalidated
+                strategy.cancel(state_fib_order_dir == 1 ? "Long" : "Short")
+                strategy.cancel(state_fib_order_dir == 1 ? "Blind Fib Long Exit" : "Blind Fib Short Exit")
+                state_fib_order_dir := 0
+                state_fib_order_entry := na
+                state_fib_order_target := na
+                state_fib_order_stop := na
+                state_fib_order_qty := na
+                state_fib_order_uuid := ""
+        string impulse_id = str.tostring(blindCandidateLowBar) + ":" + str.tostring(blindCandidateHighBar) + ":" + str.tostring(blindCandidateDir)
+        bool new_impulse = blindCandidateDir != 0 and not na(blindCandidateLowBar) and not na(blindCandidateHighBar) and impulse_id != state_blind_last_attempt_id
+        if barstate.isconfirmed and not roundtrip_finished and state_fib_order_dir == 0 and strategy.position_size == 0 and new_impulse
+            // Each anchor pair gets one attempt. A timeout, filter veto or exit never re-arms it.
+            state_blind_last_attempt_id := impulse_id
+            bool is_long = blindCandidateDir == 1
+            float impulse_range = blindCandidateHigh - blindCandidateLow
+            float midpoint = (blindCandidateHigh + blindCandidateLow) * 0.5
+            float ep = math.round_to_mintick(midpoint + (is_long ? 1 : -1) * blindFibEntryTicks * syminfo.mintick)
+            float raw_target = is_long ? blindCandidateLow + impulse_range * blindFibTargetRatio : blindCandidateHigh - impulse_range * blindFibTargetRatio
+            float target = math.round_to_mintick(raw_target + (is_long ? -1 : 1) * blindFibTargetTicks * syminfo.mintick)
+            float raw_stop = blindFibStopMode == "Beyond Impulse Origin" ? (is_long ? blindCandidateLow - blindFibStopTicks * syminfo.mintick : blindCandidateHigh + blindFibStopTicks * syminfo.mintick) : ep + (is_long ? -1 : 1) * chart_atr * effAtrStopMult
+            float stop = is_long ? math.floor(raw_stop / syminfo.mintick) * syminfo.mintick : math.ceil(raw_stop / syminfo.mintick) * syminfo.mintick
+            float reward = is_long ? target - ep : ep - target
+            float risk_distance = math.abs(ep - stop)
+            float costs = f_roundtrip_cost(ep)
+            bool cost_ok = not useCostFilter or reward >= costs * minTargetCostRatio
+            bool resting_limit = is_long ? close > ep : close < ep
+            bool valid_levels = impulse_range > 0 and ep > 0 and stop > 0 and target > 0 and risk_distance >= syminfo.mintick and reward >= syminfo.mintick and (is_long ? stop < ep : stop > ep)
+            float risk_budget = strategy.equity * f_get_risk(na) / 100.0
+            float modeled_loss = risk_distance + (includeCostsInRisk ? costs : 0.0)
+            float raw_qty = modeled_loss > 0 ? risk_budget / (modeled_loss * syminfo.pointvalue) : 0.0
+            float qty = f_position_qty(raw_qty, ep)
+            if safety_ok and (is_long ? long_vwap_ok : short_vwap_ok) and resting_limit and valid_levels and cost_ok and qty >= btcQtyStep
+                if usePerTradeHardStop and perTradeHardStopLimit > 0
+                    float cap_distance = strategy.equity * perTradeHardStopLimit / 100.0 / (qty * syminfo.pointvalue)
+                    float cap_stop = is_long ? math.ceil((ep - cap_distance) / syminfo.mintick) * syminfo.mintick : math.floor((ep + cap_distance) / syminfo.mintick) * syminfo.mintick
+                    stop := is_long ? math.max(stop, cap_stop) : math.min(stop, cap_stop)
+                // Never submit a zero-distance bracket after tightening a very small loss cap.
+                if is_long ? stop <= ep - syminfo.mintick : stop >= ep + syminfo.mintick
+                    state_fib_order_dir := is_long ? 1 : -1
+                    state_fib_order_entry := ep
+                    state_fib_order_target := target
+                    state_fib_order_stop := stop
+                    state_fib_order_qty := qty
+                    state_fib_order_closed_count := strategy.closedtrades
+                    state_fib_order_uuid := "BLIND-" + impulse_id + "-" + str.tostring(time)
+                    state_blind_order_bar := bar_index
+                    state_sl_price := stop
+                    state_current_trade_uuid := state_fib_order_uuid
+                    state_trade_entry_qty := qty
+                    string dir = is_long ? "Long" : "Short"
+                    string sentiment = is_long ? "bullish" : "bearish"
+                    string dbg = "Blind Fib 50% | Entry " + str.tostring(ep) + " | Target " + str.tostring(target)
+                    f_execute_entry(dir, ep, stop, qty, dbg, dbg, state_fib_order_uuid, sentiment, "limit")
+                    if showFibSignals
+                        label.new(bar_index, ep, is_long ? "50% BUY LIMIT" : "50% SELL LIMIT", style=is_long ? label.style_label_up : label.style_label_down, color=is_long ? color.lime : color.red, textcolor=color.white, size=size.small)
+        // Entry and full bracket are submitted together; no delayed protection or moving levels.
+        if state_fib_order_dir != 0
+            string dir = state_fib_order_dir == 1 ? "Long" : "Short"
+            string exit_id = state_fib_order_dir == 1 ? "Blind Fib Long Exit" : "Blind Fib Short Exit"
+            strategy.exit(exit_id, from_entry=dir, qty=state_fib_order_qty, limit=state_fib_order_target, stop=state_fib_order_stop, comment_profit="Blind Fib PT", comment_loss="Blind Fib SL", alert_profit=f_tp_json(false, "Blind Fib Full Target", state_fib_order_uuid + "-FIBTP"), alert_loss=f_tp_json(false, "Blind Fib Fixed Stop", state_fib_order_uuid + "-FIBSL"))
+    [state_fib_order_dir, state_fib_order_entry, state_fib_order_target, state_fib_order_stop, state_fib_order_qty, state_fib_order_uuid, state_fib_order_closed_count, state_blind_last_attempt_id, state_blind_order_bar, state_sl_price, state_current_trade_uuid, state_trade_entry_qty]
+
+[result_f_manage_blind_fib_fib_order_dir, result_f_manage_blind_fib_fib_order_entry, result_f_manage_blind_fib_fib_order_target, result_f_manage_blind_fib_fib_order_stop, result_f_manage_blind_fib_fib_order_qty, result_f_manage_blind_fib_fib_order_uuid, result_f_manage_blind_fib_fib_order_closed_count, result_f_manage_blind_fib_blind_last_attempt_id, result_f_manage_blind_fib_blind_order_bar, result_f_manage_blind_fib_sl_price, result_f_manage_blind_fib_current_trade_uuid, result_f_manage_blind_fib_trade_entry_qty] = f_manage_blind_fib()
+fib_order_dir := result_f_manage_blind_fib_fib_order_dir
+fib_order_entry := result_f_manage_blind_fib_fib_order_entry
+fib_order_target := result_f_manage_blind_fib_fib_order_target
+fib_order_stop := result_f_manage_blind_fib_fib_order_stop
+fib_order_qty := result_f_manage_blind_fib_fib_order_qty
+fib_order_uuid := result_f_manage_blind_fib_fib_order_uuid
+fib_order_closed_count := result_f_manage_blind_fib_fib_order_closed_count
+blind_last_attempt_id := result_f_manage_blind_fib_blind_last_attempt_id
+blind_order_bar := result_f_manage_blind_fib_blind_order_bar
+sl_price := result_f_manage_blind_fib_sl_price
+current_trade_uuid := result_f_manage_blind_fib_current_trade_uuid
+trade_entry_qty := result_f_manage_blind_fib_trade_entry_qty
 
 plot(showFibConfluence and useFibLevelExecution and fib_order_dir != 0 ? fib_order_entry : na, "Frozen Fib 50% Entry", color=color.orange, linewidth=2, style=plot.style_linebr)
 plot(showFibConfluence and useFibLevelExecution and fib_order_dir != 0 ? fib_order_target : na, "Frozen Fib Profit Target", color=color.rgb(212, 175, 55), linewidth=2, style=plot.style_linebr)
@@ -2804,111 +2833,205 @@ if just_entered_long or just_entered_short
 else if strategy.position_size == 0
     trade_netprofit_before_entry := na
 
-if just_entered_long and not useFibLevelExecution
-    trade_entry_equity := closed_equity_before_trade
-    trade_fvg_score := nz(pending_long_score, active_fvg_score)
-    float execution_price = strategy.opentrades.entry_price(0)
-    if na(trade_sl_price)
-        trade_sl_price := sl_price
-    float risk = math.abs(execution_price - trade_sl_price)
-    
-    // Dynamic Exit Adjustments
-                
+// Compiler-size refactor: preserve execution point and return scalar state.
+f_initialize_legacy_long() =>
+    float state_trade_entry_equity = trade_entry_equity
+    float state_trade_fvg_score = trade_fvg_score
+    float state_trade_sl_price = trade_sl_price
+    float state_tp_price = tp_price
+    float state_trail_act_price = trail_act_price
+    float state_partial_tp1_price = partial_tp1_price
+    float state_partial_tp2_price = partial_tp2_price
+    float state_trail_offset_ticks = trail_offset_ticks
+    bool state_partial_tp1_hit = partial_tp1_hit
+    bool state_partial_tp2_hit = partial_tp2_hit
+    bool state_trail_act_hit = trail_act_hit
+    box state_risk_box = risk_box
+    box state_reward_box = reward_box
+    line state_trail_act_line = trail_act_line
+    label state_trail_act_label = trail_act_label
+    line state_tp1_line = tp1_line
+    label state_tp1_label = tp1_label
+    line state_tp2_line = tp2_line
+    label state_tp2_label = tp2_label
+    bool state_waiting_bullish_pullback = waiting_bullish_pullback
+    bool state_waiting_long_rejection_limit = waiting_long_rejection_limit
+    if just_entered_long and not useFibLevelExecution
+        state_trade_entry_equity := closed_equity_before_trade
+        state_trade_fvg_score := nz(pending_long_score, active_fvg_score)
+        float execution_price = strategy.opentrades.entry_price(0)
+        if na(state_trade_sl_price)
+            state_trade_sl_price := sl_price
+        float risk = math.abs(execution_price - state_trade_sl_price)
 
-    tp_price := execution_price + (risk * riskReward)
-    if usePerTradeProfitKillswitch and perTradeProfitLimit > 0
-        float max_dollar_profit = dailyLimitType == "Percentage %" ? nz(trade_entry_equity, strategy.equity) * (perTradeProfitLimit / 100) : perTradeProfitLimit
-        float points_profit = (max_dollar_profit / math.abs(strategy.position_size)) / syminfo.pointvalue
-        float emergency_tp = execution_price + points_profit
-        tp_price := math.min(tp_price, emergency_tp)
-    float exit_dist_L1 = exitDistanceType == 1 ? chart_atr : risk
-    trail_act_price := execution_price + (exit_dist_L1 * trailActivation)
-    partial_tp1_price := execution_price + (exit_dist_L1 * tp1Target)
-    partial_tp2_price := execution_price + (exit_dist_L1 * tp2Target)
-    trail_offset_ticks := math.max(1, math.round((exit_dist_L1 * trailOffsetMult) / syminfo.mintick))
-    partial_tp1_hit := false
-    partial_tp2_hit := false
-    trail_act_hit := false
-    waiting_bullish_pullback := false
-    waiting_long_rejection_limit := false
-    if showTradeBoxes
-        risk_box := box.new(left=bar_index, top=execution_price, right=bar_index + 1, bottom=sl_price, border_color=color.new(color.red, 100), bgcolor=color.new(color.red, 85))
-        float visual_tp = tp_price
-        if exitStrategyType == "Bar-by-Bar Trail"
-            visual_tp := partial_tp1_price
-            reward_box := box.new(left=bar_index, top=visual_tp, right=bar_index + 1, bottom=execution_price, border_color=color.new(color.green, 100), bgcolor=color.new(color.green, 85))
-            trail_act_line := line.new(x1=bar_index, y1=partial_tp1_price, x2=bar_index + 1, y2=partial_tp1_price, color=color.new(color.orange, 0), style=line.style_dashed, width=1)
-            trail_act_label := label.new(x=bar_index + 1, y=partial_tp1_price, text="Trail Act", color=color.new(color.white, 100), style=label.style_label_left, textcolor=color.new(color.orange, 0), size=size.small)
-        else
-            if useTrailingStop
-                visual_tp := trail_act_price
-            if partialMode >= 1
-                visual_tp := math.max(visual_tp, partial_tp1_price)
-            if partialMode == 2
-                visual_tp := math.max(visual_tp, partial_tp2_price)
-            reward_box := box.new(left=bar_index, top=visual_tp, right=bar_index + 1, bottom=execution_price, border_color=color.new(color.green, 100), bgcolor=color.new(color.green, 85))
-            if partialMode >= 1
-                tp1_line := line.new(x1=bar_index, y1=partial_tp1_price, x2=bar_index + 1, y2=partial_tp1_price, color=color.new(color.white, 20), style=line.style_dashed, width=1)
-                tp1_label := label.new(x=bar_index + 1, y=partial_tp1_price, text="TP1", color=color.new(color.white, 100), style=label.style_label_left, textcolor=color.new(color.white, 20), size=size.small)
-            if partialMode == 2
-                tp2_line := line.new(x1=bar_index, y1=partial_tp2_price, x2=bar_index + 1, y2=partial_tp2_price, color=color.new(color.white, 20), style=line.style_dashed, width=1)
-                tp2_label := label.new(x=bar_index + 1, y=partial_tp2_price, text="TP2", color=color.new(color.white, 100), style=label.style_label_left, textcolor=color.new(color.white, 20), size=size.small)
-            if useTrailingStop
-                trail_act_line := line.new(x1=bar_index, y1=trail_act_price, x2=bar_index + 1, y2=trail_act_price, color=color.new(color.orange, 0), style=line.style_solid, width=1)
-                trail_act_label := label.new(x=bar_index + 1, y=trail_act_price, text="Trail Act", color=color.new(color.white, 100), style=label.style_label_left, textcolor=color.new(color.orange, 0), size=size.small)
+        // Dynamic Exit Adjustments
 
-if just_entered_short and not useFibLevelExecution
-    trade_entry_equity := closed_equity_before_trade
-    trade_fvg_score := nz(pending_short_score, active_fvg_score)
-    float execution_price = strategy.opentrades.entry_price(0)
-    if na(trade_sl_price)
-        trade_sl_price := sl_price
-    float risk = math.abs(trade_sl_price - execution_price)
-    
-    // Dynamic Exit Adjustments
-                
 
-    tp_price := execution_price - (risk * riskReward)
-    if usePerTradeProfitKillswitch and perTradeProfitLimit > 0
-        float max_dollar_profit = dailyLimitType == "Percentage %" ? nz(trade_entry_equity, strategy.equity) * (perTradeProfitLimit / 100) : perTradeProfitLimit
-        float points_profit = (max_dollar_profit / math.abs(strategy.position_size)) / syminfo.pointvalue
-        float emergency_tp = execution_price - points_profit
-        tp_price := math.max(tp_price, emergency_tp)
-    float exit_dist_S1 = exitDistanceType == 1 ? chart_atr : risk
-    trail_act_price := execution_price - (exit_dist_S1 * trailActivation)
-    partial_tp1_price := execution_price - (exit_dist_S1 * tp1Target)
-    partial_tp2_price := execution_price - (exit_dist_S1 * tp2Target)
-    trail_offset_ticks := math.max(1, math.round((exit_dist_S1 * trailOffsetMult) / syminfo.mintick))
-    partial_tp1_hit := false
-    partial_tp2_hit := false
-    trail_act_hit := false
-    waiting_bearish_pullback := false
-    waiting_short_rejection_limit := false
-    if showTradeBoxes
-        risk_box := box.new(left=bar_index, top=sl_price, right=bar_index + 1, bottom=execution_price, border_color=color.new(color.red, 100), bgcolor=color.new(color.red, 85))
-        float visual_tp = tp_price
-        if exitStrategyType == "Bar-by-Bar Trail"
-            visual_tp := partial_tp1_price
-            reward_box := box.new(left=bar_index, top=execution_price, right=bar_index + 1, bottom=visual_tp, border_color=color.new(color.green, 100), bgcolor=color.new(color.green, 85))
-            trail_act_line := line.new(x1=bar_index, y1=partial_tp1_price, x2=bar_index + 1, y2=partial_tp1_price, color=color.new(color.orange, 0), style=line.style_dashed, width=1)
-            trail_act_label := label.new(x=bar_index + 1, y=partial_tp1_price, text="Trail Act", color=color.new(color.white, 100), style=label.style_label_left, textcolor=color.new(color.orange, 0), size=size.small)
-        else
-            if useTrailingStop
-                visual_tp := trail_act_price
-            if partialMode >= 1
-                visual_tp := math.min(visual_tp, partial_tp1_price)
-            if partialMode == 2
-                visual_tp := math.min(visual_tp, partial_tp2_price)
-            reward_box := box.new(left=bar_index, top=execution_price, right=bar_index + 1, bottom=visual_tp, border_color=color.new(color.green, 100), bgcolor=color.new(color.green, 85))
-            if partialMode >= 1
-                tp1_line := line.new(x1=bar_index, y1=partial_tp1_price, x2=bar_index + 1, y2=partial_tp1_price, color=color.new(color.white, 20), style=line.style_dashed, width=1)
-                tp1_label := label.new(x=bar_index + 1, y=partial_tp1_price, text="TP1", color=color.new(color.white, 100), style=label.style_label_left, textcolor=color.new(color.white, 20), size=size.small)
-            if partialMode == 2
-                tp2_line := line.new(x1=bar_index, y1=partial_tp2_price, x2=bar_index + 1, y2=partial_tp2_price, color=color.new(color.white, 20), style=line.style_dashed, width=1)
-                tp2_label := label.new(x=bar_index + 1, y=partial_tp2_price, text="TP2", color=color.new(color.white, 100), style=label.style_label_left, textcolor=color.new(color.white, 20), size=size.small)
-            if useTrailingStop
-                trail_act_line := line.new(x1=bar_index, y1=trail_act_price, x2=bar_index + 1, y2=trail_act_price, color=color.new(color.orange, 0), style=line.style_solid, width=1)
-                trail_act_label := label.new(x=bar_index + 1, y=trail_act_price, text="Trail Act", color=color.new(color.white, 100), style=label.style_label_left, textcolor=color.new(color.orange, 0), size=size.small)
+        state_tp_price := execution_price + (risk * riskReward)
+        if usePerTradeProfitKillswitch and perTradeProfitLimit > 0
+            float max_dollar_profit = dailyLimitType == "Percentage %" ? nz(state_trade_entry_equity, strategy.equity) * (perTradeProfitLimit / 100) : perTradeProfitLimit
+            float points_profit = (max_dollar_profit / math.abs(strategy.position_size)) / syminfo.pointvalue
+            float emergency_tp = execution_price + points_profit
+            state_tp_price := math.min(state_tp_price, emergency_tp)
+        float exit_dist_L1 = exitDistanceType == 1 ? chart_atr : risk
+        state_trail_act_price := execution_price + (exit_dist_L1 * trailActivation)
+        state_partial_tp1_price := execution_price + (exit_dist_L1 * tp1Target)
+        state_partial_tp2_price := execution_price + (exit_dist_L1 * tp2Target)
+        state_trail_offset_ticks := math.max(1, math.round((exit_dist_L1 * trailOffsetMult) / syminfo.mintick))
+        state_partial_tp1_hit := false
+        state_partial_tp2_hit := false
+        state_trail_act_hit := false
+        state_waiting_bullish_pullback := false
+        state_waiting_long_rejection_limit := false
+        if showTradeBoxes
+            state_risk_box := box.new(left=bar_index, top=execution_price, right=bar_index + 1, bottom=sl_price, border_color=color.new(color.red, 100), bgcolor=color.new(color.red, 85))
+            float visual_tp = state_tp_price
+            if exitStrategyType == "Bar-by-Bar Trail"
+                visual_tp := state_partial_tp1_price
+                state_reward_box := box.new(left=bar_index, top=visual_tp, right=bar_index + 1, bottom=execution_price, border_color=color.new(color.green, 100), bgcolor=color.new(color.green, 85))
+                state_trail_act_line := line.new(x1=bar_index, y1=state_partial_tp1_price, x2=bar_index + 1, y2=state_partial_tp1_price, color=color.new(color.orange, 0), style=line.style_dashed, width=1)
+                state_trail_act_label := label.new(x=bar_index + 1, y=state_partial_tp1_price, text="Trail Act", color=color.new(color.white, 100), style=label.style_label_left, textcolor=color.new(color.orange, 0), size=size.small)
+            else
+                if useTrailingStop
+                    visual_tp := state_trail_act_price
+                if partialMode >= 1
+                    visual_tp := math.max(visual_tp, state_partial_tp1_price)
+                if partialMode == 2
+                    visual_tp := math.max(visual_tp, state_partial_tp2_price)
+                state_reward_box := box.new(left=bar_index, top=visual_tp, right=bar_index + 1, bottom=execution_price, border_color=color.new(color.green, 100), bgcolor=color.new(color.green, 85))
+                if partialMode >= 1
+                    state_tp1_line := line.new(x1=bar_index, y1=state_partial_tp1_price, x2=bar_index + 1, y2=state_partial_tp1_price, color=color.new(color.white, 20), style=line.style_dashed, width=1)
+                    state_tp1_label := label.new(x=bar_index + 1, y=state_partial_tp1_price, text="TP1", color=color.new(color.white, 100), style=label.style_label_left, textcolor=color.new(color.white, 20), size=size.small)
+                if partialMode == 2
+                    state_tp2_line := line.new(x1=bar_index, y1=state_partial_tp2_price, x2=bar_index + 1, y2=state_partial_tp2_price, color=color.new(color.white, 20), style=line.style_dashed, width=1)
+                    state_tp2_label := label.new(x=bar_index + 1, y=state_partial_tp2_price, text="TP2", color=color.new(color.white, 100), style=label.style_label_left, textcolor=color.new(color.white, 20), size=size.small)
+                if useTrailingStop
+                    state_trail_act_line := line.new(x1=bar_index, y1=state_trail_act_price, x2=bar_index + 1, y2=state_trail_act_price, color=color.new(color.orange, 0), style=line.style_solid, width=1)
+                    state_trail_act_label := label.new(x=bar_index + 1, y=state_trail_act_price, text="Trail Act", color=color.new(color.white, 100), style=label.style_label_left, textcolor=color.new(color.orange, 0), size=size.small)
+    [state_trade_entry_equity, state_trade_fvg_score, state_trade_sl_price, state_tp_price, state_trail_act_price, state_partial_tp1_price, state_partial_tp2_price, state_trail_offset_ticks, state_partial_tp1_hit, state_partial_tp2_hit, state_trail_act_hit, state_risk_box, state_reward_box, state_trail_act_line, state_trail_act_label, state_tp1_line, state_tp1_label, state_tp2_line, state_tp2_label, state_waiting_bullish_pullback, state_waiting_long_rejection_limit]
+
+[result_f_initialize_legacy_long_trade_entry_equity, result_f_initialize_legacy_long_trade_fvg_score, result_f_initialize_legacy_long_trade_sl_price, result_f_initialize_legacy_long_tp_price, result_f_initialize_legacy_long_trail_act_price, result_f_initialize_legacy_long_partial_tp1_price, result_f_initialize_legacy_long_partial_tp2_price, result_f_initialize_legacy_long_trail_offset_ticks, result_f_initialize_legacy_long_partial_tp1_hit, result_f_initialize_legacy_long_partial_tp2_hit, result_f_initialize_legacy_long_trail_act_hit, result_f_initialize_legacy_long_risk_box, result_f_initialize_legacy_long_reward_box, result_f_initialize_legacy_long_trail_act_line, result_f_initialize_legacy_long_trail_act_label, result_f_initialize_legacy_long_tp1_line, result_f_initialize_legacy_long_tp1_label, result_f_initialize_legacy_long_tp2_line, result_f_initialize_legacy_long_tp2_label, result_f_initialize_legacy_long_waiting_bullish_pullback, result_f_initialize_legacy_long_waiting_long_rejection_limit] = f_initialize_legacy_long()
+trade_entry_equity := result_f_initialize_legacy_long_trade_entry_equity
+trade_fvg_score := result_f_initialize_legacy_long_trade_fvg_score
+trade_sl_price := result_f_initialize_legacy_long_trade_sl_price
+tp_price := result_f_initialize_legacy_long_tp_price
+trail_act_price := result_f_initialize_legacy_long_trail_act_price
+partial_tp1_price := result_f_initialize_legacy_long_partial_tp1_price
+partial_tp2_price := result_f_initialize_legacy_long_partial_tp2_price
+trail_offset_ticks := result_f_initialize_legacy_long_trail_offset_ticks
+partial_tp1_hit := result_f_initialize_legacy_long_partial_tp1_hit
+partial_tp2_hit := result_f_initialize_legacy_long_partial_tp2_hit
+trail_act_hit := result_f_initialize_legacy_long_trail_act_hit
+risk_box := result_f_initialize_legacy_long_risk_box
+reward_box := result_f_initialize_legacy_long_reward_box
+trail_act_line := result_f_initialize_legacy_long_trail_act_line
+trail_act_label := result_f_initialize_legacy_long_trail_act_label
+tp1_line := result_f_initialize_legacy_long_tp1_line
+tp1_label := result_f_initialize_legacy_long_tp1_label
+tp2_line := result_f_initialize_legacy_long_tp2_line
+tp2_label := result_f_initialize_legacy_long_tp2_label
+waiting_bullish_pullback := result_f_initialize_legacy_long_waiting_bullish_pullback
+waiting_long_rejection_limit := result_f_initialize_legacy_long_waiting_long_rejection_limit
+
+// Compiler-size refactor: preserve execution point and return scalar state.
+f_initialize_legacy_short() =>
+    float state_trade_entry_equity = trade_entry_equity
+    float state_trade_fvg_score = trade_fvg_score
+    float state_trade_sl_price = trade_sl_price
+    float state_tp_price = tp_price
+    float state_trail_act_price = trail_act_price
+    float state_partial_tp1_price = partial_tp1_price
+    float state_partial_tp2_price = partial_tp2_price
+    float state_trail_offset_ticks = trail_offset_ticks
+    bool state_partial_tp1_hit = partial_tp1_hit
+    bool state_partial_tp2_hit = partial_tp2_hit
+    bool state_trail_act_hit = trail_act_hit
+    box state_risk_box = risk_box
+    box state_reward_box = reward_box
+    line state_trail_act_line = trail_act_line
+    label state_trail_act_label = trail_act_label
+    line state_tp1_line = tp1_line
+    label state_tp1_label = tp1_label
+    line state_tp2_line = tp2_line
+    label state_tp2_label = tp2_label
+    bool state_waiting_bearish_pullback = waiting_bearish_pullback
+    bool state_waiting_short_rejection_limit = waiting_short_rejection_limit
+    if just_entered_short and not useFibLevelExecution
+        state_trade_entry_equity := closed_equity_before_trade
+        state_trade_fvg_score := nz(pending_short_score, active_fvg_score)
+        float execution_price = strategy.opentrades.entry_price(0)
+        if na(state_trade_sl_price)
+            state_trade_sl_price := sl_price
+        float risk = math.abs(state_trade_sl_price - execution_price)
+
+        // Dynamic Exit Adjustments
+
+
+        state_tp_price := execution_price - (risk * riskReward)
+        if usePerTradeProfitKillswitch and perTradeProfitLimit > 0
+            float max_dollar_profit = dailyLimitType == "Percentage %" ? nz(state_trade_entry_equity, strategy.equity) * (perTradeProfitLimit / 100) : perTradeProfitLimit
+            float points_profit = (max_dollar_profit / math.abs(strategy.position_size)) / syminfo.pointvalue
+            float emergency_tp = execution_price - points_profit
+            state_tp_price := math.max(state_tp_price, emergency_tp)
+        float exit_dist_S1 = exitDistanceType == 1 ? chart_atr : risk
+        state_trail_act_price := execution_price - (exit_dist_S1 * trailActivation)
+        state_partial_tp1_price := execution_price - (exit_dist_S1 * tp1Target)
+        state_partial_tp2_price := execution_price - (exit_dist_S1 * tp2Target)
+        state_trail_offset_ticks := math.max(1, math.round((exit_dist_S1 * trailOffsetMult) / syminfo.mintick))
+        state_partial_tp1_hit := false
+        state_partial_tp2_hit := false
+        state_trail_act_hit := false
+        state_waiting_bearish_pullback := false
+        state_waiting_short_rejection_limit := false
+        if showTradeBoxes
+            state_risk_box := box.new(left=bar_index, top=sl_price, right=bar_index + 1, bottom=execution_price, border_color=color.new(color.red, 100), bgcolor=color.new(color.red, 85))
+            float visual_tp = state_tp_price
+            if exitStrategyType == "Bar-by-Bar Trail"
+                visual_tp := state_partial_tp1_price
+                state_reward_box := box.new(left=bar_index, top=execution_price, right=bar_index + 1, bottom=visual_tp, border_color=color.new(color.green, 100), bgcolor=color.new(color.green, 85))
+                state_trail_act_line := line.new(x1=bar_index, y1=state_partial_tp1_price, x2=bar_index + 1, y2=state_partial_tp1_price, color=color.new(color.orange, 0), style=line.style_dashed, width=1)
+                state_trail_act_label := label.new(x=bar_index + 1, y=state_partial_tp1_price, text="Trail Act", color=color.new(color.white, 100), style=label.style_label_left, textcolor=color.new(color.orange, 0), size=size.small)
+            else
+                if useTrailingStop
+                    visual_tp := state_trail_act_price
+                if partialMode >= 1
+                    visual_tp := math.min(visual_tp, state_partial_tp1_price)
+                if partialMode == 2
+                    visual_tp := math.min(visual_tp, state_partial_tp2_price)
+                state_reward_box := box.new(left=bar_index, top=execution_price, right=bar_index + 1, bottom=visual_tp, border_color=color.new(color.green, 100), bgcolor=color.new(color.green, 85))
+                if partialMode >= 1
+                    state_tp1_line := line.new(x1=bar_index, y1=state_partial_tp1_price, x2=bar_index + 1, y2=state_partial_tp1_price, color=color.new(color.white, 20), style=line.style_dashed, width=1)
+                    state_tp1_label := label.new(x=bar_index + 1, y=state_partial_tp1_price, text="TP1", color=color.new(color.white, 100), style=label.style_label_left, textcolor=color.new(color.white, 20), size=size.small)
+                if partialMode == 2
+                    state_tp2_line := line.new(x1=bar_index, y1=state_partial_tp2_price, x2=bar_index + 1, y2=state_partial_tp2_price, color=color.new(color.white, 20), style=line.style_dashed, width=1)
+                    state_tp2_label := label.new(x=bar_index + 1, y=state_partial_tp2_price, text="TP2", color=color.new(color.white, 100), style=label.style_label_left, textcolor=color.new(color.white, 20), size=size.small)
+                if useTrailingStop
+                    state_trail_act_line := line.new(x1=bar_index, y1=state_trail_act_price, x2=bar_index + 1, y2=state_trail_act_price, color=color.new(color.orange, 0), style=line.style_solid, width=1)
+                    state_trail_act_label := label.new(x=bar_index + 1, y=state_trail_act_price, text="Trail Act", color=color.new(color.white, 100), style=label.style_label_left, textcolor=color.new(color.orange, 0), size=size.small)
+    [state_trade_entry_equity, state_trade_fvg_score, state_trade_sl_price, state_tp_price, state_trail_act_price, state_partial_tp1_price, state_partial_tp2_price, state_trail_offset_ticks, state_partial_tp1_hit, state_partial_tp2_hit, state_trail_act_hit, state_risk_box, state_reward_box, state_trail_act_line, state_trail_act_label, state_tp1_line, state_tp1_label, state_tp2_line, state_tp2_label, state_waiting_bearish_pullback, state_waiting_short_rejection_limit]
+
+[result_f_initialize_legacy_short_trade_entry_equity, result_f_initialize_legacy_short_trade_fvg_score, result_f_initialize_legacy_short_trade_sl_price, result_f_initialize_legacy_short_tp_price, result_f_initialize_legacy_short_trail_act_price, result_f_initialize_legacy_short_partial_tp1_price, result_f_initialize_legacy_short_partial_tp2_price, result_f_initialize_legacy_short_trail_offset_ticks, result_f_initialize_legacy_short_partial_tp1_hit, result_f_initialize_legacy_short_partial_tp2_hit, result_f_initialize_legacy_short_trail_act_hit, result_f_initialize_legacy_short_risk_box, result_f_initialize_legacy_short_reward_box, result_f_initialize_legacy_short_trail_act_line, result_f_initialize_legacy_short_trail_act_label, result_f_initialize_legacy_short_tp1_line, result_f_initialize_legacy_short_tp1_label, result_f_initialize_legacy_short_tp2_line, result_f_initialize_legacy_short_tp2_label, result_f_initialize_legacy_short_waiting_bearish_pullback, result_f_initialize_legacy_short_waiting_short_rejection_limit] = f_initialize_legacy_short()
+trade_entry_equity := result_f_initialize_legacy_short_trade_entry_equity
+trade_fvg_score := result_f_initialize_legacy_short_trade_fvg_score
+trade_sl_price := result_f_initialize_legacy_short_trade_sl_price
+tp_price := result_f_initialize_legacy_short_tp_price
+trail_act_price := result_f_initialize_legacy_short_trail_act_price
+partial_tp1_price := result_f_initialize_legacy_short_partial_tp1_price
+partial_tp2_price := result_f_initialize_legacy_short_partial_tp2_price
+trail_offset_ticks := result_f_initialize_legacy_short_trail_offset_ticks
+partial_tp1_hit := result_f_initialize_legacy_short_partial_tp1_hit
+partial_tp2_hit := result_f_initialize_legacy_short_partial_tp2_hit
+trail_act_hit := result_f_initialize_legacy_short_trail_act_hit
+risk_box := result_f_initialize_legacy_short_risk_box
+reward_box := result_f_initialize_legacy_short_reward_box
+trail_act_line := result_f_initialize_legacy_short_trail_act_line
+trail_act_label := result_f_initialize_legacy_short_trail_act_label
+tp1_line := result_f_initialize_legacy_short_tp1_line
+tp1_label := result_f_initialize_legacy_short_tp1_label
+tp2_line := result_f_initialize_legacy_short_tp2_line
+tp2_label := result_f_initialize_legacy_short_tp2_label
+waiting_bearish_pullback := result_f_initialize_legacy_short_waiting_bearish_pullback
+waiting_short_rejection_limit := result_f_initialize_legacy_short_waiting_short_rejection_limit
 
 if long_cond or fib_direct_long_cond
     if stopLossType == 5
@@ -3182,28 +3305,25 @@ float runner_trail_offset_ticks = trail_offset_ticks
 var bool exits_placed = false
 if strategy.position_size == 0
     exits_placed := false
-if canPlaceExits and not useFibLevelExecution
-    if not exits_placed and strategy.position_size != 0
-        [q1, q2, qR] = f_get_qtys(trade_entry_qty)
-        trade_q1 := q1
-        trade_q2 := q2
-        trade_qR := qR
-        exits_placed := true
+// Compiler-size refactor: preserve execution point and return scalar state.
+f_dispatch_legacy_long() =>
+    bool state_bbb_trail_active = bbb_trail_active
+    float state_bbb_trail_sl_long = bbb_trail_sl_long
     if strategy.position_size > 0
         if exitStrategyType == "Bar-by-Bar Trail"
-            if not bbb_trail_active and high >= long_tp1_exit_limit
-                bbb_trail_active := true
+            if not state_bbb_trail_active and high >= long_tp1_exit_limit
+                state_bbb_trail_active := true
                 float initial_anchor = math.min(low, low[1])
-                bbb_trail_sl_long := math.max(nz(eff_sl_exit_long, trade_sl_price), initial_anchor - (barTrailBufferTicks * syminfo.mintick))
-            
-            if bbb_trail_active and barstate.isconfirmed
+                state_bbb_trail_sl_long := math.max(nz(eff_sl_exit_long, trade_sl_price), initial_anchor - (barTrailBufferTicks * syminfo.mintick))
+
+            if state_bbb_trail_active and barstate.isconfirmed
                 float trail_anchor = math.min(low[0], low[1])
                 float proposed_sl = trail_anchor - (barTrailBufferTicks * syminfo.mintick)
-                if na(bbb_trail_sl_long) or proposed_sl > bbb_trail_sl_long
-                    bbb_trail_sl_long := proposed_sl
-            
-            float active_sl = na(bbb_trail_sl_long) ? nz(eff_sl_exit_long, trade_sl_price) : bbb_trail_sl_long
-            
+                if na(state_bbb_trail_sl_long) or proposed_sl > state_bbb_trail_sl_long
+                    state_bbb_trail_sl_long := proposed_sl
+
+            float active_sl = na(state_bbb_trail_sl_long) ? nz(eff_sl_exit_long, trade_sl_price) : state_bbb_trail_sl_long
+
             if stopLossBehavior == 0
                 if not na(profit_cap_limit)
                     strategy.exit("Profit Cap", from_entry="Long", qty=trade_qR, limit=profit_cap_limit, comment_profit="Exit Long (Profit Cap)", alert_message=f_tp_json(false, "Exit Long | BBB Profit Cap", current_trade_uuid + "-CAP"))
@@ -3221,7 +3341,7 @@ if canPlaceExits and not useFibLevelExecution
             if partialMode == 2
                 if trade_q2 > 0
                     f_do_partial_exit("TP2", "Long", trade_q2, trade_qR, long_tp2_exit_limit, eff_sl_exit_long, "TP2", reason_sl_long, dbg_p2, current_trade_uuid + "-TP2", "bullish")
-            
+
             if useTrailingStop
                 if trade_qR > 0
                     f_do_trailing_exit("Runner", "Long", trade_qR, 0, profit_cap_limit, eff_sl_exit_long, runner_trail_price, runner_trail_offset_ticks, "Runner Exit", reason_sl_long, dbg_r, current_trade_uuid + "-R", "bullish")
@@ -3245,22 +3365,28 @@ if canPlaceExits and not useFibLevelExecution
                     f_do_partial_exit("Exit Long 2", "Long", trade_q2, trade_qR, tp_price, eff_sl_exit_long, "Exit Long", reason_sl_long, dbg, current_trade_uuid + "-SL2", "bullish")
                 if trade_qR > 0
                     f_do_partial_exit("Exit Long R", "Long", trade_qR, 0, tp_price, eff_sl_exit_long, "Exit Long", reason_sl_long, dbg, current_trade_uuid + "-SLR", "bullish")
-        
+
+    [state_bbb_trail_active, state_bbb_trail_sl_long]
+
+// Compiler-size refactor: preserve execution point and return scalar state.
+f_dispatch_legacy_short() =>
+    bool state_bbb_trail_active = bbb_trail_active
+    float state_bbb_trail_sl_short = bbb_trail_sl_short
     if strategy.position_size < 0
         if exitStrategyType == "Bar-by-Bar Trail"
-            if not bbb_trail_active and low <= short_tp1_exit_limit
-                bbb_trail_active := true
+            if not state_bbb_trail_active and low <= short_tp1_exit_limit
+                state_bbb_trail_active := true
                 float initial_anchor = math.max(high, high[1])
-                bbb_trail_sl_short := math.min(nz(eff_sl_exit_short, trade_sl_price), initial_anchor + (barTrailBufferTicks * syminfo.mintick))
-            
-            if bbb_trail_active and barstate.isconfirmed
+                state_bbb_trail_sl_short := math.min(nz(eff_sl_exit_short, trade_sl_price), initial_anchor + (barTrailBufferTicks * syminfo.mintick))
+
+            if state_bbb_trail_active and barstate.isconfirmed
                 float trail_anchor = math.max(high[0], high[1])
                 float proposed_sl = trail_anchor + (barTrailBufferTicks * syminfo.mintick)
-                if na(bbb_trail_sl_short) or proposed_sl < bbb_trail_sl_short
-                    bbb_trail_sl_short := proposed_sl
-            
-            float active_sl = na(bbb_trail_sl_short) ? nz(eff_sl_exit_short, trade_sl_price) : bbb_trail_sl_short
-            
+                if na(state_bbb_trail_sl_short) or proposed_sl < state_bbb_trail_sl_short
+                    state_bbb_trail_sl_short := proposed_sl
+
+            float active_sl = na(state_bbb_trail_sl_short) ? nz(eff_sl_exit_short, trade_sl_price) : state_bbb_trail_sl_short
+
             if stopLossBehavior == 0
                 if not na(profit_cap_limit)
                     strategy.exit("Profit Cap", from_entry="Short", qty=trade_qR, limit=profit_cap_limit, comment_profit="Exit Short (Profit Cap)", alert_message=f_tp_json(false, "Exit Short | BBB Profit Cap", current_trade_uuid + "-CAP"))
@@ -3278,7 +3404,7 @@ if canPlaceExits and not useFibLevelExecution
             if partialMode == 2
                 if trade_q2 > 0
                     f_do_partial_exit("TP2", "Short", trade_q2, trade_qR, short_tp2_exit_limit, eff_sl_exit_short, "TP2", reason_sl_short, dbg_p2, current_trade_uuid + "-TP2", "bearish")
-            
+
             if useTrailingStop
                 if trade_qR > 0
                     f_do_trailing_exit("Runner", "Short", trade_qR, 0, profit_cap_limit, eff_sl_exit_short, runner_trail_price, runner_trail_offset_ticks, "Runner Exit", reason_sl_short, dbg_r, current_trade_uuid + "-R", "bearish")
@@ -3302,37 +3428,59 @@ if canPlaceExits and not useFibLevelExecution
                     f_do_partial_exit("Exit Short 2", "Short", trade_q2, trade_qR, tp_price, eff_sl_exit_short, "Exit Short", reason_sl_short, dbg, current_trade_uuid + "-SL2", "bearish")
                 if trade_qR > 0
                     f_do_partial_exit("Exit Short R", "Short", trade_qR, 0, tp_price, eff_sl_exit_short, "Exit Short", reason_sl_short, dbg, current_trade_uuid + "-SLR", "bearish")
+    [state_bbb_trail_active, state_bbb_trail_sl_short]
 
-if strategy.position_size != 0
-    if showTradeBoxes and not na(risk_box)
-        if not bbb_trail_active
-            box.set_right(risk_box, bar_index + 1)
-    if showTradeBoxes and not na(reward_box)
-        if not bbb_trail_active
-            box.set_right(reward_box, bar_index + 1)
-    if showTradeBoxes and not na(tp1_line)
-        line.set_x2(tp1_line, bar_index + 1)
-        label.set_x(tp1_label, bar_index + 1)
-    if showTradeBoxes and not na(tp2_line)
-        line.set_x2(tp2_line, bar_index + 1)
-        label.set_x(tp2_label, bar_index + 1)
-    if showTradeBoxes and not na(trail_act_line)
-        if not bbb_trail_active
-            line.set_x2(trail_act_line, bar_index + 1)
-            label.set_x(trail_act_label, bar_index + 1)
-    
-    if bbb_trail_active
-        float current_sl = strategy.position_size > 0 ? bbb_trail_sl_long : bbb_trail_sl_short
-        if not na(current_sl)
-            if na(current_bbb_line)
-                current_bbb_line := line.new(bar_index, current_sl, bar_index + 1, current_sl, color=color.orange, style=line.style_dashed, width=2)
-            else
-                float prev_sl = line.get_y1(current_bbb_line)
-                if current_sl == prev_sl
-                    line.set_x2(current_bbb_line, bar_index + 1)
+if canPlaceExits and not useFibLevelExecution
+    if not exits_placed and strategy.position_size != 0
+        [q1, q2, qR] = f_get_qtys(trade_entry_qty)
+        trade_q1 := q1
+        trade_q2 := q2
+        trade_qR := qR
+        exits_placed := true
+    [result_f_dispatch_legacy_long_bbb_trail_active, result_f_dispatch_legacy_long_bbb_trail_sl_long] = f_dispatch_legacy_long()
+    bbb_trail_active := result_f_dispatch_legacy_long_bbb_trail_active
+    bbb_trail_sl_long := result_f_dispatch_legacy_long_bbb_trail_sl_long
+    [result_f_dispatch_legacy_short_bbb_trail_active, result_f_dispatch_legacy_short_bbb_trail_sl_short] = f_dispatch_legacy_short()
+    bbb_trail_active := result_f_dispatch_legacy_short_bbb_trail_active
+    bbb_trail_sl_short := result_f_dispatch_legacy_short_bbb_trail_sl_short
+
+// Compiler-size refactor: preserve execution point and return scalar state.
+f_update_trade_drawings() =>
+    line state_current_bbb_line = current_bbb_line
+    if strategy.position_size != 0
+        if showTradeBoxes and not na(risk_box)
+            if not bbb_trail_active
+                box.set_right(risk_box, bar_index + 1)
+        if showTradeBoxes and not na(reward_box)
+            if not bbb_trail_active
+                box.set_right(reward_box, bar_index + 1)
+        if showTradeBoxes and not na(tp1_line)
+            line.set_x2(tp1_line, bar_index + 1)
+            label.set_x(tp1_label, bar_index + 1)
+        if showTradeBoxes and not na(tp2_line)
+            line.set_x2(tp2_line, bar_index + 1)
+            label.set_x(tp2_label, bar_index + 1)
+        if showTradeBoxes and not na(trail_act_line)
+            if not bbb_trail_active
+                line.set_x2(trail_act_line, bar_index + 1)
+                label.set_x(trail_act_label, bar_index + 1)
+
+        if bbb_trail_active
+            float current_sl = strategy.position_size > 0 ? bbb_trail_sl_long : bbb_trail_sl_short
+            if not na(current_sl)
+                if na(state_current_bbb_line)
+                    state_current_bbb_line := line.new(bar_index, current_sl, bar_index + 1, current_sl, color=color.orange, style=line.style_dashed, width=2)
                 else
-                    line.new(bar_index, prev_sl, bar_index, current_sl, color=color.orange, style=line.style_dashed, width=2)
-                    current_bbb_line := line.new(bar_index, current_sl, bar_index + 1, current_sl, color=color.orange, style=line.style_dashed, width=2)
+                    float prev_sl = line.get_y1(state_current_bbb_line)
+                    if current_sl == prev_sl
+                        line.set_x2(state_current_bbb_line, bar_index + 1)
+                    else
+                        line.new(bar_index, prev_sl, bar_index, current_sl, color=color.orange, style=line.style_dashed, width=2)
+                        state_current_bbb_line := line.new(bar_index, current_sl, bar_index + 1, current_sl, color=color.orange, style=line.style_dashed, width=2)
+    state_current_bbb_line
+
+result_f_update_trade_drawings_current_bbb_line = f_update_trade_drawings()
+current_bbb_line := result_f_update_trade_drawings_current_bbb_line
 
 bool is_time_out_of_bounds = isNewsDay or isWindowExcluded or isNearingWindow or not is_allowed_dow or isBlockedSession or (useTimeRestrictions and na(time(timeframe.period, allowedSession + ":1234567", "America/New_York")))
 bool shouldForceCloseSession = forceCloseOnSessionEnd and is_time_out_of_bounds // Decoupled from max_losses_hit
@@ -3364,34 +3512,39 @@ if strategy.position_size == 0 and not waiting_bullish_pullback and not waiting_
 bool isOffline = dailyKillswitch or hardStopHit or maxProfitHit or max_losses_hit or isNewsDay or isFomcDecisionWindow or isWindowExcluded or isNearingWindow or isEod or isBlockedSession or (useTimeRestrictions and not inSession)
 var bool wasOffline = true
 
-if isOffline and not wasOffline
-    string offline_reason = "Bot Offline"
-    if maxProfitHit
-        offline_reason := "Offline: Daily Max Profit Hit"
-    else if hardStopHit
-        offline_reason := "Offline: Daily Liquidation Hit"
-    else if dailyKillswitch
-        offline_reason := "Offline: Daily Loss Entry Lockout"
-    else if max_losses_hit
-        offline_reason := "Offline: Max Losses Hit"
-    else if isNewsDay
-        offline_reason := "Offline: News Day Blocked"
-    else if isWindowExcluded
-        offline_reason := "Offline: News Exclusion Window"
-    else if isNearingWindow
-        offline_reason := "Offline: Nearing News Window"
-    else if isEod
-        offline_reason := "Offline: EOD Liquidation"
-    else if isBlockedSession
-        offline_reason := "Offline: Blocked Intra-Day Session"
-    else if useTimeRestrictions and not inSession
-        offline_reason := "Offline: Outside Allowed Session"
+// Compiler-size refactor: preserve execution point and return scalar state.
+f_draw_online_transitions() =>
+    if isOffline and not wasOffline
+        string offline_reason = "Bot Offline"
+        if maxProfitHit
+            offline_reason := "Offline: Daily Max Profit Hit"
+        else if hardStopHit
+            offline_reason := "Offline: Daily Liquidation Hit"
+        else if dailyKillswitch
+            offline_reason := "Offline: Daily Loss Entry Lockout"
+        else if max_losses_hit
+            offline_reason := "Offline: Max Losses Hit"
+        else if isNewsDay
+            offline_reason := "Offline: News Day Blocked"
+        else if isWindowExcluded
+            offline_reason := "Offline: News Exclusion Window"
+        else if isNearingWindow
+            offline_reason := "Offline: Nearing News Window"
+        else if isEod
+            offline_reason := "Offline: EOD Liquidation"
+        else if isBlockedSession
+            offline_reason := "Offline: Blocked Intra-Day Session"
+        else if useTimeRestrictions and not inSession
+            offline_reason := "Offline: Outside Allowed Session"
 
-    if showOfflineDots and strategy.position_size == 0
-        label.new(bar_index, low, "🔴", yloc=yloc.belowbar, style=label.style_none, textcolor=color.red, size=size.small, tooltip=offline_reason)
-else if not isOffline and wasOffline
-    if showOfflineDots and strategy.position_size == 0
-        label.new(bar_index, low, "🟢", yloc=yloc.belowbar, style=label.style_none, textcolor=color.lime, size=size.small, tooltip="Bot Online")
+        if showOfflineDots and strategy.position_size == 0
+            label.new(bar_index, low, "🔴", yloc=yloc.belowbar, style=label.style_none, textcolor=color.red, size=size.small, tooltip=offline_reason)
+    else if not isOffline and wasOffline
+        if showOfflineDots and strategy.position_size == 0
+            label.new(bar_index, low, "🟢", yloc=yloc.belowbar, style=label.style_none, textcolor=color.lime, size=size.small, tooltip="Bot Online")
+    true
+
+f_draw_online_transitions()
 
 wasOffline := isOffline
 
@@ -3399,47 +3552,57 @@ wasOffline := isOffline
 // Status Dashboard UI
 // ==========================
 var table status_tbl = table.new(position.bottom_right, 1, 1, bgcolor=color.new(color.black, 80), border_width=1, border_color=color.new(color.gray, 50))
-if barstate.islast
-    string status_txt = "Bot Online"
-    color status_col = color.lime
-    if dailyKillswitch or hardStopHit or max_losses_hit or maxProfitHit
-        status_txt := "Bot Offline"
-        status_col := maxProfitHit ? color.lime : color.red
-    else if isOffline
-        status_txt := "Bot Offline"
-        status_col := color.orange
-    table.cell(status_tbl, 0, 0, status_txt, text_color=status_col, text_size=size.normal)
+// Compiler-size refactor: preserve execution point and return scalar state.
+f_draw_status_dashboard() =>
+    if barstate.islast
+        string status_txt = "Bot Online"
+        color status_col = color.lime
+        if dailyKillswitch or hardStopHit or max_losses_hit or maxProfitHit
+            status_txt := "Bot Offline"
+            status_col := maxProfitHit ? color.lime : color.red
+        else if isOffline
+            status_txt := "Bot Offline"
+            status_col := color.orange
+        table.cell(status_tbl, 0, 0, status_txt, text_color=status_col, text_size=size.normal)
+    true
+
+f_draw_status_dashboard()
 
 var int first_bar_time = time
 var table dd_tbl = table.new(position.bottom_left, 2, 8, bgcolor=color.new(color.black, 80), border_width=1, border_color=color.new(color.gray, 50))
-if barstate.islast and showPropFirmMetrics
-    table.cell(dd_tbl, 0, 0, "Prop Firm Metrics (Closed Trade)", text_color=color.white, text_size=size.small, bgcolor=color.new(color.blue, 70))
-    table.merge_cells(dd_tbl, 0, 0, 1, 0)
-    
-    string date_range = str.format("{0,date,yyyy-MM-dd}", first_bar_time) + " to " + str.format("{0,date,yyyy-MM-dd}", time)
-    table.cell(dd_tbl, 0, 1, "Date Range:", text_color=color.gray, text_size=size.small)
-    table.cell(dd_tbl, 1, 1, date_range, text_color=color.white, text_size=size.small)
-    
-    table.cell(dd_tbl, 0, 2, "Total Closed Trades:", text_color=color.gray, text_size=size.small)
-    table.cell(dd_tbl, 1, 2, str.tostring(strategy.closedtrades), text_color=color.white, text_size=size.small)
-    
-    float win_rate = strategy.closedtrades > 0 ? (strategy.wintrades / float(strategy.closedtrades)) * 100.0 : 0.0
-    table.cell(dd_tbl, 0, 3, "Win Rate:", text_color=color.gray, text_size=size.small)
-    table.cell(dd_tbl, 1, 3, str.tostring(win_rate, "#.##") + "%", text_color=color.white, text_size=size.small)
+// Compiler-size refactor: preserve execution point and return scalar state.
+f_draw_closed_trade_metrics() =>
+    if barstate.islast and showPropFirmMetrics
+        table.cell(dd_tbl, 0, 0, "Prop Firm Metrics (Closed Trade)", text_color=color.white, text_size=size.small, bgcolor=color.new(color.blue, 70))
+        table.merge_cells(dd_tbl, 0, 0, 1, 0)
 
-    table.cell(dd_tbl, 0, 4, "Peak / Lowest Closed:", text_color=color.gray, text_size=size.small)
-    table.cell(dd_tbl, 1, 4, str.tostring(peak_closed_equity, "$#,###") + " / " + str.tostring(lowest_closed_equity, "$#,###"), text_color=color.white, text_size=size.small)
-    
-    table.cell(dd_tbl, 0, 5, "Max Closed Drawdown:", text_color=color.gray, text_size=size.small)
-    table.cell(dd_tbl, 1, 5, str.tostring(max_closed_drawdown, "$#,###.00"), text_color=color.red, text_size=size.small)
-    
-    table.cell(dd_tbl, 0, 6, "Lowest Buffer Left:", text_color=color.gray, text_size=size.small)
-    table.cell(dd_tbl, 1, 6, str.tostring(lowest_buffer, "$#,###.00"), text_color=lowest_buffer > 0 ? color.lime : color.red, text_size=size.small)
-    
-    float final_threshold = math.min(strategy.initial_capital, peak_closed_equity - propFirmDrawdownLimit)
-    float final_buffer = (strategy.initial_capital + strategy.netprofit) - final_threshold
-    table.cell(dd_tbl, 0, 7, "Current Buffer Left:", text_color=color.gray, text_size=size.small)
-    table.cell(dd_tbl, 1, 7, str.tostring(final_buffer, "$#,###.00"), text_color=final_buffer > 0 ? color.lime : color.red, text_size=size.small)
+        string date_range = str.format("{0,date,yyyy-MM-dd}", first_bar_time) + " to " + str.format("{0,date,yyyy-MM-dd}", time)
+        table.cell(dd_tbl, 0, 1, "Date Range:", text_color=color.gray, text_size=size.small)
+        table.cell(dd_tbl, 1, 1, date_range, text_color=color.white, text_size=size.small)
+
+        table.cell(dd_tbl, 0, 2, "Total Closed Trades:", text_color=color.gray, text_size=size.small)
+        table.cell(dd_tbl, 1, 2, str.tostring(strategy.closedtrades), text_color=color.white, text_size=size.small)
+
+        float win_rate = strategy.closedtrades > 0 ? (strategy.wintrades / float(strategy.closedtrades)) * 100.0 : 0.0
+        table.cell(dd_tbl, 0, 3, "Win Rate:", text_color=color.gray, text_size=size.small)
+        table.cell(dd_tbl, 1, 3, str.tostring(win_rate, "#.##") + "%", text_color=color.white, text_size=size.small)
+
+        table.cell(dd_tbl, 0, 4, "Peak / Lowest Closed:", text_color=color.gray, text_size=size.small)
+        table.cell(dd_tbl, 1, 4, str.tostring(peak_closed_equity, "$#,###") + " / " + str.tostring(lowest_closed_equity, "$#,###"), text_color=color.white, text_size=size.small)
+
+        table.cell(dd_tbl, 0, 5, "Max Closed Drawdown:", text_color=color.gray, text_size=size.small)
+        table.cell(dd_tbl, 1, 5, str.tostring(max_closed_drawdown, "$#,###.00"), text_color=color.red, text_size=size.small)
+
+        table.cell(dd_tbl, 0, 6, "Lowest Buffer Left:", text_color=color.gray, text_size=size.small)
+        table.cell(dd_tbl, 1, 6, str.tostring(lowest_buffer, "$#,###.00"), text_color=lowest_buffer > 0 ? color.lime : color.red, text_size=size.small)
+
+        float final_threshold = math.min(strategy.initial_capital, peak_closed_equity - propFirmDrawdownLimit)
+        float final_buffer = (strategy.initial_capital + strategy.netprofit) - final_threshold
+        table.cell(dd_tbl, 0, 7, "Current Buffer Left:", text_color=color.gray, text_size=size.small)
+        table.cell(dd_tbl, 1, 7, str.tostring(final_buffer, "$#,###.00"), text_color=final_buffer > 0 ? color.lime : color.red, text_size=size.small)
+    true
+
+f_draw_closed_trade_metrics()
 
 // ==========================
 // VWAP Plotting
