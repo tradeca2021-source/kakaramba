@@ -1,5 +1,5 @@
 //@version=6
-strategy("BTC RBO v80 Blind Fibonacci (Perpetual)", shorttitle="BTC RBO v80 Fib", overlay=true, pyramiding=3, initial_capital=100000, default_qty_type=strategy.fixed, default_qty_value=1, margin_long=100, margin_short=100, max_lines_count=500, max_boxes_count=500, max_labels_count=500, use_bar_magnifier=true, commission_type=strategy.commission.percent, commission_value=0.06, slippage=2, process_orders_on_close=false)
+strategy("BTC RBO v82 Blind Fibonacci (Perpetual)", shorttitle="BTC RBO v82 Fib", overlay=true, pyramiding=3, initial_capital=100000, default_qty_type=strategy.fixed, default_qty_value=1, margin_long=100, margin_short=100, max_lines_count=500, max_boxes_count=500, max_labels_count=500, use_bar_magnifier=true, commission_type=strategy.commission.percent, commission_value=0.06, slippage=2, process_orders_on_close=false)
 
 // --- LIBRARY IMPORT ---
 // External dependency: access to traderjoeb/PropFirm_News_Dates/6 is required.
@@ -116,7 +116,7 @@ blindFibTargetTicks = input.int(2, "Blind Target Front-Run (Ticks)", minval=0, m
 blindFibUseVwap = input.bool(false, "Blind Mode: Require VWAP Alignment", group=grp_fib, tooltip="Optional long-above/short-below VWAP gate; off permits both directions without a trend filter.")
 blindFibStopMode = input.string("ATR from Entry", "Blind Mode: Stop Placement", options=["ATR from Entry", "Beyond Impulse Origin"], group=grp_fib, tooltip="ATR stop uses setup ATR x ATR Stop Multiplier. Origin stop is below the long impulse low / above the short impulse high. Neither choice is inferred from the screenshot.")
 blindFibStopTicks = input.int(2, "Blind Origin Stop Buffer (Ticks)", minval=1, maxval=100, group=grp_fib)
-blindFibMaxAge = input.int(30, "Fib Candidate Max Age After Confirmation (Bars)", minval=1, group=grp_fib, tooltip="An unsubmitted swing pair may retry temporary blockers within this many bars after its terminal pivot becomes known. Completed, canceled, crossed or expired pairs are not re-entered.")
+blindFibMaxAge = input.int(30, "Fib Candidate Max Age After Confirmation (Bars)", minval=1, group=grp_fib, tooltip="An unsubmitted swing pair may retry temporary blockers within this many bars after its terminal pivot becomes known. If confirmation occurs beyond the entry, the current pair waits for price to return to the limit side. Submitted, completed, canceled or expired pairs are not re-entered.")
 blindFibTimeout = input.int(30, "Blind Pending Timeout (Bars, 0=Off)", minval=0, group=grp_fib)
 blindFibAnchorMode = input.string("Confirmed Swing Pair", "Blind Mode: Impulse Anchors", options=["Rolling Lookback", "Confirmed Swing Pair"], group=grp_fib, tooltip="Rolling preserves the existing lookback extrema. Swing pairs use chronologically ordered confirmed pivots, known only after the right-side bars close. Default uses confirmed swing pairs on the chart timeframe.")
 blindFibPivotBars = input.int(3, "Blind Swing Confirmation Bars", minval=1, maxval=50, group=grp_fib)
@@ -464,7 +464,7 @@ f_tp_json(bool is_entry, string debug_str, string uuid, float sl_price_val = na,
 
     string action_str = "{{strategy.order.action}}" // TradingView automatically assigns "buy" or "sell" even for exits
     string core_fields = '{\n  "ticker": "' + webhookTicker + '",\n  "action": "' + action_str + '"' + sentiment_block + ',\n  "orderType": "' + order_type + '",\n  "price": {{close}}' + limit_block + ',\n  "quantity": {{strategy.order.contracts}},\n  "time": "{{timenow}}"' + sl_block + cancel_block + ','
-    string extras_fields = '\n  "extras": {\n    "strategy_version": "v78-BlindFib",\n    "order_id": "{{strategy.order.id}}",\n    "position_after_trade": "{{strategy.market_position}}",\n    "trade_uuid": "' + uuid + '",\n    "debug": "' + debug_str + '"\n  }\n}'
+    string extras_fields = '\n  "extras": {\n    "strategy_version": "v82-BlindFib",\n    "order_id": "{{strategy.order.id}}",\n    "position_after_trade": "{{strategy.market_position}}",\n    "trade_uuid": "' + uuid + '",\n    "debug": "' + debug_str + '"\n  }\n}'
     core_fields + extras_fields
 
 
@@ -685,7 +685,9 @@ f_manage_blind_fib() =>
             float risk_distance = math.abs(ep - stop)
             float costs = f_roundtrip_cost(ep)
             bool cost_ok = not useCostFilter or reward >= costs * minTargetCostRatio
-            bool resting_limit = is_long ? close > ep : close < ep
+            // Equality can submit a limit for the next available tick. Do not backfill
+            // an earlier touch; only prices strictly beyond the limit are crossed.
+            bool resting_limit = is_long ? close >= ep : close <= ep
             bool valid_levels = impulse_range > 0 and ep > 0 and stop > 0 and target > 0 and risk_distance >= syminfo.mintick and reward >= syminfo.mintick and (is_long ? stop < ep : stop > ep)
             float risk_budget = strategy.equity * f_get_risk(na) / 100.0
             float modeled_loss = risk_distance + (includeCostsInRisk ? costs : 0.0)
@@ -695,8 +697,11 @@ f_manage_blind_fib() =>
             bool net_target_ok = not requirePositiveNetTarget or expectedNetReward > 0
             bool net_rr_ok = minNetRewardRisk == 0 or (not na(expectedNetRatio) and expectedNetRatio >= minNetRewardRisk)
 
-            state_fibEntryStatus := candidate_expired ? "Blocked: Fib candidate expired" : not resting_limit ? "Blocked: 50% entry already crossed" : na(chart_atr) ? "Waiting: ATR warm-up" : not valid_levels ? "Blocked: invalid stop/target distance" : not isValidTimeframe ? "Blocked: use a 1-15 minute chart" : dailyKillswitch ? "Blocked: daily P&L limit" : max_losses_hit ? "Blocked: consecutive-loss limit" : not safety_ok ? "Blocked: session / day / news restriction" : not (is_long ? long_vwap_ok : short_vwap_ok) ? "Blocked: optional VWAP alignment" : not net_target_ok ? "Blocked: target cannot cover fees / slippage" : not net_rr_ok ? "Blocked: net reward/risk below minimum" : not cost_ok ? "Blocked: target below estimated cost filter" : qty < btcQtyStep ? "Blocked: quantity below exchange step" : "Ready: submit 50% limit"
-            if candidate_expired or not resting_limit or (not na(chart_atr) and not valid_levels)
+            state_fibEntryStatus := candidate_expired ? "Blocked: Fib candidate expired" : not resting_limit ? "Waiting: price beyond 50%; retry until expiry" : na(chart_atr) ? "Waiting: ATR warm-up" : not valid_levels ? "Blocked: invalid stop/target distance" : not isValidTimeframe ? "Blocked: use a 1-15 minute chart" : dailyKillswitch ? "Blocked: daily P&L limit" : max_losses_hit ? "Blocked: consecutive-loss limit" : not safety_ok ? "Blocked: session / day / news restriction" : not (is_long ? long_vwap_ok : short_vwap_ok) ? "Blocked: optional VWAP alignment" : not net_target_ok ? "Blocked: target cannot cover fees / slippage" : not net_rr_ok ? "Blocked: net reward/risk below minimum" : not cost_ok ? "Blocked: target below estimated cost filter" : qty < btcQtyStep ? "Blocked: quantity below exchange step" : "Ready: submit 50% limit"
+            // A crossed midpoint is temporary: confirmation may occur during the
+            // retracement. Keep this current pair eligible for a future resting
+            // limit; do not pretend the earlier touch was tradable.
+            if candidate_expired or (not na(chart_atr) and not valid_levels)
                 state_blind_last_attempt_id := impulse_id
             if not candidate_expired and safety_ok and (is_long ? long_vwap_ok : short_vwap_ok) and resting_limit and valid_levels and net_target_ok and net_rr_ok and cost_ok and qty >= btcQtyStep
                 if usePerTradeHardStop and perTradeHardStopLimit > 0
@@ -748,6 +753,33 @@ sl_price := result_f_manage_blind_fib_sl_price
 current_trade_uuid := result_f_manage_blind_fib_current_trade_uuid
 trade_entry_qty := result_f_manage_blind_fib_trade_entry_qty
 fibEntryStatus := result_f_manage_blind_fib_fibEntryStatus
+
+// Whole-chart diagnostics: overlapping gate counts describe each new pair at
+// confirmation, including pairs observed while another order is active.
+// Submissions and filled positions are separate; a plotted setup is not a fill.
+var int fibSetupCount = 0
+var int fibCrossedCount = 0
+var int fibNetCostBlockedCount = 0
+var int fibSafetyBlockedCount = 0
+var int fibBusyCount = 0
+var int fibSubmittedCount = 0
+if barstate.isconfirmed and newFibSeries
+    fibSetupCount += 1
+    bool diagnosticLong = blindCandidateDir == 1
+    bool diagnosticCrossed = diagnosticLong ? close < fibCandidateEntry : close > fibCandidateEntry
+    float diagnosticReward = diagnosticLong ? fibCandidateTarget - fibCandidateEntry : fibCandidateEntry - fibCandidateTarget
+    float diagnosticCosts = (fibCandidateEntry + fibCandidateTarget) * estFeePct / 100.0 + syminfo.mintick * estSlippageTicks * 2.0
+    if diagnosticCrossed
+        fibCrossedCount += 1
+    if requirePositiveNetTarget and diagnosticReward <= diagnosticCosts
+        fibNetCostBlockedCount += 1
+    if not inSession or dailyKillswitch or isEod or isFomcLiquidationTime
+        fibSafetyBlockedCount += 1
+    if nz(fib_order_dir[1]) != 0 or strategy.position_size != 0
+        fibBusyCount += 1
+if barstate.isconfirmed and fib_order_dir != 0 and blind_order_bar == bar_index
+    fibSubmittedCount += 1
+int fibFilledCount = strategy.closedtrades + strategy.opentrades
 
 plot(showFibConfluence ? (fib_order_dir != 0 ? fib_order_entry : fibCandidateReady ? fibCandidateEntry : na) : na, "Fib 50% Candidate / Frozen Order Entry", color=color.orange, linewidth=2, style=plot.style_linebr)
 plot(showFibConfluence ? (fib_order_dir != 0 ? fib_order_target : fibCandidateReady ? fibCandidateTarget : na) : na, "Fib Candidate / Frozen Order Profit Target", color=color.rgb(212, 175, 55), linewidth=2, style=plot.style_linebr)
@@ -838,7 +870,7 @@ bool economicsLong = fib_order_dir != 0 ? fib_order_dir == 1 : blindCandidateDir
 float economicsRawStop = blindFibStopMode == "Beyond Impulse Origin" ? (economicsLong ? blindCandidateLow - blindFibStopTicks * syminfo.mintick : blindCandidateHigh + blindFibStopTicks * syminfo.mintick) : economicsEntry + (economicsLong ? -1 : 1) * chart_atr * effAtrStopMult
 float economicsStop = fib_order_dir != 0 ? fib_order_stop : economicsLong ? math.floor(economicsRawStop / syminfo.mintick) * syminfo.mintick : math.ceil(economicsRawStop / syminfo.mintick) * syminfo.mintick
 [visibleNetReward, visibleNetRisk, visibleNetRatio, visibleBreakEven] = f_net_economics(economicsEntry, economicsTarget, economicsStop, economicsLong)
-var table status_tbl = table.new(position.bottom_right, 1, 6, bgcolor=color.new(color.black, 80), border_width=1, border_color=color.new(color.gray, 50))
+var table status_tbl = table.new(position.bottom_right, 1, 11, bgcolor=color.new(color.black, 80), border_width=1, border_color=color.new(color.gray, 50))
 if barstate.islast
     string status_txt = "Bot Online"
     color status_col = color.lime
@@ -856,6 +888,14 @@ if barstate.islast
     table.cell(status_tbl, 0, 3, breakEvenText, text_color=not na(visibleNetReward) and visibleNetReward <= 0 ? color.red : color.silver, text_size=size.small)
     table.cell(status_tbl, 0, 4, "TP exits: " + str.tostring(targetExitCount) + " (net losers: " + str.tostring(losingTargetCount) + ") | SL exits: " + str.tostring(stopExitCount), text_color=color.white, text_size=size.small)
     table.cell(status_tbl, 0, 5, lastCompletedReason + (na(lastCompletedNet) ? "" : " | Net " + str.tostring(lastCompletedNet, "#.##")), text_color=not na(lastCompletedNet) and lastCompletedNet < 0 ? color.red : color.silver, text_size=size.small)
+    table.cell(status_tbl, 0, 6, "v82 | Pairs " + str.tostring(fibSetupCount) + " | Limits sent " + str.tostring(fibSubmittedCount) + " | Filled " + str.tostring(fibFilledCount), text_color=color.white, text_size=size.small)
+    table.cell(status_tbl, 0, 7, "At confirmation: crossed " + str.tostring(fibCrossedCount) + " | fee-blocked " + str.tostring(fibNetCostBlockedCount), text_color=color.orange, text_size=size.small)
+    table.cell(status_tbl, 0, 8, "At confirmation: safety-blocked " + str.tostring(fibSafetyBlockedCount) + " | busy " + str.tostring(fibBusyCount) + " (counts overlap)", text_color=color.silver, text_size=size.small)
+    float targetProgress = blindFibTargetRatio - 0.5
+    float approxRequiredRange = targetProgress > 0 ? (f_roundtrip_cost(fibCandidateEntry) + (blindFibEntryTicks + blindFibTargetTicks) * syminfo.mintick) / targetProgress : na
+    string rangeText = fibCandidateReady ? "Current pair range " + str.tostring(blindCandidateHigh - blindCandidateLow, "#.##") + " | approx. fee break-even range " + str.tostring(approxRequiredRange, "#.##") : "Waiting for confirmed anchors"
+    table.cell(status_tbl, 0, 9, rangeText, text_color=color.silver, text_size=size.small)
+    table.cell(status_tbl, 0, 10, "Net-target gate " + (requirePositiveNetTarget ? "ON" : "OFF") + " | Cost filter " + (useCostFilter ? "ON" : "OFF") + " | Pivot bars " + str.tostring(blindFibPivotBars), text_color=color.silver, text_size=size.small)
 
 
 
