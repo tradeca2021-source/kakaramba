@@ -1,3 +1,35 @@
+RBO v95: independent larger Fib confluence and potential obstacles
+
+Latest version: BTC_RBO_v95_Fib_Confluence.pine. This includes the v94 slower structure alignment and prior21-bar Fib channel, plus independent larger-leg Fib context. v94 is also retained as a separate file for comparison. Install the full v95 file as a fresh TradingView instance; check saved inputs before comparing versions.
+
+A larger leg is frozen only after chronological confirmed larger pivots matching the larger direction. Defaults:13/13 swings (effective at least local+1), minimum leg3 confirmationATR, lifetime90 bars after confirmation. It dies at the age limit, a closed price beyond origin, or confirmed opposite larger direction. Only a new qualifying pivot pair can replace it. No running extreme moves an active larger Fib. Local trade Fib lifetime remains30 bars. Neither larger Fib replacement nor expiry moves a filled trade's bracket.
+
+Seven directional larger Fib levels are examined:0%,23.6%,38.2%,50%,61.8%,78.6%,100%. The trade Fib target remains directional61.8%; uploaded retracement conventions are not silently substituted. If the larger Fib has the same endpoint bars/direction as the trade Fib, context is unavailable for independent confluence. Pending larger direction also makes the comparison unavailable. No valid larger leg/ATR/price geometry yields n/a, not a manufactured score.
+
+Context score0–3 awards one point each for: larger leg direction matching the trade, entry within max(one tick,0.2 currentATR) of a larger level, and no potential opposing larger level in the entry-to-target path. Entry confluence YES requires BOTH alignment and proximity. A score is descriptive context, not a probability or proven profitability measure. The panel shows the score, nearest level and potential obstacle; blue marks the nearest larger level, yellow the potential obstacle. These update with current context/ATR and are not trade exit orders.
+
+For long trades, a potential obstacle is the nearest larger level above entry+confluence tolerance and at/below target+0.1 currentATR clearance. Shorts mirror this below entry. Levels within entry tolerance are treated as entry context rather than obstacles. Price alone does not establish actual support/resistance; the existing separate strongSR filter retains its confirmed-touch/break rules. Score uses only one active larger leg, not an unbounded archive of earlier Fibs.
+
+Require Independent Larger Fib Entry Confluence defaults OFF. Avoid Potential Larger Fib Target Obstacles defaults OFF. Enable each independently for testing. When enabled, missing/expired/duplicate context blocks arming; a pending limit cancels if its context becomes ineligible. With both OFF, these new computations are informational. Existing v94 larger structure gate remains ON and congestion gate OFF by default. Open positions keep their50%/61.8% frozen entry/target/stop snapshots and previously enabled safety exits, with no new opposite-trend close.
+
+This uses the repository's own confirmed structure and bounded seven-level arithmetic. No uploaded moving-anchor or HTF lookahead calculation was copied. No HTF requests are used: the two scales are on the current chart. Local72 source/formula/lifecycle checks passed; native TradingView compilation/fills and BTC15-minute out-of-sample performance remain unverified. No win-rate/profit-factor improvement is claimed. Previous version notes follow:
+
+RBO v94: slower structure alignment and prior-range Fib zones
+
+Latest working file: BTC_RBO_v94_Structure_Zones.pine. This upgrade keeps v93 bidirectional confirmed-trend50% limits, directional61.8% targets, position labels and frozen stop/target management.
+
+Require Larger Structure Alignment defaults ON. Local5/5 swings still define the entry Fib; an independent slower13/13 chart-timeframe swing direction must agree before arming. Effective larger confirmation bars are max(local+1, configured larger), so they always remain slower. Both instances require closed candles and two consecutive closes beyond frozen swing-break thresholds by default. Unknown, opposed or pending larger direction blocks new orders and cancels pending orders. It cannot close a filled position. The panel reports both directions and the larger gate state. MAIN UP/DOWN labels are optional and default OFF. This is two swing scales on the same chart, not a higher-timeframe data request or LuxAlgo's recursive short/intermediate/long hierarchy.
+
+Show Prior-Range Fib Zones defaults ON. Channel boundaries use highest high and lowest low of the previous21 completed candles. Upper23.6%, middle38.2–61.8%, and lower76.4% location bands are faintly shaded. The current candle cannot move the channel used for its decision. The channel ratios measure retracement from channel high; the trade Fib target still measures directional progress from the confirmed impulse origin. Channel boundaries update each bar; submitted trade brackets never follow them.
+
+Skip Narrow Sideways Middle-Zone Entries defaults OFF for separate testing. When enabled, it rejects a candidate entry only if its price lies within the channel middle AND prior channel width is <=4 priorATR AND prior21-change price efficiency is <=0.3. Efficiency is absolute net close displacement divided by total absolute close changes, all ending on the preceding bar; flat travel is0. Warm-up blocks arming while this optional gate is enabled. Pending limits cancel if their frozen entry becomes congested. A midpoint in an efficient directional or wide range is not blocked by this rule. No upper-only long/lower-only short requirement is added. Chart location text refers to current close, while this trade gate uses the planned entry price.
+
+New larger confirmation introduces delay and can reduce trades, particularly during warm-up or local/larger disagreement. Inputs are unoptimized starting settings. Compare with Require Larger Structure Alignment OFF to isolate the new direction gate; then test congestion separately, using an untouched evaluation period. Neither negative v92 exports nor local checks establish profitability for v94.
+
+Implementation extends the repository's own closed-bar structure routine and basic rolling-range arithmetic; no LuxAlgo methods or object/drawing code were copied. Existing volume/SR/cost/quantity/session/news safeguards, finite-life Fibs and actual open/close labels remain. No engulfing requirement, moving target or opposite-trend position close is added.
+
+Local55 source/formula/lifecycle checks passed. Native TradingView compilation, execution and BTC15-minute performance remain unverified. Previous version notes follow:
+
 RBO v93: bidirectional confirmed-trend Fib trading
 
 Latest working version: BTC_RBO_v93_Trend_Fib.pine. Per the user, this replaces v92 long-only breakout entries and1.5R exits with50% Fib limit entries and directional61.8% targets. Install as a fresh full strategy instance. Earlier version files remain available.
