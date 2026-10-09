@@ -1,5 +1,5 @@
 //@version=6
-strategy("BTC RBO v91 Rally Only (Perpetual)", shorttitle="BTC RBO v91 Rally", overlay=true, pyramiding=3, initial_capital=100000, default_qty_type=strategy.fixed, default_qty_value=1, margin_long=100, margin_short=100, max_lines_count=500, max_boxes_count=500, max_labels_count=500, use_bar_magnifier=true, commission_type=strategy.commission.percent, commission_value=0.06, slippage=2, process_orders_on_close=false)
+strategy("BTC RBO v92 Rally Volume (Perpetual)", shorttitle="BTC RBO v92 RallyVol", overlay=true, pyramiding=3, initial_capital=100000, default_qty_type=strategy.fixed, default_qty_value=1, margin_long=100, margin_short=100, max_lines_count=500, max_boxes_count=500, max_labels_count=500, use_bar_magnifier=true, commission_type=strategy.commission.percent, commission_value=0.06, slippage=2, process_orders_on_close=false)
 
 // --- LIBRARY IMPORT ---
 // External dependency: access to traderjoeb/PropFirm_News_Dates/6 is required.
@@ -115,6 +115,11 @@ rallyBreakAtr = input.float(0.1, "Close Above Prior High Buffer (ATR)", minval=0
 rallyCooldown = input.int(5, "Minimum Bars Between Entry Attempts", minval=1, group=grp_rally)
 rallyRewardRisk = input.float(1.5, "Profit Target / Stop Distance", minval=0.1, maxval=10.0, step=0.1, group=grp_rally)
 rallyUseVwap = input.bool(false, "Require Close Above VWAP", group=grp_rally)
+rallyUseVolume = input.bool(true, "Require Relative Volume Confirmation", group=grp_rally, tooltip="Requires breakout candle volume versus the previous completed candles. Missing or zero baseline volume blocks entry while enabled.")
+rallyVolumeLength = input.int(20, "Relative Volume Baseline Bars", minval=2, maxval=200, group=grp_rally)
+rallyMinRvol = input.float(1.2, "Minimum Relative Volume", minval=0.1, maxval=10.0, step=0.1, group=grp_rally)
+rallyUseRangeCap = input.bool(true, "Avoid Oversized Breakout Candles", group=grp_rally)
+rallyMaxRangeAtr = input.float(2.0, "Maximum Breakout High-Low Range (ATR)", minval=0.1, maxval=10.0, step=0.1, group=grp_rally)
 showFibConfluence = input.bool(true, "Show Active Rally Entry / Target", group=grp_rally)
 showFibSignals = input.bool(true, "Show Rally Entry Attempts", group=grp_rally)
 
@@ -489,7 +494,7 @@ f_tp_json(bool is_entry, string debug_str, string uuid, float sl_price_val = na,
 
     string action_str = "{{strategy.order.action}}" // TradingView automatically assigns "buy" or "sell" even for exits
     string core_fields = '{\n  "ticker": "' + webhookTicker + '",\n  "action": "' + action_str + '"' + sentiment_block + ',\n  "orderType": "' + order_type + '",\n  "price": {{close}}' + limit_block + ',\n  "quantity": {{strategy.order.contracts}},\n  "time": "{{timenow}}"' + sl_block + cancel_block + ','
-    string extras_fields = '\n  "extras": {\n    "strategy_version": "v91-RallyOnly",\n    "order_id": "{{strategy.order.id}}",\n    "position_after_trade": "{{strategy.market_position}}",\n    "trade_uuid": "' + uuid + '",\n    "debug": "' + debug_str + '"\n  }\n}'
+    string extras_fields = '\n  "extras": {\n    "strategy_version": "v92-RallyOnly",\n    "order_id": "{{strategy.order.id}}",\n    "position_after_trade": "{{strategy.market_position}}",\n    "trade_uuid": "' + uuid + '",\n    "debug": "' + debug_str + '"\n  }\n}'
     core_fields + extras_fields
 
 
@@ -737,6 +742,12 @@ plot(showStrongSr ? nearestSrSupport : na, "Nearest Strong Support Center", colo
 float rallyPriorHigh = ta.highest(high, rallyLookback)[1]
 float rallyPriorLow = ta.lowest(low, rallyLookback)[1]
 bool rallySetup = barstate.isconfirmed and trendLongAllowed and not na(chart_atr) and close > rallyPriorHigh + chart_atr * rallyBreakAtr and close > open and close - open >= chart_atr * rallyMinBodyAtr
+// Check quality on the fresh structural wave, without chasing a rejected wave later.
+float rallyPriorVolume = ta.sma(volume, rallyVolumeLength)[1]
+float rallyRvol = not na(volume) and not na(rallyPriorVolume) and rallyPriorVolume > 0 ? volume / rallyPriorVolume : na
+bool rallyVolumeOk = not rallyUseVolume or (not na(rallyRvol) and rallyRvol >= rallyMinRvol)
+float rallyCandleRangeAtr = not na(chart_atr) and chart_atr > 0 ? (high - low) / chart_atr : na
+bool rallyRangeOk = not rallyUseRangeCap or (not na(rallyCandleRangeAtr) and rallyCandleRangeAtr <= rallyMaxRangeAtr)
 bool rallyNewSetup = rallySetup and not rallySetup[1]
 bool fibCandidateReady = rallyNewSetup
 bool newFibSeries = rallyNewSetup
@@ -860,8 +871,8 @@ f_manage_rally() =>
             bool rr_ok = minNetRewardRisk == 0 or (not na(netRatio) and netRatio >= minNetRewardRisk)
             bool cost_ok = not useCostFilter or target - ep >= costs * minTargetCostRatio
             bool levels_ok = stop > 0 and stop <= ep - syminfo.mintick and target >= ep + syminfo.mintick
-            state_fibEntryStatus := not safety_ok ? "Blocked: session / risk restrictions" : not cooldown_ok ? "Waiting: rally entry cooldown" : not vwap_ok ? "Blocked: optional VWAP" : not sr_ok ? "Blocked: strong resistance before target" : not levels_ok ? "Blocked: invalid stop / target" : not net_ok ? "Blocked: target cannot cover fees" : not rr_ok ? "Blocked: net reward/risk" : not cost_ok ? "Blocked: cost filter" : qty < effectiveQtyStep ? "Blocked: quantity below effective step" : "Rally market buy submitted"
-            if safety_ok and cooldown_ok and vwap_ok and sr_ok and levels_ok and net_ok and rr_ok and cost_ok and qty >= effectiveQtyStep
+            state_fibEntryStatus := not safety_ok ? "Blocked: session / risk restrictions" : not cooldown_ok ? "Waiting: rally entry cooldown" : not rallyVolumeOk ? "Blocked: relative volume missing or below threshold" : not rallyRangeOk ? "Blocked: oversized breakout candle" : not vwap_ok ? "Blocked: optional VWAP" : not sr_ok ? "Blocked: strong resistance before target" : not levels_ok ? "Blocked: invalid stop / target" : not net_ok ? "Blocked: target cannot cover fees" : not rr_ok ? "Blocked: net reward/risk" : not cost_ok ? "Blocked: cost filter" : qty < effectiveQtyStep ? "Blocked: quantity below effective step" : "Rally market buy submitted"
+            if safety_ok and cooldown_ok and rallyVolumeOk and rallyRangeOk and vwap_ok and sr_ok and levels_ok and net_ok and rr_ok and cost_ok and qty >= effectiveQtyStep
                 state_fib_order_dir := 1
                 state_fib_order_entry := ep
                 state_fib_order_target := target
@@ -1039,13 +1050,13 @@ bool economicsLong = fib_order_dir != 0 ? fib_order_dir == 1 : blindCandidateDir
 float economicsRawStop = economicsEntry - chart_atr * effAtrStopMult
 float economicsStop = fib_order_dir != 0 ? fib_order_stop : economicsLong ? math.floor(economicsRawStop / syminfo.mintick) * syminfo.mintick : math.ceil(economicsRawStop / syminfo.mintick) * syminfo.mintick
 [visibleNetReward, visibleNetRisk, visibleNetRatio, visibleBreakEven] = f_net_economics(economicsEntry, economicsTarget, economicsStop, economicsLong)
-// Context readings do not impose new entry gates. RVOL uses the preceding
-// 20 bars, excluding the current bar. These are current readings, not frozen
-// setup observations and not order-book or order-flow data.
+// Dashboard readings are current, not frozen setup observations. RVOL uses
+// the configured prior completed candles and also gates entries when enabled.
+// Exchange candle volume is not order-book or order-flow data.
 float signalRangeAtr = fibCandidateReady and chart_atr > 0 ? (blindCandidateHigh - blindCandidateLow) / chart_atr : na
 float signalEntryVwapAtr = fibCandidateReady and chart_atr > 0 and not na(vwapValue) ? (fibCandidateEntry - vwapValue) / chart_atr : na
-float signalPriorVolume = ta.sma(volume, 20)[1]
-float signalRelativeVolume = not na(volume) and signalPriorVolume > 0 ? volume / signalPriorVolume : na
+float signalPriorVolume = rallyPriorVolume
+float signalRelativeVolume = rallyRvol
 float signalReward = blindCandidateDir == 1 ? fibCandidateTarget - fibCandidateEntry : fibCandidateEntry - fibCandidateTarget
 [visibleSrObstacle, visibleSrStrength] = f_sr_obstacle(economicsEntry, economicsTarget, economicsLong)
 [signalSrObstacle, signalSrStrength] = f_sr_obstacle(fibCandidateEntry, fibCandidateTarget, blindCandidateDir == 1)
@@ -1099,10 +1110,10 @@ if barstate.islast
     table.cell(status_tbl, 0, 3, breakEvenText, text_color=not na(visibleNetReward) and visibleNetReward <= 0 ? color.red : color.silver, text_size=size.small)
     table.cell(status_tbl, 0, 4, "TP exits: " + str.tostring(targetExitCount) + " (net losers: " + str.tostring(losingTargetCount) + ") | SL exits: " + str.tostring(stopExitCount), text_color=color.white, text_size=size.small)
     table.cell(status_tbl, 0, 5, lastCompletedReason + (na(lastCompletedNet) ? "" : " | Net " + str.tostring(lastCompletedNet, "#.##")), text_color=not na(lastCompletedNet) and lastCompletedNet < 0 ? color.red : color.silver, text_size=size.small)
-    table.cell(status_tbl, 0, 6, "v91 | Pairs " + str.tostring(fibSetupCount) + " | Order attempts " + str.tostring(fibSubmittedCount) + " | Filled " + str.tostring(fibFilledCount), text_color=color.white, text_size=size.small)
+    table.cell(status_tbl, 0, 6, "v92 | Rally waves " + str.tostring(fibSetupCount) + " | Order attempts " + str.tostring(fibSubmittedCount) + " | Filled " + str.tostring(fibFilledCount), text_color=color.white, text_size=size.small)
     table.cell(status_tbl, 0, 7, "Rally setups fee-blocked " + str.tostring(fibNetCostBlockedCount), text_color=color.orange, text_size=size.small)
     table.cell(status_tbl, 0, 8, "At confirmation: safety-blocked " + str.tostring(fibSafetyBlockedCount) + " | busy " + str.tostring(fibBusyCount) + " (counts overlap)", text_color=color.silver, text_size=size.small)
-    table.cell(status_tbl, 0, 9, "Rally body >= " + str.tostring(rallyMinBodyAtr) + " ATR | Breakout buffer " + str.tostring(rallyBreakAtr) + " ATR", text_color=color.silver, text_size=size.small)
+    table.cell(status_tbl, 0, 9, "Rally body >= " + str.tostring(rallyMinBodyAtr) + " ATR | Breakout buffer " + str.tostring(rallyBreakAtr) + " ATR | RVOL " + (rallyUseVolume ? ">= " + str.tostring(rallyMinRvol) : "OFF") + " | Candle range cap " + (rallyUseRangeCap ? str.tostring(rallyMaxRangeAtr) + " ATR" : "OFF"), text_color=color.silver, text_size=size.small)
     table.cell(status_tbl, 0, 10, "LONG RALLIES ONLY | Prior range " + str.tostring(rallyLookback) + " bars | Target " + str.tostring(rallyRewardRisk) + "R", text_color=color.silver, text_size=size.small)
     string vwapEntryText = na(signalEntryVwapAtr) ? "n/a" : math.abs(fibCandidateEntry - vwapValue) < syminfo.mintick ? "at VWAP" : blindCandidateDir * signalEntryVwapAtr > 0 ? "aligned" : "opposed"
     string contextText = "Current rally range/ATR " + (na(signalRangeAtr) ? "n/a" : str.tostring(signalRangeAtr, "#.##")) + " | Rally entry vs VWAP " + vwapEntryText + " | Current RVOL " + (na(signalRelativeVolume) ? "n/a" : str.tostring(signalRelativeVolume, "#.##"))
@@ -1111,6 +1122,10 @@ if barstate.islast
     if fibCandidateReady
         if blindCandidateDir == 1 ? not trendLongAllowed : not trendShortAllowed
             selectedBlocks += "confirmed trend; "
+        if not rallyVolumeOk
+            selectedBlocks += "relative volume; "
+        if not rallyRangeOk
+            selectedBlocks += "oversized candle; "
         if not rallyNewSetup
             selectedBlocks += "no fresh rally; "
         if useStrongSr and not na(signalSrObstacle)

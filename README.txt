@@ -1,3 +1,25 @@
+RBO v92: volume-confirmed rallies with volatility limits
+
+Latest version: BTC_RBO_v92_Rally_Volume.pine. Install this full version as a fresh TradingView strategy instance. BTC_RBO_v74_Fib.pine retains the v91 source for comparison.
+
+Relative volume confirmation defaults ON: the closed breakout candle must have at least 1.2 times the average volume of the previous 20 completed candles. The current candle is excluded from the baseline. Missing volume, unavailable history, or a zero baseline blocks entry while this option is enabled; disabling the option bypasses that volume requirement. Use your actual BTC perpetual exchange's feed.
+
+Avoid Oversized Breakout Candles defaults ON: full high-low range must be at most 2 ATR, including wicks. The existing minimum bullish body of 0.5 ATR and close-above-prior-high buffer of 0.1 ATR remain. Volume and range checks run on the first eligible structural breakout in a wave; a rejected continuing wave is not chased when volume later increases. A fresh breakout wave must form. The dashboard gives volume/range rejection reasons and current relative volume.
+
+Long-only confirmed-trend rally entries, actual-fill relative 1.5R brackets, finite-life informational Fibs and existing S/R, fee, sizing and compliance gates are retained from v91. No new trend-reversal exit. These are configurable starting settings, not proven improvements in win rate or profit factor. Local source/arithmetic checks passed; native TradingView compilation and backtesting remain unverified.
+
+RBO v91: long-only rally breakouts with finite-life Fib context
+
+BTCUSDT perpetual, 15-minute is the requested market. v91 replaces the former 50% pullback limit entry: only a fresh CLOSED bullish candle breaking above the previous five bars by 0.1 ATR, with a body of at least 0.5 ATR and confirmed bullish local structure, can submit a market buy. Unknown, bearish or pending trend changes block new entries. No short entries. A five-bar cooldown and one active position prevent repeated wave entries. Optional VWAP alignment defaults OFF. These are starting settings, not optimized results.
+
+Stop distance freezes at setup ATR times the ATR stop multiplier (default 1.5), subject to the existing risk cap. Native relative tick brackets bind to the actual market fill, including next-bar gaps: target defaults to 1.5 times stop distance, rounded to tradable ticks. Entry is normally next-bar open; it cannot retroactively fill at the breakout candle close. Fees, risk sizing, quantity/margin caps, opposing strong resistance, sessions/news and existing compliance safety exits remain. Trend reversals do not introduce an additional position exit. An eligible candle can still be blocked by these guards; the action panel gives the engine reason.
+
+The optional internal Fib is informational retracement context, not an entry requirement or trade target. It uses chronological confirmed swing high/low pairs, minimum 3 ATR at confirmation, aligned with the confirmed trend. Levels show terminal 0%, retracement 50%/61.8%, and origin 100%. Anchors freeze; a new qualifying confirmed pair can replace them. It dies on a CLOSED price beyond the origin, confirmed opposite trend, or 30 bars after confirmation (7.5 hours on 15-minute). Expired pairs stay dead until a new pair confirms. Broken origins and non-positive ranges cannot create a fresh Fib. The action panel shows context status and age. Historical plotted segments remain; expired levels stop extending. Bearish context does not authorize shorts.
+
+Install the complete v91 script as a fresh TradingView instance and check saved inputs. A separate Fib Strat v4 indicator on the chart has its own drawings; disable that separate instance if its old Fib lines remain. This repository script cannot remove another indicator's drawings. The retained traderjoeb/PropFirm_News_Dates/6 library requires TradingView access.
+
+Local source checks and deterministic breakout/bracket/lifecycle cases are documented in the v91 validation artifact. They do not compile or execute Pine. Native TradingView compilation and BTC venue-specific backtesting remain necessary; no win-rate or profit-factor improvement is claimed. Previous version notes below describe historical behavior superseded by v91.
+
 RBO v90: mandatory trend-only entries and a clean trade chart
 
 The user requires entries with the confirmed trend and expressly chose NO new exit on trend reversal. Trend direction eligibility is now mandatory rather than an optional saved input: only longs in confirmed bullish structure and shorts in confirmed bearish structure, with UNKNOWN or a pending change blocking both. Pending limits still cancel if their direction loses confirmation. Already-open positions retain existing stop/target and previously enabled compliance/profit safety exits; no trend-reversal market close is added.
