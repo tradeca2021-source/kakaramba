@@ -1,10 +1,15 @@
 //@version=6
-// Confirmed Zig Zag variant: chart-timeframe, close-confirmed percentage reversals.
+// Confirmed Zig Zag variant: chart-timeframe, close-confirmed swing reversals.
 // Completed legs only; anchors never move after creation. First pivot seeds the engine.
 // Engine timeframe and StartAnchor apply only to legacy engines. No performance claim.
 // Usage: paste the complete file into a NEW TradingView Pine Editor script and compile.
 // Requires access to tradeca2021/PropFirm_News_Dates/6 (same import as supplied FibTrader).
-// Default engine: v5 (confirmed Zig Zag), reversal 2.5%; tune to symbol/timeframe.
+// Default: v5, confirm at 23.6% swing retracement, then wait for rejection at 50%.
+// Short: touch 50%, bearish body and close below it; long is the mirror rule.
+// Rejection must occur AFTER confirmation. Enter on the next available tick,
+// not retroactively at 50%. Size uses the rejection close; actual fills may gap.
+// Fixed Fib targets/stops remain; a rejection past the target is not chased.
+// Optional modes: original 2.5% price deviation and resting 50% limit entries.
 // Existing MinMove, stop-distance, schedule and opposing-Fib filters still apply.
 // Wicks crossing the configured stop invalidate candidates, including on their birth bar.
 // No entries are backdated to pivot bars. First pivot only seeds; wait for the second.
@@ -55,8 +60,11 @@ ptLevel         = input.float(0.382,  "Target fib level (C# TargetPrice)", step 
 stopLevel       = input.float(0.618,  "Stop fib level (C# ViolationPrice)", step = 0.001, group = G_T, tooltip = "Stop = this level + 1 tick. 0.618 = MC ViolationPrice (the far edge of the pink/green box). 1.0 = the fib's 100%.")
 autoScale       = input.bool(true,    "Auto-scale MinMove / MinSl / MaxSl to price", group = G_T, tooltip = "Settings are calibrated on ES at ~7,730. On: they scale by close / Scale reference price (and by tick size), so the same inputs work on NQ/YM/RTY and in older years (ES was ~2,800 in 2019). ES today is ~unchanged. Checked on 4 hourly markets: same pattern as fixed settings.")
 scaleRefPx      = input.float(7730,   "Scale reference price", minval = 1, group = G_T)
-fibEngine       = input.string("v5 (confirmed Zig Zag)", "Fib engine", options = ["v5 (confirmed Zig Zag)", "v3 (trade-calibrated)", "v2 (MC reconstruction)", "v1 (swing legs)", "v4 (major anchor)"], group = G_T, tooltip = "v5: completed, close-confirmed chart-timeframe Zig Zag legs with immutable anchors; percentage reversal below. Legacy v2 reproduces 6 of 8 fibs read off the MC screenshots (v1: 2 of 8; luck control 0.4): a fib's 0% freezes after a pullback of ReversalLevel x range and >= Freeze points; price breaking a frozen 0% spawns a same-direction fib from that 0% plus a copy from the same 100%; a broken 100% spawns an opposite fib anchored there; one fib per (direction, 100% price), newest wins. Hypothesis, not MC's source code. v4 = one fib per major anchor (rule R2, calib_agentD/maj15): no leg engine; see the v4 inputs.")
-zzDeviation = input.float(2.5, "Zig Zag: close reversal (%)", minval = 0.01, maxval = 99.0, step = 0.1, group = G_T, tooltip = "Chart timeframe only. A closed price reversing this percentage from the tracked extreme confirms a pivot. First pivot seeds the engine; subsequent alternating pivots create immutable Fib legs. Larger settings delay confirmation and can miss entries. StartAnchor and engine timeframe are ignored in this mode.")
+fibEngine       = input.string("v5 (confirmed Zig Zag)", "Fib engine", options = ["v5 (confirmed Zig Zag)", "v3 (trade-calibrated)", "v2 (MC reconstruction)", "v1 (swing legs)", "v4 (major anchor)"], group = G_T, tooltip = "v5: completed, close-confirmed chart-timeframe Zig Zag legs with immutable anchors. Choose swing-relative confirmation for earlier pullback setups or the original price-deviation confirmation. Legacy v2 reproduces 6 of 8 fibs read off the MC screenshots (v1: 2 of 8; luck control 0.4): a fib's 0% freezes after a pullback of ReversalLevel x range and >= Freeze points; price breaking a frozen 0% spawns a same-direction fib from that 0% plus a copy from the same 100%; a broken 100% spawns an opposite fib anchored there; one fib per (direction, 100% price), newest wins. Hypothesis, not MC's source code. v4 = one fib per major anchor (rule R2, calib_agentD/maj15): no leg engine; see the v4 inputs.")
+zzConfirmation = input.string("Swing retracement", "Zig Zag: confirmation basis", options = ["Swing retracement", "Price deviation"], group = G_T, tooltip = "Swing retracement confirms a reversal after a fraction of the leg's own range, so it can confirm before the 50% entry. Price deviation uses a percentage of the extreme's price and can confirm too late for smaller legs.")
+zzRetracement = input.float(0.236, "Zig Zag: confirming swing retracement", minval = 0.01, maxval = 0.49, step = 0.001, group = G_T, tooltip = "Fraction of the tracked leg, not percentage of the symbol price. Closed-bar confirmation still can arrive beyond 50% on a large reversal candle; no entry is backdated. MinMove also applies. First pivot seeds the engine without creating a trade.")
+zzEntryMode = input.string("50% rejection candle", "Zig Zag: entry trigger", options = ["50% rejection candle", "Resting 50% limit"], group = G_T, tooltip = "Rejection: after swing confirmation, a closed candle must touch the exact tick-rounded 50% level, close back on the continuation side and have a directional body. Submit a market entry for the next available tick, retaining the Fib stop/target; quantity uses rejection close. Entry front-run ticks apply only to resting limit mode. Legacy engines are unchanged.")
+zzDeviation = input.float(2.5, "Zig Zag: close reversal (%)", minval = 0.01, maxval = 99.0, step = 0.1, group = G_T, tooltip = "Used only with Price deviation confirmation. Chart timeframe only. A closed price reversing this percentage from the tracked extreme confirms a pivot. First pivot seeds the engine; subsequent alternating pivots create immutable Fib legs. Larger settings delay confirmation and can miss entries. StartAnchor and engine timeframe are ignored in this mode.")
 engineTf        = input.timeframe("60", "Fib engine timeframe", group = G_T, tooltip = "Bars fed to the fib engine. 60 scored best against MC (6/8, ~42 live fibs); on charts slower than this the chart timeframe is used. Empty = chart timeframe.")
 v3Htf           = input.bool(false,   "v3: build fibs on the engine timeframe", group = G_T, tooltip = "Off (default) = v3 builds fibs from chart bars and the Fib engine timeframe is ignored. On = chart bars are aggregated into engine-timeframe bars (e.g. 60) and the engine steps once per completed engine bar, like v2, so fibs anchor on bigger swings. Untested: compare an export with it on vs off on the same 1-minute chart.")
 v3Freeze        = input.float(0.5,    "v3: freeze 0% after pullback of x range", step = 0.05, group = G_T, tooltip = "v3 = best of ~50 engines scored trade-by-trade against 11 measured MC trades (9/11 matched; luck control ~1). 0% stops moving after this pullback; a pullback beyond 61.8% retires the fib from trading (ViolationPrice).")
@@ -225,6 +233,7 @@ bool tradeFail = mcMode ? false : tradeFailIn
 bool showNext = mcMode ? false : showNextIn
 bool showTrend = mcMode ? false : showTrendIn
 bool ZZ = fibEngine == "v5 (confirmed Zig Zag)"
+bool ZZ_REJECTION = ZZ and zzEntryMode == "50% rejection candle"
 bool V4 = fibEngine == "v4 (major anchor)"
 float TICK = tickSizeIn > 0 ? tickSizeIn : syminfo.mintick
 // No strategy.risk.max_position_size: TradingView counted the re-priced entry order against it and cut every
@@ -252,6 +261,7 @@ type Fib
     float ext               // 0%   — follows price tick by tick while the swing extends
     int   anchorBar
     int   extBar
+    int   confirmedBar = na // v5: bar when the completed leg became known
     bool  alive    = true
     bool  retraced = false
     bool  isExt    = false
@@ -262,7 +272,7 @@ type Fib
     bool  frozen   = false
     bool  viol     = false   // v3: pulled back beyond 61.8% - no longer traded
     bool  spawned  = false
-    int   kind     = 0     // 0 leg, 1 break-of-frozen-0%, 2 clone, 3 flip at broken 100%, 4 v4 major anchor
+    int   kind     = 0     // 0 leg, 1 break-of-frozen-0%, 2 clone, 3 flip at broken 100%, 4 v4 major anchor, 5 confirmed Zig Zag
     int   trades   = 0
     float strength = 0.0   // anchorPriority: hours back from the anchor bar to the last earlier bar beyond the 100% (set at birth)
     array<line>  lns
@@ -285,6 +295,7 @@ type ZigState
     int dir = 0
     float extreme
     int extremeBar
+    float origin // startup reference only; not a confirmed tradable anchor
     float pivot
     int pivotBar
     bool seeded = false
@@ -482,12 +493,17 @@ stepZig(ZigState z, Leg lg, array<Fib> fs) =>
         z.dir := close >= open ? 1 : -1
         z.extreme := z.dir == 1 ? high : low
         z.extremeBar := bar_index
+        z.origin := z.dir == 1 ? low : high
     else
         bool up = z.dir == 1
         if up ? high > z.extreme : low < z.extreme
             z.extreme := up ? high : low
             z.extremeBar := bar_index
-        bool reversed = up ? close <= z.extreme - math.abs(z.extreme) * zzDeviation / 100.0 : close >= z.extreme + math.abs(z.extreme) * zzDeviation / 100.0
+        float origin = z.seeded ? z.pivot : z.origin
+        float legRange = math.abs(z.extreme - origin)
+        float reversalDistance = zzConfirmation == "Swing retracement" ? legRange * zzRetracement : math.abs(z.extreme) * zzDeviation / 100.0
+        bool validLeg = zzConfirmation != "Swing retracement" or (legRange >= math.max(MINMOVE_E, TICK) and (up ? z.extreme > origin : z.extreme < origin))
+        bool reversed = validLeg and (up ? close <= z.extreme - reversalDistance : close >= z.extreme + reversalDistance)
         if reversed
             if up
                 PIV_HI_P.push(z.extreme)
@@ -497,7 +513,7 @@ stepZig(ZigState z, Leg lg, array<Fib> fs) =>
                 PIV_LO_B.push(z.extremeBar)
             // Never manufacture a first anchor; require chronological alternating pivots.
             if z.seeded and z.extremeBar > z.pivotBar and (up ? z.extreme > z.pivot : z.extreme < z.pivot) and math.abs(z.extreme - z.pivot) >= MINMOVE_E
-                fs.push(Fib.new(id = lg.nextId, isLong = up, anchor = z.pivot, ext = z.extreme, anchorBar = z.pivotBar, extBar = z.extremeBar, frozen = true, retraced = true, kind = 5, strength = anchorStrength(up, z.pivot, bar_index - z.pivotBar)))
+                fs.push(Fib.new(id = lg.nextId, isLong = up, anchor = z.pivot, ext = z.extreme, anchorBar = z.pivotBar, extBar = z.extremeBar, confirmedBar = bar_index, frozen = true, retraced = true, kind = 5, strength = anchorStrength(up, z.pivot, bar_index - z.pivotBar)))
                 lg.nextId += 1
             z.pivot := z.extreme
             z.pivotBar := z.extremeBar
@@ -729,11 +745,15 @@ candidates(array<Fib> fs, bool wantLong) =>
         if f.alive
             ix += 1
         if f.alive and not f.isExt and not f.viol and not (v3NoClone and f.kind == 2) and not (confirmTurn and oppId > f.id and not oppRet) and f.isLong == wantLong and (maxTradesPerFib == 0 or f.trades < maxTradesPerFib) and (minFibPts == 0 or f.rng() >= minFibPts) and not (noReentryAfterStop and FIBLOSS.contains(f.id)) and (bigTrendPts == 0 or bigTrendOk(fs, f))
-            float e   = rt(f.lvl(0.5) + d * fr50Ticks * TICK)
+            float touch = rt(f.lvl(0.5) + (ZZ_REJECTION ? 0.0 : d * fr50Ticks * TICK))
+            // A pivot label may be drawn in the past; its rejection cannot be.
+            bool rejection = not ZZ_REJECTION or (barstate.isconfirmed and not na(f.confirmedBar) and bar_index > f.confirmedBar and (wantLong ? (low <= touch and close > touch and close > open) : (high >= touch and close < touch and close < open)))
+            float e   = ZZ_REJECTION ? rt(close) : touch
             float t   = rt(f.lvl(ptLevel) - d * frPtTicks * TICK)
             float sl  = rt(f.lvl(stopLevel) - d * TICK)
             float slT = math.abs(e - sl) / TICK
-            bool ok = slT >= MINSL_E and slT <= MAXSL_E and (wantLong ? (t > e and close > e) : (t < e and close < e)) and math.abs(t - e) / TICK >= minPtTicks and (minRR == 0 or math.abs(t - e) >= minRR * math.abs(e - sl)) and (minFibAtr == 0 or f.rng() >= minFibAtr * ATR14)
+            bool priceOk = ZZ_REJECTION ? (wantLong ? sl < e and e < t : t < e and e < sl) : (wantLong ? (t > e and close > e) : (t < e and close < e))
+            bool ok = rejection and priceOk and slT >= MINSL_E and slT <= MAXSL_E and math.abs(t - e) / TICK >= minPtTicks and (minRR == 0 or math.abs(t - e) >= minRR * math.abs(e - sl)) and (minFibAtr == 0 or f.rng() >= minFibAtr * ATR14)
             if ok and onlyClear
                 // C#: opposing50 = checkFib.TargetPrice(0.5) - entryFrontRun; long needs opposing50 >= PT.
                 // The C# loop assigns isClear per opposing fib, so the LAST one in the list decides.
@@ -812,7 +832,7 @@ placeSide(array<Fib> fs, bool isL, array<string> want, array<int> stats) =>
                     QUOTE.set(qb + 2, ps.get(i))
                     QUOTE.set(qb + 3, qty)
                     QSTR.set(isL ? 0 : 1, gs.get(i))
-                    strategy.entry(eid, isL ? strategy.long : strategy.short, qty, limit = es.get(i), comment = "50to382 Entry " + side + fid)
+                    strategy.entry(eid, isL ? strategy.long : strategy.short, qty, limit = ZZ_REJECTION ? na : es.get(i), comment = (ZZ_REJECTION ? "50% Rejection " : "50to382 Entry ") + side + fid)
                     strategy.exit(eid + "x", eid, limit = (useTrail or useBBB) ? na : ps.get(i), stop = ss.get(i), trail_price = useTrail ? ps.get(i) : na, trail_offset = useTrail ? math.max(1, math.round(0.8 * ATR14 / TICK)) : na, comment_trailing = "Trail exit " + side + fid, comment_profit = "50to382 PT " + side + fid, comment_loss = "Stoploss " + side + fid)
 
 bumpTrades(array<Fib> fs, int id) =>
@@ -1119,7 +1139,8 @@ if useNews and FOMC_D.includes(nyDay) and time_close >= fomcFlatT and time < fom
     strategy.close_all(comment = "FOMC pre-release close")
 bgcolor(useNews and newsBlocked ? color.new(color.orange, 88) : na, title = "News block")
 
-// Orders: one per qualifying fib, re-priced every tick while resting; exits are frozen once filled.
+// Legacy/limit mode: one resting order per qualifying Fib. Zig Zag rejection mode:
+// market entry only after a closed rejection candle. Filled exits stay managed below.
 var array<string> LIVE = array.new<string>()
 var array<int> STATS = array.from(0, 0, 0)     // long candidates now, short candidates now, orders sent (cumulative)
 STATS.set(0, 0)
@@ -1324,7 +1345,7 @@ if showDebug and barstate.islast
         DBG.cell(1, r, sideNote, text_color = color.orange, text_size = ts, text_halign = text.align_left)
         r += 1
     DBG.cell(0, r, "mode", text_color = cG, text_size = ts)
-    DBG.cell(1, r, (mcMode ? "MultiCharts" : "extended") + " | " + fibEngine + (V4 ? " " + str.tostring(v4Hours) + "h" : "") + " | " + timeframe.period + (v3Htf and fibEngine == "v3 (trade-calibrated)" ? " | fibs " + engineTf : "") + (useTrail ? " | ATR trail" : "") + (useBBB ? " | BBB trail" : "") + (confirmTurn ? " | turn" : "") + (v3ExtRule or v3NoClone ? " | no-ext" : "") + (useBE ? " | BE" : "") + (minFibPts > 0 ? " | min" + str.tostring(minFibPts, "#.##") : "") + (bigTrendPts > 0 ? " | big" + str.tostring(bigTrendPts, "#.##") : "") + (noReentryAfterStop ? " | no-reentry" : "") + (rthOnly ? " | rth" : "") + (skipSunday and (not mcMode or sundayInMc) ? " | no-sun" : "") + (flatWeekendIn ? " | wk-flat" : "") + (dayLossUsd > 0 ? " | dayloss " + str.tostring(dayLossUsd, "#") : "") + (PRESET_MNQ1 ? " | PRESET MNQ 1%DD" : "") + (volSpikeSkip ? " | volspike" : "") + (extDaySkip ? " | extday" : "") + (anchorPriority ? " | anchor-prio" : ""), text_color = cW, text_size = ts, text_halign = text.align_left)
+    DBG.cell(1, r, (mcMode ? "MultiCharts" : "extended") + " | " + fibEngine + (ZZ ? " | " + zzConfirmation + " | " + zzEntryMode : "") + (V4 ? " " + str.tostring(v4Hours) + "h" : "") + " | " + timeframe.period + (v3Htf and fibEngine == "v3 (trade-calibrated)" ? " | fibs " + engineTf : "") + (useTrail ? " | ATR trail" : "") + (useBBB ? " | BBB trail" : "") + (confirmTurn ? " | turn" : "") + (v3ExtRule or v3NoClone ? " | no-ext" : "") + (useBE ? " | BE" : "") + (minFibPts > 0 ? " | min" + str.tostring(minFibPts, "#.##") : "") + (bigTrendPts > 0 ? " | big" + str.tostring(bigTrendPts, "#.##") : "") + (noReentryAfterStop ? " | no-reentry" : "") + (rthOnly ? " | rth" : "") + (skipSunday and (not mcMode or sundayInMc) ? " | no-sun" : "") + (flatWeekendIn ? " | wk-flat" : "") + (dayLossUsd > 0 ? " | dayloss " + str.tostring(dayLossUsd, "#") : "") + (PRESET_MNQ1 ? " | PRESET MNQ 1%DD" : "") + (volSpikeSkip ? " | volspike" : "") + (extDaySkip ? " | extday" : "") + (anchorPriority ? " | anchor-prio" : ""), text_color = cW, text_size = ts, text_halign = text.align_left)
     r += 1
     // ---- open trade
     DBG.cell(0, r, "OPEN TRADE", text_color = cW, bgcolor = cH, text_size = ts)
@@ -1345,13 +1366,13 @@ if showDebug and barstate.islast
         DBG.cell(1, r, "flat", text_color = cG, text_size = ts, text_halign = text.align_left)
         r += 1
     // ---- resting orders
-    DBG.cell(0, r, "RESTING ORDERS", text_color = cW, bgcolor = cH, text_size = ts)
+    DBG.cell(0, r, ZZ_REJECTION ? "REJECTION SIGNALS" : "RESTING ORDERS", text_color = cW, bgcolor = cH, text_size = ts)
     DBG.cell(1, r, "entry / stop / target x qty", text_color = cW, bgcolor = cH, text_size = ts)
     r += 1
     for k = 0 to 1
         int qb = k * 4
         bool has = not na(QUOTE.get(qb))
-        DBG.cell(0, r, k == 0 ? "buy limit" : "sell limit", text_color = k == 0 ? cOK : cBad, text_size = ts)
+        DBG.cell(0, r, k == 0 ? (ZZ_REJECTION ? "buy after rejection" : "buy limit") : (ZZ_REJECTION ? "sell after rejection" : "sell limit"), text_color = k == 0 ? cOK : cBad, text_size = ts)
         DBG.cell(1, r, has ? f_px(QUOTE.get(qb)) + " / " + f_px(QUOTE.get(qb + 1)) + " / " + f_px(QUOTE.get(qb + 2)) + "  x" + str.tostring(QUOTE.get(qb + 3), "#") + (anchorPriority and not na(QSTR.get(k)) ? "  anchor " + str.tostring(QSTR.get(k), "0") + "h" : "") : "none  (" + str.tostring(STATS.get(k)) + " fibs qualify)", text_color = has ? cW : cG, text_size = ts, text_halign = text.align_left)
         r += 1
     // ---- fibs
