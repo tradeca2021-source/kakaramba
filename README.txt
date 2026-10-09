@@ -1,3 +1,15 @@
+RBO v98: net-payoff quality candidate
+
+Latest file: BTC_RBO_v98_Net_Quality_Fib.pine. Minimum Net Reward / Net Risk defaults1.0 instead of0. This is an experimental floor, not a proven optimized setting: estimated net profit at the fixed target must at least match estimated net stopped loss. Costs include configured entry/exit fees and two-sided modeled slippage. Funding, spread and unexpected gaps are not modeled. Match fee/slippage inputs to Strategy Properties.
+
+The user50% entry and directional61.8% target remain. A poor-payoff Fib is rejected, not rescued by tightening its stop or moving its target. Temporary economics blockers can retry during a live, unsubmitted Fib's age. Stop/target remain frozen after arming and filled positions keep their exits through trend changes. Risk sizing now uses fees at the planned entry and stop prices, correcting the prior twice-entry fee approximation. It remains subject to quantity/margin caps and risk controls; stop gaps can exceed modeled risk.
+
+Clean compact panel adds one economics row: current estimated netRR, configured floor and (for candidate context) minimum target PRICE estimate needed to meet it. This is a mathematical diagnostic, never an order or updated target. Candidate readings use current ATR and precede any hard-stop cap adjustment; submitted-order readings use actual frozen snapshots. Engine rejection text reports the evaluated post-cap ratio. Extreme fee or impossible target-price conditions return unavailable diagnostics. Exits remain unchanged.
+
+Evidence: subset analysis of the old v92 long-only1.5R export improved recorded PF from0.551 toabout0.88 at threshold1.0, still losing; higher thresholds worsened it. The old3R export already passed all tested thresholds and stayed losing. This supports testing economic discipline, not claiming a new trading edge or projecting current v98 results. No current v97/v98 OHLCV backtest is available here.
+
+Controlled runs: v98 floor0/VWAP OFF, then floor1/VWAP OFF, then floor1/VWAP ON. VWAP remains OFF by default to isolate comparisons. Hold other settings/range/costs constant. Evaluate both directions, net profit, profit factor, drawdown and adequate trade counts on separate periods. Do not select on profit factor alone. Use a fresh instance and verify saved inputs.109 local source/formula/lifecycle checks passed; native TradingView compilation, fills and performance remain unverified. Previous notes follow:
+
 RBO v97: recent internal BOS/CHoCH confirmation for Fib entries
 
 Latest file: BTC_RBO_v97_SMC_Fib.pine. Replace the older chart strategy with this complete version. Clean chart and all existing bidirectional50% entries/directional61.8% targets are retained.
