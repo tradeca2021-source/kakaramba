@@ -1,3 +1,17 @@
+RBO v97: recent internal BOS/CHoCH confirmation for Fib entries
+
+Latest file: BTC_RBO_v97_SMC_Fib.pine. Replace the older chart strategy with this complete version. Clean chart and all existing bidirectional50% entries/directional61.8% targets are retained.
+
+Require Recent Directional BOS / CHoCH defaults ON. This is an independent closed-bar adaptation of standard structure concepts discussed in the supplied LuxAlgo Smart Money Concepts indicator, not an exact copy of its alerts. It extends the repository's own confirmed-pivot routine. No LuxAlgo source, order-block/FVG methods or HTF lookahead requests were copied.
+
+Internal confirmation defaults:3/3 chart pivots, two consecutive closed candles beyond the known pivot plus max(existing tick buffer,0.1ATR), and lifetime20 bars from confirmation (5 hours on15-minute). The threshold and pivot identity freeze while counting closes. Pivots are considered only on actual detection; no signal is dated back to a swing label. Each confirmed internal pivot is consumed once, so remaining beyond it cannot keep refreshing event age. Same-direction subsequent breaks are BOS; opposite breaks are CHoCH. The first confirmed break is INIT, which can also qualify a trade.
+
+Arming a50% limit requires the latest internal bias to match the Fib direction, no pending internal break, and a confirmed event since that Fib's origin with age less than20bars. Local and larger structure gates, costs, SR, volume, sizing and safety restrictions still apply. Confirmation precedes arming; it is not a required reaction at the eventual pullback touch. Both directions use the same rules. Confirmation expiry, pending or opposite internal structure cancels pending limits at calculation time, before the next tradable tick; fills occurring earlier within that bar remain governed by the existing bracket. Canceled Fib pairs stay consumed and require a new Fib before another attempt.
+
+Open positions retain their fixed stop and Fib target even when internal direction changes or confirmation expires. No opposite-trend market close is added; existing enabled compliance/news safety exits remain. Clean mode adds internal direction/event/age to the compact panel, with no new plotted structure labels. Diagnostic internal event labels are optional and default OFF. Rich webhook debug includes event type and age; native trade comments remain short. Disable Require Recent Directional BOS / CHoCH to compare the prior entry rules without this gate.
+
+Expect fewer eligible orders and extra confirmation delay. Starting settings are unoptimized and do not establish improved win rate or profit factor. Local91 source/formula/lifecycle checks passed, covering frozen thresholds, consumed pivots, BOS/CHoCH changes, prior-leg rejection, freshness and unchanged filled exits. Native TradingView compilation and BTC15-minute performance remain unverified. Previous notes follow:
+
 RBO v96: clean active-trade chart
 
 Latest file: BTC_RBO_v96_Clean_Fib.pine. Replace the visible v95 strategy instance with this full version; leaving both visible produces overlapping charts. Clean Chart: Active Trade and Compact Panel defaults ON and overrides individual diagnostic visibility inputs.
