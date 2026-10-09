@@ -1,3 +1,15 @@
+RBO v96: clean active-trade chart
+
+Latest file: BTC_RBO_v96_Clean_Fib.pine. Replace the visible v95 strategy instance with this full version; leaving both visible produces overlapping charts. Clean Chart: Active Trade and Compact Panel defaults ON and overrides individual diagnostic visibility inputs.
+
+Clean mode shows native TradingView fill/exit markers, a five-row top-right panel, and current pending/open order lines only: orange entry, gold target, fuchsia stop. The lines disappear when the order/position completes or cancels; prior plotted order trails are hidden. The panel gives direction, exact active entry/stop/target/quantity, engine reason and Fib context. No active order means no order lines.
+
+Clean mode hides rolling channel bands, candidate/context Fib levels, larger Fib confluence/obstacle plots, strongSR lines, VWAP, historical trend labels, submission/custom fill labels, online dots and large diagnostics/metrics tables. Their underlying trading calculations remain enabled. Turn Clean Chart OFF and use existing individual visibility inputs for the full diagnostic view.
+
+Native entry comments are now short: Fib L50 or Fib S50. Rich entry details remain in webhook debug messages and the diagnostic panel, rather than long text over candles. This changes exported entry comment text; existing tools that parse economics from comments must account for the new format. Native trade-marker visibility is also controlled by TradingView's Style settings.
+
+Verified: v96 entry-management source matches v95 after normalizing only the short comment argument and submission-label visibility. The existing72 source/formula/lifecycle checks passed against v96. This is chart cleanup; trend, volume, SR, cost and confluence gates, quantities and50%/directional61.8% stop/target behavior are retained. Native Pine compilation and rendered TradingView appearance remain unverified. Previous notes follow:
+
 RBO v95: independent larger Fib confluence and potential obstacles
 
 Latest version: BTC_RBO_v95_Fib_Confluence.pine. This includes the v94 slower structure alignment and prior21-bar Fib channel, plus independent larger-leg Fib context. v94 is also retained as a separate file for comparison. Install the full v95 file as a fresh TradingView instance; check saved inputs before comparing versions.
