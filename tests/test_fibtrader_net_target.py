@@ -99,3 +99,25 @@ for obstacle,expected in [(106,True),(103,False)]:
 verify('ENTRY_REASON.fill("Not evaluated: account/side gate")' in s)
 verify('ENTRY_REASON.get(side)' in s)
 print('Nearest-obstacle freshness, order independence, target-cap and post-cap cost checks passed.')
+
+# Date-window boundaries: evaluate actual Pine expressions; rolling mode must
+# never flatten every last bar or disable the current bar's valid signal.
+def window_expr(name,env):
+    expr=re.search(r'^(?:bool|int) '+name+r' = (.+)$',s,re.M)[1]
+    return eval(translate(expr),{},env)
+last=200*86400000
+for mode in ['Last 30 days','Custom dates','From StartDate']:
+    env=dict(backtestWindow=mode,last_bar_time=last,startTime=100*86400000,endTimeBTC=180*86400000,loadedEndBTC=last+900000)
+    env['entryStartBTC']=window_expr('entryStartBTC',env)
+    env['entryEndBTC']=window_expr('entryEndBTC',env)
+    env['validWindowBTC']=window_expr('validWindowBTC',env)
+    for stamp in [env['entryStartBTC']-1,env['entryStartBTC'],env['entryEndBTC']-900000,last]:
+        e=env|dict(time=stamp,time_close=stamp+900000,engineActiveBTC=True)
+        e['beforeEndBTC']=window_expr('beforeEndBTC',e)
+        expected=stamp>=env['entryStartBTC'] and (mode!='Custom dates' or stamp+900000<env['entryEndBTC'])
+        verify(window_expr('active',e)==expected)
+verify('if backtestWindow == "Custom dates" and validWindowBTC and time_close >= entryEndBTC' in s)
+verify('if engineActiveBTC\n    if leg.dir == 0' in s)
+verify('"CHART RUN TRADES"' in s)
+verify('Pine cannot change/read the Deep Backtesting date selector' in s)
+print('Date-window boundary and rolling-mode safety checks passed.')

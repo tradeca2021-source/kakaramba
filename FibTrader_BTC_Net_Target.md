@@ -38,3 +38,15 @@ If that level lies before the desired objective, put the objective two ticks bef
 The panel adds **Long setup** and **Short setup** reasons for the latest live swing per direction: waiting for a closed rejection, expired/already-traded swing, invalid entry/stop/target geometry, opposing level, insufficient net payoff, stop-distance limits, size constraints or optional filters. When some candidates qualify, it shows the eligible count and separately identifies the newest swing's reason. Account/direction gates can prevent candidate evaluation; the status row and “Not evaluated” message distinguish that case. These are current-bar diagnostics, not cumulative rejection counts or an account of every historical missed trade.
 
 Native compilation and profitability of v2 remain unverified. Test a fresh instance and compare identical backtest ranges; Deep Backtesting results and the chart's visible historical markers need not share the same range. Fib-failure markers are observation-only and are not orders. The local test command now also checks obstacle freshness, order independence, both-direction caps and post-cap economics.
+
+## v3: explicit entry dates and range visibility
+
+The entry window defaults to **Last 30 days**, anchored to the latest loaded chart bar. **Custom dates** uses StartDate and an exclusive custom end; **From StartDate** retains an open-ended window. The swing engine warms up from StartDate independently of the narrower entry window. This allows pre-window swing context without pre-window trade entries. The panel displays dates in America/Edmonton by default, with an editable timezone.
+
+In Custom dates mode, entry signals require the candle to close before the end. At the boundary, cancel pending orders and close existing positions on the available calculation tick. If candles gap across the end, processing occurs on the first available later candle; a previously submitted market order may fill before cancellation. Last 30 days and From StartDate modes do not force-close on every latest bar. Reload/recalculate when comparing a rolling window after time has advanced, because existing historical trades are not retroactively deleted on each realtime tick.
+
+The panel now shows the entry window, first/last loaded chart bars, insufficient-history warning and **CHART RUN TRADES**. That count belongs to this script calculation; it is not a read of TradingView's separate Deep Backtesting result.
+
+Pine cannot read, modify or refresh the platform's Deep Backtesting date selector. Use a fresh BTC Net3 instance, set matching custom dates in the script and Strategy Tester, and wait for recalculation. Different loaded history/warm-up can still change Zig Zag state and trade counts even with matching entry dates. The date controls do not establish that a screenshot mismatch was a platform error or that profitability improved. Native compilation/reconciliation remains to be checked in TradingView.
+
+Local checks additionally evaluate entry-window boundaries and ensure rolling mode neither disables the current bar nor flattens positions on every last bar.

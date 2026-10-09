@@ -1,4 +1,8 @@
 //@version=6
+// v3: explicit entry window (default last 30 days), end-boundary flattening and
+// loaded-history/date diagnostics. Engine warm-up remains separate from entries.
+// Pine cannot read/change TradingView's Deep Backtesting selector; match it manually.
+// Different chart/Deep warm-up history can still produce different swing state.
 // v2: nearest current opposing 50% ahead of entry, optional capped objective.
 // Capped targets must pay at least 1.0x modeled stopped risk after costs by default.
 // Per-direction diagnostics describe waiting, expiry, geometry, costs and filters.
@@ -56,7 +60,7 @@
 // Historical source note for the legacy engines (this variant calculates at bar close): so on a live chart every tick can extend a fib's 0% anchor,
 // which moves its 38.2/50/61.8 levels and re-prices the resting limit orders — as in MultiCharts.
 // On history each bar is walked low->high (up bar) or high->low (down bar).
-strategy("FibTrader BTC Zig Zag Net Target v2", shorttitle = "FibTrader BTC Net2", overlay = true,
+strategy("FibTrader BTC Zig Zag Net Target v3", shorttitle = "FibTrader BTC Net3", overlay = true,
      calc_on_every_tick = false, pyramiding = 1, use_bar_magnifier = true,
      max_lines_count = 500, max_labels_count = 500, max_boxes_count = 500, max_bars_back = 5000,
      default_qty_type = strategy.fixed, default_qty_value = 1, margin_long = 100, margin_short = 100,
@@ -127,6 +131,10 @@ extensionLevel  = input.float(-0.382, "ExtensionLevel", maxval = 0, group = G_T,
 reversalLevel   = input.float(0.236,  "ReversalLevel", minval = 0, maxval = 1, group = G_T, tooltip = "Reconstructed: a retrace of this fraction of the current swing confirms the swing and starts the opposing one.")
 minRevAtrIn     = input.float(0.0,    "Min reversal size (ATRs, 0 = off, not in MC)", minval = 0, step = 0.5, group = G_T, tooltip = "A counter-move must also be at least this many ATRs before a new swing starts. Stops small pullbacks spawning ever-smaller fibs; scales itself between ES and NQ.")
 atrLen          = input.int(14,       "ATR length", minval = 1, group = G_T)
+G_WINDOW = "Backtest window (match Strategy Tester dates)"
+backtestWindow = input.string("Last 30 days", "Entry window", options = ["Last 30 days", "Custom dates", "From StartDate"], group = G_WINDOW, tooltip = "Last 30 days is anchored to the latest loaded chart bar, not the visible viewport or computer clock. Pine cannot change/read the Deep Backtesting date selector. Match its dates to the panel for comparison; different warm-up history can still change signals.")
+endTimeBTC = input.time(timestamp("2027-01-01 00:00 +0000"), "Custom end (exclusive)", group = G_WINDOW)
+panelTimezone = input.string("America/Edmonton", "Panel date timezone", group = G_WINDOW)
 startTime       = input.time(timestamp("2025-04-04 10:00"), "StartDate", group = G_T)
 onlyClear       = input.bool(true,    "OnlyAllowTradesClearOfOpposing50", group = G_T)
 clearAllIn      = input.bool(false,   "...every opposing fib must be clear (stricter than MC)", group = G_T, tooltip = "Off = exactly the C#: the loop overwrites isClear for each opposing fib, so the LAST opposing fib in the list decides. On = all must be clear, which blocks almost every trade once many fibs are live.")
@@ -969,7 +977,21 @@ var Leg leg = Leg.new()
 var array<Fib> fibs = array.new<Fib>()
 var int seenTrades  = 0
 
-bool active = time >= startTime
+// Warm up the engine independently of the narrower entry window.
+var int firstDataTimeBTC = time
+int loadedEndBTC = last_bar_time + int(timeframe.in_seconds() * 1000)
+int entryStartBTC = backtestWindow == "Last 30 days" ? last_bar_time - 30 * 86400000 : startTime
+int entryEndBTC = backtestWindow == "Custom dates" ? endTimeBTC : loadedEndBTC
+bool validWindowBTC = entryEndBTC > entryStartBTC
+bool engineActiveBTC = time >= startTime
+bool beforeEndBTC = backtestWindow != "Custom dates" or time_close < entryEndBTC
+bool active = validWindowBTC and engineActiveBTC and time >= entryStartBTC and beforeEndBTC
+// Cancel before the final boundary candle closes; flatten existing positions.
+// If bars gap over the boundary, this executes on the first available later bar.
+if backtestWindow == "Custom dates" and validWindowBTC and time_close >= entryEndBTC
+    strategy.cancel_all()
+    if strategy.opentrades > 0
+        strategy.close_all(comment = "Backtest window end", immediately = true)
 var float EB_O = na
 var float EB_H = na
 var float EB_L = na
@@ -992,7 +1014,7 @@ float v4Ll = na(V4_LL) ? na : na(V4_CL) ? V4_LL : math.min(V4_LL, V4_CL)
 V4_CH := na(V4_CH) ? high : math.max(V4_CH, high)
 V4_CL := na(V4_CL) ? low : math.min(V4_CL, low)
 
-if active
+if engineActiveBTC
     if leg.dir == 0
         if startAnchor > 0
             leg.dir   := close >= startAnchor ? 1 : -1
@@ -1448,7 +1470,7 @@ f_pos(string p) =>
         => position.top_right
 f_sz(string z) => z == "tiny" ? size.tiny : z == "normal" ? size.normal : size.small
 f_px(float v) => na(v) ? "-" : str.tostring(v, "#,##0.00")
-var table DBG = table.new(f_pos(dbgPos), 2, 22, bgcolor = color.new(color.black, 15), border_color = color.new(color.gray, 60), border_width = 1)
+var table DBG = table.new(f_pos(dbgPos), 2, 28, bgcolor = color.new(color.black, 15), border_color = color.new(color.gray, 60), border_width = 1)
 if showDebug and barstate.islast
     color cH = color.new(#2962FF, 35)
     color cOK = color.lime
@@ -1458,7 +1480,7 @@ if showDebug and barstate.islast
     ts = f_sz(dbgSize)
     int r = 0
     // ---- why / why not
-    string why = not active ? "before StartDate" : hardHit ? "hard daily loss hit" : (dayLossUsd > 0 and strategy.netprofit - dayStartPnl <= -dayLossUsd) ? "daily loss limit hit" : (maxConsLosses > 0 and lossStreak >= maxConsLosses) ? "max losses in a row" : inEod ? "end-of-day window" : inWkFlat ? "Friday weekend-flat window" : sesBlocked ? "session filter (Sunday / hours)" : volSpikeBlocked ? "vol spike filter" : extDayBlocked ? "extended day filter" : newsBlocked ? "news window" : strategy.opentrades >= maxPositions ? "in a trade (max positions)" : ""
+    string why = not validWindowBTC ? "invalid entry window: end must follow start" : not active ? "outside entry window / StartDate" : hardHit ? "hard daily loss hit" : (dayLossUsd > 0 and strategy.netprofit - dayStartPnl <= -dayLossUsd) ? "daily loss limit hit" : (maxConsLosses > 0 and lossStreak >= maxConsLosses) ? "max losses in a row" : inEod ? "end-of-day window" : inWkFlat ? "Friday weekend-flat window" : sesBlocked ? "session filter (Sunday / hours)" : volSpikeBlocked ? "vol spike filter" : extDayBlocked ? "extended day filter" : newsBlocked ? "news window" : strategy.opentrades >= maxPositions ? "in a trade (max positions)" : ""
     bool canTrade = why == ""
     string sideNote = (blockLongs ? "longs blocked by fib fail  " : "") + (blockShorts ? "shorts blocked by fib fail" : "")
     DBG.cell(0, r, "STATUS", text_color = cW, bgcolor = cH, text_size = ts)
@@ -1473,6 +1495,15 @@ if showDebug and barstate.islast
     r += 1
     DBG.cell(0, r, "BTC risk / costs", text_color = cG, text_size = ts)
     DBG.cell(1, r, str.tostring(riskPct, "0.00") + "% risk | " + str.tostring(maxExposurePct, "0") + "% exposure | " + str.tostring(modeledFeePct, "0.00") + "% fee/side | " + targetModeBTC, text_color = cW, text_size = ts, text_halign = text.align_left)
+    r += 1
+    DBG.cell(0, r, "Entry window", text_color = cG, text_size = ts)
+    DBG.cell(1, r, str.format_time(entryStartBTC, "yyyy-MM-dd HH:mm", panelTimezone) + " to " + str.format_time(entryEndBTC, "yyyy-MM-dd HH:mm", panelTimezone) + " (end exclusive)", text_color = cW, text_size = ts)
+    r += 1
+    DBG.cell(0, r, "Loaded chart history", text_color = cG, text_size = ts)
+    DBG.cell(1, r, str.format_time(firstDataTimeBTC, "yyyy-MM-dd HH:mm", panelTimezone) + " to " + str.format_time(last_bar_time, "yyyy-MM-dd HH:mm", panelTimezone), text_color = cW, text_size = ts)
+    r += 1
+    DBG.cell(0, r, "Range check", text_color = cG, text_size = ts)
+    DBG.cell(1, r, not validWindowBTC ? "INVALID DATES" : firstDataTimeBTC > entryStartBTC ? "Loaded data starts after requested window" : "Match Deep Tester dates manually", text_color = not validWindowBTC or firstDataTimeBTC > entryStartBTC ? color.orange : cG, text_size = ts)
     r += 1
     // ---- open trade
     DBG.cell(0, r, "OPEN TRADE", text_color = cW, bgcolor = cH, text_size = ts)
@@ -1524,14 +1555,14 @@ if showDebug and barstate.islast
     // ---- totals
     int nC = strategy.closedtrades
     float pfv = strategy.grossloss > 0 ? strategy.grossprofit / strategy.grossloss : na
-    DBG.cell(0, r, "ALL TRADES", text_color = cW, bgcolor = cH, text_size = ts)
+    DBG.cell(0, r, "CHART RUN TRADES", text_color = cW, bgcolor = cH, text_size = ts)
     DBG.cell(1, r, str.tostring(nC) + " trades   win " + (nC > 0 ? str.tostring(100.0 * strategy.wintrades / nC, "0.0") + "%" : "-") + "   PF " + (na(pfv) ? "-" : str.tostring(pfv, "0.00")), text_color = cW, bgcolor = cH, text_size = ts, text_halign = text.align_left)
     r += 1
     DBG.cell(0, r, "net / max DD", text_color = cG, text_size = ts)
     DBG.cell(1, r, str.tostring(strategy.netprofit, "$#,##0") + "  /  " + str.tostring(-strategy.max_drawdown, "$#,##0"), text_color = strategy.netprofit >= 0 ? cOK : cBad, text_size = ts, text_halign = text.align_left)
     r += 1
     DBG.cell(0, r, "news windows / build", text_color = cG, text_size = ts)
-    DBG.cell(1, r, str.tostring(NW_S.size()) + " loaded  |  BTC net v2", text_color = cG, text_size = ts, text_halign = text.align_left)
+    DBG.cell(1, r, str.tostring(NW_S.size()) + " loaded  |  BTC net v3", text_color = cG, text_size = ts, text_halign = text.align_left)
 
 // Prop firm trailing-drawdown dashboard (closed-trade basis, as RBO v71).
 var float peakEq = strategy.initial_capital
