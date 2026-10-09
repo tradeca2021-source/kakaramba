@@ -1,4 +1,8 @@
 //@version=6
+// v2: nearest current opposing 50% ahead of entry, optional capped objective.
+// Capped targets must pay at least 1.0x modeled stopped risk after costs by default.
+// Per-direction diagnostics describe waiting, expiry, geometry, costs and filters.
+// Fib-failure labels are diagnostic only; they never open positions in this version.
 // NET-TARGET VARIANT: retain risk limits and 50% rejection entries.
 // Default objective: 1.5x modeled net stopped risk AFTER estimated costs.
 // Stop remains the original Fib stop. Target can extend beyond the swing extreme;
@@ -52,7 +56,7 @@
 // Historical source note for the legacy engines (this variant calculates at bar close): so on a live chart every tick can extend a fib's 0% anchor,
 // which moves its 38.2/50/61.8 levels and re-prices the resting limit orders — as in MultiCharts.
 // On history each bar is walked low->high (up bar) or high->low (down bar).
-strategy("FibTrader BTC Zig Zag Net Target", shorttitle = "FibTrader BTC Net", overlay = true,
+strategy("FibTrader BTC Zig Zag Net Target v2", shorttitle = "FibTrader BTC Net2", overlay = true,
      calc_on_every_tick = false, pyramiding = 1, use_bar_magnifier = true,
      max_lines_count = 500, max_labels_count = 500, max_boxes_count = 500, max_bars_back = 5000,
      default_qty_type = strategy.fixed, default_qty_value = 1, margin_long = 100, margin_short = 100,
@@ -74,6 +78,9 @@ modeledFeePct = input.float(0.06, "Modeled fee per side (%)", minval = 0, step =
 modeledSlippageTicks = input.int(2, "Modeled slippage per side (ticks)", minval = 0, group = G_BTC, tooltip = "Match Strategy Properties slippage. Spread and funding are not included.")
 riskGapATR = input.float(0.25, "Sizing allowance for stop gaps (ATR)", minval = 0, step = 0.05, group = G_BTC, tooltip = "Extra risk allowance reduces quantity; it does not move the actual stop or guarantee a maximum loss.")
 targetModeBTC = input.string("Net risk multiple", "BTC target mode", options = ["Net risk multiple", "Swing extreme", "Original Fib"], group = G_BTC, tooltip = "Net risk multiple: solve for a price paying the selected multiple of modeled stopped risk after fees/slippage. It may lie beyond the original swing. Swing extreme: original 0% price. Original Fib: old target level. Existing entry, stop, risk and opposing-Fib filters remain. No profitability claim.")
+opposingModeBTC = input.string("Cap before nearest", "Opposing Fib handling", options = ["Cap before nearest", "Require clear path", "Legacy last/all"], group = G_BTC, tooltip = "When opposing-Fib clearance is enabled, use only the nearest valid opposing 50% ahead of entry. Cap before nearest takes an earlier objective if it still meets the capped net reward floor; Require clear path rejects blocked objectives. Legacy reproduces the prior last/all loop. Unoptimized; compare modes on identical history.")
+obstacleBufferTicks = input.int(2, "Ticks before opposing level", minval = 1, group = G_BTC)
+minCappedNetRR = input.float(1.0, "Minimum net reward/risk for capped target", minval = 0.1, step = 0.1, group = G_BTC, tooltip = "Default 1.0 is an unoptimized starting floor. If the nearer objective cannot pay this multiple after modeled costs, reject the entry. Stops and sizing are not tightened to make it qualify.")
 targetNetRiskMultiple = input.float(1.5, "Target net reward / modeled stopped risk", minval = 0.1, maxval = 10, step = 0.1, group = G_BTC, tooltip = "Unoptimized starting objective, not a predicted or guaranteed return. Applies only to Net risk multiple target mode. In trailing modes this price activates the trail.")
 minNetRR = input.float(0.0, "Minimum net target / modeled risk (0 = positive net target only)", minval = 0, step = 0.05, group = G_BTC, tooltip = "Costs are evaluated at the selected objective, even when that level activates a trailing exit. Positive estimated target proceeds are always required. This does not forecast trailing profits.")
 setupLifeBars = input.int(48, "Zig Zag setup lifetime after confirmation (bars)", minval = 1, group = G_BTC)
@@ -793,6 +800,25 @@ bigTrendOk(array<Fib> fs, Fib f) =>
 // FibTrade50To382 returns one TradeDetails per qualifying fib. best = the entry price would be hit first
 // (highest long entry below price, lowest short entry above price) for the one-order mode; with anchorPriority on,
 // best = the strongest anchor (Fib.strength), ties -> the nearest entry, then the first seen.
+// Ahead-of-entry obstacles only. Expired/violated/extension setups are excluded.
+nearestOpposing50(array<Fib> fs, bool wantLong, float e) =>
+    float nearest = na
+    float d = wantLong ? 1.0 : -1.0
+    for o in fs
+        bool fresh = o.kind != 5 or (not na(o.confirmedBar) and bar_index - o.confirmedBar < setupLifeBars)
+        if o.alive and not o.isExt and not o.viol and fresh and o.isLong != wantLong
+            float opp = o.lvl(0.5) - d * fr50Ticks * TICK
+            bool ahead = wantLong ? opp >= e : opp <= e
+            if ahead and (na(nearest) or (wantLong ? opp < nearest : opp > nearest))
+                nearest := opp
+    nearest
+
+cappedObjectiveBTC(bool isLong, float wanted, float obstacle) =>
+    float cap = na(obstacle) ? wanted : (isLong ? math.floor((obstacle - obstacleBufferTicks * TICK) / TICK) * TICK : math.ceil((obstacle + obstacleBufferTicks * TICK) / TICK) * TICK)
+    isLong ? math.min(wanted, cap) : math.max(wanted, cap)
+
+var array<string> ENTRY_REASON = array.from("Waiting for live swing", "Waiting for live swing")
+
 candidates(array<Fib> fs, bool wantLong) =>
     array<int>   ids = array.new<int>()
     array<int>   pos = array.new<int>()
@@ -811,49 +837,67 @@ candidates(array<Fib> fs, bool wantLong) =>
         if g.alive and g.isLong != wantLong and g.id > oppId
             oppId  := g.id
             oppRet := g.retraced
+    int diagnosticId = -1
+    string diagnostic = "No live swing (warm-up or invalidated)"
     for f in fs
         if f.alive
             ix += 1
-        if f.alive and not f.isExt and not f.viol and not (v3NoClone and f.kind == 2) and not (confirmTurn and oppId > f.id and not oppRet) and f.isLong == wantLong and (f.kind != 5 or (not na(f.confirmedBar) and bar_index - f.confirmedBar < setupLifeBars)) and (maxTradesPerFib == 0 or f.trades < maxTradesPerFib) and (minFibPts == 0 or f.rng() >= minFibPts) and not (noReentryAfterStop and FIBLOSS.contains(f.id)) and (bigTrendPts == 0 or bigTrendOk(fs, f))
-            float touch = rt(f.lvl(0.5) + (ZZ_REJECTION ? 0.0 : d * fr50Ticks * TICK))
-            // A pivot label may be drawn in the past; its rejection cannot be.
-            bool rejection = not ZZ_REJECTION or (barstate.isconfirmed and not na(f.confirmedBar) and bar_index > f.confirmedBar and (wantLong ? (low <= touch and close > touch and close > open) : (high >= touch and close < touch and close < open)))
-            float e   = ZZ_REJECTION ? rt(close) : touch
-            float sl  = rt(f.lvl(stopLevel) - d * TICK)
-            float originalTarget = rt(f.lvl(ptLevel) - d * frPtTicks * TICK)
-            float t = targetForBTC(wantLong, e, sl, originalTarget, f.ext)
-            float slT = math.abs(e - sl) / TICK
-            bool priceOk = ZZ_REJECTION ? (wantLong ? sl < e and e < t : t < e and e < sl) : (wantLong ? (t > e and close > e) : (t < e and close < e))
-            float netTarget = netTargetFor(e, t)
-            float modeledRisk = unitRiskFor(e, sl)
-            bool economicOk = netTarget > 0 and modeledRisk > 0 and netTarget >= minNetRR * modeledRisk
-            float candleRange = high - low
-            float closeStrength = candleRange > 0 ? (wantLong ? (close - low) / candleRange : (high - close) / candleRange) : 0.0
-            bool qualityOk = not ZZ_REJECTION or not strongRejection or closeStrength >= minCloseStrength
-            bool trendOk = not useTrendBias or (wantLong ? close > trendEMA and trendEMA > trendEMA[1] : close < trendEMA and trendEMA < trendEMA[1])
-            bool sizeOk = qtyFor(e, sl) > 0
-            bool ok = economicOk and qualityOk and trendOk and sizeOk and rejection and priceOk and slT >= MINSL_E and slT <= MAXSL_E and math.abs(t - e) / TICK >= minPtTicks and (minRR == 0 or math.abs(t - e) >= minRR * math.abs(e - sl)) and (minFibAtr == 0 or f.rng() >= minFibAtr * ATR14)
-            if ok and onlyClear
-                // C#: opposing50 = checkFib.TargetPrice(0.5) - entryFrontRun; long needs opposing50 >= PT.
-                // The C# loop assigns isClear per opposing fib, so the LAST one in the list decides.
-                bool clear = true
-                for o in fs
-                    if o.alive and o.isLong != wantLong
-                        float opp = o.lvl(0.5) - d * fr50Ticks * TICK
-                        bool thisClear = wantLong ? opp >= t : opp <= t
-                        clear := clearAll ? (clear and thisClear) : thisClear
-                ok := clear
-            if ok
-                bool nearer = best >= 0 and (wantLong ? e > es.get(best) : e < es.get(best))
-                if best < 0 or (anchorPriority ? (f.strength > gs.get(best) or (f.strength == gs.get(best) and nearer)) : nearer)
-                    best := ids.size()
-                ids.push(f.id)
-                pos.push(ix)
-                es.push(e)
-                ps.push(t)
-                ss.push(sl)
-                bs.push(rt(f.lvl(beLevel)))
-                gs.push(f.strength)
+        if f.alive and f.isLong == wantLong
+            bool fresh = f.kind != 5 or (not na(f.confirmedBar) and bar_index - f.confirmedBar < setupLifeBars)
+            bool stateOk = not f.isExt and not f.viol and not (v3NoClone and f.kind == 2) and not (confirmTurn and oppId > f.id and not oppRet) and fresh and (maxTradesPerFib == 0 or f.trades < maxTradesPerFib) and (minFibPts == 0 or f.rng() >= minFibPts) and not (noReentryAfterStop and FIBLOSS.contains(f.id)) and (bigTrendPts == 0 or bigTrendOk(fs, f))
+            string reason = not fresh ? "Setup expired" : f.isExt or f.viol ? "Swing invalid/extension" : maxTradesPerFib > 0 and f.trades >= maxTradesPerFib ? "Swing already traded" : "Swing/context filter"
+            if stateOk
+                float touch = rt(f.lvl(0.5) + (ZZ_REJECTION ? 0.0 : d * fr50Ticks * TICK))
+                // No rejection is backdated to a pivot or its confirmation bar.
+                bool rejection = not ZZ_REJECTION or (barstate.isconfirmed and not na(f.confirmedBar) and bar_index > f.confirmedBar and (wantLong ? (low <= touch and close > touch and close > open) : (high >= touch and close < touch and close < open)))
+                float e = ZZ_REJECTION ? rt(close) : touch
+                float sl = rt(f.lvl(stopLevel) - d * TICK)
+                float originalTarget = rt(f.lvl(ptLevel) - d * frPtTicks * TICK)
+                float t = targetForBTC(wantLong, e, sl, originalTarget, f.ext)
+                float wanted = t
+                float obstacle = nearestOpposing50(fs, wantLong, e)
+                if onlyClear and opposingModeBTC == "Cap before nearest"
+                    t := cappedObjectiveBTC(wantLong, t, obstacle)
+                bool capped = t != wanted
+                bool obstacleOk = not onlyClear or opposingModeBTC == "Legacy last/all" or na(obstacle) or (wantLong ? t < obstacle : t > obstacle)
+                if onlyClear and opposingModeBTC == "Legacy last/all"
+                    bool clear = true
+                    for o in fs
+                        if o.alive and o.isLong != wantLong
+                            float opp = o.lvl(0.5) - d * fr50Ticks * TICK
+                            bool thisClear = wantLong ? opp >= t : opp <= t
+                            clear := clearAll ? (clear and thisClear) : thisClear
+                    obstacleOk := clear
+                float slT = math.abs(e - sl) / TICK
+                bool priceOk = ZZ_REJECTION ? (wantLong ? sl < e and e < t : t < e and e < sl) : (wantLong ? (t > e and close > e) : (t < e and close < e))
+                float netTarget = netTargetFor(e, t)
+                float modeledRisk = unitRiskFor(e, sl)
+                float requiredRR = capped ? math.max(minNetRR, minCappedNetRR) : minNetRR
+                bool economicOk = netTarget > 0 and modeledRisk > 0 and netTarget >= requiredRR * modeledRisk
+                float candleRange = high - low
+                float closeStrength = candleRange > 0 ? (wantLong ? (close - low) / candleRange : (high - close) / candleRange) : 0.0
+                bool qualityOk = not ZZ_REJECTION or not strongRejection or closeStrength >= minCloseStrength
+                bool trendOk = not useTrendBias or (wantLong ? close > trendEMA and trendEMA > trendEMA[1] : close < trendEMA and trendEMA < trendEMA[1])
+                bool sizeOk = qtyFor(e, sl) > 0
+                bool stopOk = slT >= MINSL_E and slT <= MAXSL_E
+                bool distanceOk = math.abs(t - e) / TICK >= minPtTicks and (minRR == 0 or math.abs(t - e) >= minRR * math.abs(e - sl)) and (minFibAtr == 0 or f.rng() >= minFibAtr * ATR14)
+                bool ok = rejection and priceOk and economicOk and qualityOk and trendOk and sizeOk and stopOk and distanceOk and obstacleOk
+                reason := not rejection ? "Waiting for closed 50% rejection" : not priceOk ? "Entry/stop/target geometry" : not obstacleOk ? "Opposing 50% blocks objective" : not economicOk ? (capped ? "Capped target below net R floor" : "Target fails net cost/R floor") : not stopOk ? "Stop outside Min/MaxSl" : not sizeOk ? "Quantity below minimum/risk cap" : not qualityOk ? "Rejection close-strength filter" : not trendOk ? "EMA trend filter" : not distanceOk ? "Reward/range filter" : (capped ? "Eligible: capped before obstacle" : "Eligible rejection/limit")
+                if ok
+                    bool nearer = best >= 0 and (wantLong ? e > es.get(best) : e < es.get(best))
+                    if best < 0 or (anchorPriority ? (f.strength > gs.get(best) or (f.strength == gs.get(best) and nearer)) : nearer)
+                        best := ids.size()
+                    ids.push(f.id)
+                    pos.push(ix)
+                    es.push(e)
+                    ps.push(t)
+                    ss.push(sl)
+                    bs.push(rt(f.lvl(beLevel)))
+                    gs.push(f.strength)
+            if f.id > diagnosticId
+                diagnosticId := f.id
+                diagnostic := reason
+    ENTRY_REASON.set(wantLong ? 0 : 1, ids.size() > 0 ? str.tostring(ids.size()) + " eligible; newest: " + diagnostic : diagnostic)
     [ids, es, ps, ss, best, pos, bs, gs]
 
 var map<string, float> PTM  = map.new<string, float>()   // target of the resting/filled order, per entry id
@@ -1289,6 +1333,7 @@ if useEmergency and strategy.opentrades > 0
         bool  isL = strategy.opentrades.size(i) > 0
         if isL ? low <= ep - emergencyTicks * TKS * TICK : high >= ep + emergencyTicks * TKS * TICK
             strategy.close(strategy.opentrades.entry_id(i), comment = "Emergency stop", immediately = true)
+ENTRY_REASON.fill("Not evaluated: account/side gate")
 QUOTE.fill(na)
 QSTR.fill(na)
 if active and not dayBlocked and not newsBlocked and strategy.opentrades < maxPositions
@@ -1457,6 +1502,10 @@ if showDebug and barstate.islast
         DBG.cell(0, r, k == 0 ? (ZZ_REJECTION ? "buy after rejection" : "buy limit") : (ZZ_REJECTION ? "sell after rejection" : "sell limit"), text_color = k == 0 ? cOK : cBad, text_size = ts)
         DBG.cell(1, r, has ? f_px(QUOTE.get(qb)) + " / " + f_px(QUOTE.get(qb + 1)) + " / " + f_px(QUOTE.get(qb + 2)) + "  x" + str.tostring(QUOTE.get(qb + 3), "#") + (anchorPriority and not na(QSTR.get(k)) ? "  anchor " + str.tostring(QSTR.get(k), "0") + "h" : "") : "none  (" + str.tostring(STATS.get(k)) + " fibs qualify)", text_color = has ? cW : cG, text_size = ts, text_halign = text.align_left)
         r += 1
+    for side = 0 to 1
+        DBG.cell(0, r, side == 0 ? "Long setup" : "Short setup", text_color = cG, text_size = ts)
+        DBG.cell(1, r, ENTRY_REASON.get(side), text_color = cW, text_size = ts, text_halign = text.align_left)
+        r += 1
     // ---- fibs
     int aliveN = 0
     int tradeN = 0
@@ -1482,7 +1531,7 @@ if showDebug and barstate.islast
     DBG.cell(1, r, str.tostring(strategy.netprofit, "$#,##0") + "  /  " + str.tostring(-strategy.max_drawdown, "$#,##0"), text_color = strategy.netprofit >= 0 ? cOK : cBad, text_size = ts, text_halign = text.align_left)
     r += 1
     DBG.cell(0, r, "news windows / build", text_color = cG, text_size = ts)
-    DBG.cell(1, r, str.tostring(NW_S.size()) + " loaded  |  2026-09-26 mnq-preset", text_color = cG, text_size = ts, text_halign = text.align_left)
+    DBG.cell(1, r, str.tostring(NW_S.size()) + " loaded  |  BTC net v2", text_color = cG, text_size = ts, text_halign = text.align_left)
 
 // Prop firm trailing-drawdown dashboard (closed-trade basis, as RBO v71).
 var float peakEq = strategy.initial_capital

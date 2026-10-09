@@ -52,3 +52,50 @@ for a,b in [('qtyFor(float e,','// Losing 50to382'),('stepZig(ZigState','stepV4(
 verify(re.search(r'bool rejection = (.+)',s)[1]==re.search(r'bool rejection = (.+)',base)[1])
 verify('float t = targetForBTC(wantLong, e, sl, originalTarget, f.ext)' in s)
 print(f'{checks} target-economics, directional-rounding and preservation checks passed. Native compilation/backtesting unverified.')
+
+# Nearest-obstacle evaluation uses the actual Pine filtering/selection expressions.
+nearest_body=s[s.index('nearestOpposing50(array<Fib>'):s.index('cappedObjectiveBTC(')]
+def nearest_obstacle(items,long,e,bar=100):
+    nearest=math.nan
+    for o in items:
+        env=dict(o=o,wantLong=long,e=e,bar_index=bar,setupLifeBars=48,d=1 if long else -1,fr50Ticks=2,TICK=.1,na=math.isnan,nearest=nearest)
+        fresh_expr=re.search(r'bool fresh = (.+)',nearest_body)[1]
+        env['fresh']=eval(translate(fresh_expr),{},env)
+        valid_expr=re.search(r'if (o.alive .+)',nearest_body)[1]
+        if not eval(translate(valid_expr),{},env):continue
+        env['opp']=eval(translate(re.search(r'float opp = (.+)',nearest_body)[1]),{},env)
+        env['ahead']=eval(translate(re.search(r'bool ahead = (.+)',nearest_body)[1]),{},env)
+        selection=re.search(r'if (ahead .+)',nearest_body)[1]
+        if eval(translate(selection),{},env):nearest=env['opp']
+    return nearest
+
+def fib(level,long=False,**changes):
+    return NS(**(dict(alive=True,isExt=False,viol=False,kind=5,confirmedBar=90,isLong=long,lvl=lambda _:level)|changes))
+# Account for the inherited two-tick opposing entry front-run.
+verify(math.isclose(nearest_obstacle([fib(99),fib(108),fib(106)],True,100),105.8))
+verify(math.isclose(nearest_obstacle([fib(106),fib(108),fib(99)],True,100),105.8))
+verify(math.isnan(nearest_obstacle([fib(99)],True,100)))
+verify(math.isnan(nearest_obstacle([fib(106,confirmedBar=52)],True,100)))
+verify(math.isnan(nearest_obstacle([fib(106,confirmedBar=math.nan)],True,100)))
+verify(math.isnan(nearest_obstacle([fib(106,viol=True)],True,100)))
+verify(math.isnan(nearest_obstacle([fib(106,isExt=True)],True,100)))
+verify(math.isnan(nearest_obstacle([fib(106,long=True)],True,100)))
+verify(math.isclose(nearest_obstacle([fib(91,long=True),fib(95,long=True),fib(102,long=True)],False,100),95.2))
+# Target caps are directional, never move the stop, and are tested AFTER costs.
+cap_ctx=context|dict(obstacleBufferTicks=2,modeledFeePct=0,modeledSlippageTicks=0,riskGapATR=0)
+verify(math.isclose(run_fn('cappedObjectiveBTC',(True,107.5,106),cap_ctx),105.8))
+verify(math.isclose(run_fn('cappedObjectiveBTC',(False,92.5,94),cap_ctx),94.2))
+verify(run_fn('cappedObjectiveBTC',(True,107.5,110),cap_ctx)==107.5)
+verify(run_fn('cappedObjectiveBTC',(True,107.5,math.nan),cap_ctx)==107.5)
+required=re.search(r'float requiredRR = (.+)',s)[1]
+economic=re.search(r'bool economicOk = (.+)',s)[1]
+for obstacle,expected in [(106,True),(103,False)]:
+    target=run_fn('cappedObjectiveBTC',(True,107.5,obstacle),cap_ctx)
+    env=dict(capped=True,minNetRR=0,minCappedNetRR=1,math=math_api)
+    env['requiredRR']=eval(translate(required),{},env)
+    env['netTarget']=run_fn('netTargetFor',(100,target),cap_ctx)
+    env['modeledRisk']=run_fn('unitRiskFor',(100,95),cap_ctx)
+    verify(eval(translate(economic),{},env)==expected)
+verify('ENTRY_REASON.fill("Not evaluated: account/side gate")' in s)
+verify('ENTRY_REASON.get(side)' in s)
+print('Nearest-obstacle freshness, order independence, target-cap and post-cap cost checks passed.')

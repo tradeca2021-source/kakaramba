@@ -26,3 +26,15 @@ Native compilation and profitability remain unverified. In TradingView:
 2. Compare Original Fib, Swing extreme and Net risk multiple with the same entry/exit settings.
 3. Compare separate periods and both directions; include trade counts, net profit, drawdown and results excluding the largest winner. Do not choose a mode based only on the total profit.
 4. Export the updated Properties and Trades sheets. OHLCV or chart replay is needed to evaluate missed setups and tune entry logic; screenshots alone cannot establish improved expectancy.
+
+## v2: opposing levels and entry diagnostics
+
+The default **Opposing Fib handling** mode is now **Cap before nearest**. With opposing clearance enabled, find the nearest valid opposing 50% level ahead of entry, excluding expired Zig Zag setups and violated/extension Fibs. Levels behind entry do not block a forward target. Selection is independent of array order.
+
+If that level lies before the desired objective, put the objective two ticks before it and recalculate modeled net proceeds. The capped target must meet the greater of the existing minimum net reward/risk and the new capped-target floor (default 1.0). If geometry or economics fail, reject the entry. The stop and risk budget are never tightened to make the cap pass. The 1.0 floor and two-tick buffer are unoptimized starting settings.
+
+**Require clear path** rejects an obstructed objective without capping. **Legacy last/all** retains the previous loop for comparisons, including its order-dependent last-level behavior when the strict-all option is off. Turning off opposing clearance skips these obstacle restrictions; cost, position and account controls still apply.
+
+The panel adds **Long setup** and **Short setup** reasons for the latest live swing per direction: waiting for a closed rejection, expired/already-traded swing, invalid entry/stop/target geometry, opposing level, insufficient net payoff, stop-distance limits, size constraints or optional filters. When some candidates qualify, it shows the eligible count and separately identifies the newest swing's reason. Account/direction gates can prevent candidate evaluation; the status row and “Not evaluated” message distinguish that case. These are current-bar diagnostics, not cumulative rejection counts or an account of every historical missed trade.
+
+Native compilation and profitability of v2 remain unverified. Test a fresh instance and compare identical backtest ranges; Deep Backtesting results and the chart's visible historical markers need not share the same range. Fib-failure markers are observation-only and are not orders. The local test command now also checks obstacle freshness, order independence, both-direction caps and post-cap economics.
