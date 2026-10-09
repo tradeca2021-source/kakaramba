@@ -1,3 +1,25 @@
+RBO v90: mandatory trend-only entries and a clean trade chart
+
+The user requires entries with the confirmed trend and expressly chose NO new exit on trend reversal. Trend direction eligibility is now mandatory rather than an optional saved input: only longs in confirmed bullish structure and shorts in confirmed bearish structure, with UNKNOWN or a pending change blocking both. Pending limits still cancel if their direction loses confirmation. Already-open positions retain existing stop/target and previously enabled compliance/profit safety exits; no trend-reversal market close is added.
+
+Clean Chart: Orders and Trend Changes Only defaults ON. It hides raw candidate arrows/anchor bounds, candidate-only orange/gold prices, WAIT/SKIP/CANCELED debug labels and a candidate-only S/R obstacle edge. Actual submitted-order entry/target/stop lines, submission labels, native TradingView fill/exit markers, confirmed trend markers and nearest strong S/R context remain. This is not a claim that every submission fills. Debug reason labels default OFF independently; enabling them requires Clean Chart OFF and a trend-aligned candidate.
+
+The top-right action panel shows no countertrend candidate prices when no matching Fib exists. It reads WAIT—NO TREND-ALIGNED FIB and still explains the filter in the reason. Full bottom-right diagnostics remain available for investigating blocked candidates. Clean display does not remove ATR noise, S/R, fees, risk or size guards. The v89 ATR noise improvements are included. Use a fresh v90 instance/reset saved inputs as needed, especially when comparing screenshot v88 with newer behavior.
+
+Local source/eligibility checks confirm mandatory directional blocking, unchanged entry management and no newly added trend exit. Native Pine compilation/fills/performance remain unverified. Prior version statements about disabling the trend gate describe historical behavior, not v90. Previous notes follow:
+
+RBO v89: ATR-based structure noise reduction
+
+Use ATR-Based Structure Noise Reduction defaults ON. Starting settings: newly confirmed Fib range >=3 ATR; trend breaks must exceed max(2ticks,0.25 ATR); S/R breakouts must exceed the full zone plus max(2ticks,0.15 ATR). Existing two-consecutive-close confirmation remains unchanged. These are configurable heuristic defaults, not optimized or proven profitable settings.
+
+For Confirmed Swing Pair and Deviation Confirmed Pair, qualification uses ATR on the actual confirmation bar. Smaller pairs are ignored before replacing an existing qualifying candidate; raw pivot/deviation tracking still advances to detect future legs. This is not a queue of all earlier pairs. The retained pair retains its original confirmation age and cannot live indefinitely; expiry, crossed-price, trend, S/R, economics and risk rules still apply. Rolling Lookback retains its previous pair selection. Small swings that are ignored are not plotted as new confirmed trade candidates.
+
+Trend buffer freezes when a possible change begins, so rising/falling ATR during the second close cannot move the confirmation threshold. S/R breakout margins freeze with the zone at creation and survive role flips, touch updates and array eviction. All zone arrays remain aligned. A tick minimum still applies. The entry and directional target remain blind50% and61.8%; no candle-reaction entry is added. Stops, sizing, fees and fixed brackets are unchanged.
+
+The compact decision panel displays noise toggle/thresholds. Its other range/ATR reading remains a CURRENT metric; it may differ from the ratio when the candidate qualified. Disable the noise toggle to restore v88's tick-only break thresholds and confirmed-pair selection. Existing TradingView instances may retain saved inputs; inspect the new noise values before comparing runs. Expect fewer/further-delayed signals in exchange for rejecting small structural movements. No higher win rate or profit factor has been verified.
+
+Local checks cover small-break rejection, larger breaks, frozen buffers, pair retention and unchanged trade geometry/default legacy behavior with noise OFF. Native Pine compilation and BTC out-of-sample backtests remain outstanding. Previous notes follow:
+
 RBO v88: actionable trade / wait / skip decisions
 
 Top-right decision panel shows LONG/SHORT LIMIT SUBMITTED (awaiting an actual fill), LONG/SHORT OPEN, WAIT with no entry order, SKIP NOW with the engine reason, or canceled/waiting for another pair. It displays local confirmed structure and pending-change progress, exact frozen order entry/target/stop/quantity when active, and estimated net economics. Candidate-only prices are clearly marked as informational; they do not authorize an entry or indicate that an order was accepted. The panel describes the latest/current engine state, not every candle visible when scrolling history.

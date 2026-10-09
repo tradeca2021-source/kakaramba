@@ -1,5 +1,5 @@
 //@version=6
-strategy("BTC RBO v88 Blind Fibonacci (Perpetual)", shorttitle="BTC RBO v88 Fib", overlay=true, pyramiding=3, initial_capital=100000, default_qty_type=strategy.fixed, default_qty_value=1, margin_long=100, margin_short=100, max_lines_count=500, max_boxes_count=500, max_labels_count=500, use_bar_magnifier=true, commission_type=strategy.commission.percent, commission_value=0.06, slippage=2, process_orders_on_close=false)
+strategy("BTC RBO v90 Blind Fibonacci (Perpetual)", shorttitle="BTC RBO v90 Fib", overlay=true, pyramiding=3, initial_capital=100000, default_qty_type=strategy.fixed, default_qty_value=1, margin_long=100, margin_short=100, max_lines_count=500, max_boxes_count=500, max_labels_count=500, use_bar_magnifier=true, commission_type=strategy.commission.percent, commission_value=0.06, slippage=2, process_orders_on_close=false)
 
 // --- LIBRARY IMPORT ---
 // External dependency: access to traderjoeb/PropFirm_News_Dates/6 is required.
@@ -174,11 +174,18 @@ grp_trend = "VWAP"
 vwapType = input.string("Daily (24/7)", title="VWAP Type", options=["RTH (Anchored 09:30 AM)", "Session Auto-Anchor (03:00 / 09:30)", "Daily (24/7)"], group=grp_trend, tooltip="Determines how VWAP is anchored. Session Auto-Anchor resets at the NY or London open depending on current time.")
 
 grp_structure = "Confirmed Trend & Changes"
-useConfirmedTrend = input.bool(true, "Require Confirmed Trend Before Fib Entries", group=grp_structure, tooltip="Only long in confirmed bullish structure or short in confirmed bearish structure. Unknown structure and a possible change awaiting confirmation block new entries. Open trades retain their fixed brackets.")
+// Trend-only is mandatory: saved inputs cannot enable countertrend orders.
+useConfirmedTrend = true
 trendSwingBars = input.int(5, "Trend Swing Confirmation Bars", minval=1, maxval=50, group=grp_structure)
 trendConfirmCloses = input.int(2, "Consecutive Closes Beyond Swing to Confirm", minval=1, maxval=10, group=grp_structure, tooltip="Closed candles beyond a frozen confirmed swing level. A failed follow-through clears the possible change and retains the prior confirmed direction.")
 trendBreakTicks = input.int(2, "Trend Break Buffer (Ticks)", minval=0, maxval=100, group=grp_structure)
 showTrendChanges = input.bool(true, "Show Confirmed Trend Changes", group=grp_structure)
+
+grp_noise = "Noise Reduction"
+useNoiseReduction = input.bool(true, "Use ATR-Based Structure Noise Reduction", group=grp_noise, tooltip="Qualify newly confirmed Fib pairs by range/ATR and require volatility-sized trend/S/R breaks. This can reduce signals and increase confirmation delay; settings are starting values, not optimized results.")
+minFibImpulseAtr = input.float(3.0, "Minimum New Confirmed Fib Range (ATR)", minval=0.0, maxval=30.0, step=0.25, group=grp_noise, tooltip="Small confirmed pairs do not replace an existing qualifying pair. Applies to confirmed pivot and deviation modes; rolling lookback is unchanged. Existing candidate expiry still applies.")
+trendNoiseAtr = input.float(0.25, "Trend Break Buffer (ATR)", minval=0.0, maxval=3.0, step=0.05, group=grp_noise, tooltip="Maximum of this ATR distance and the tick buffer, frozen when break confirmation starts.")
+srNoiseAtr = input.float(0.15, "S/R Breakout Buffer at Zone Creation (ATR)", minval=0.0, maxval=3.0, step=0.05, group=grp_noise)
 
 grp_sr = "Strong Support / Resistance"
 useStrongSr = input.bool(true, "Avoid Strong Opposing S/R Before Target", group=grp_sr, tooltip="Block long limits if a strong resistance zone overlaps the entry-to-target path; block shorts if strong support overlaps it. A confirmed breakout changes the zone's role. Existing positions retain their brackets.")
@@ -196,7 +203,8 @@ grp_ui = "Chart & Dashboard"
 
 showPropFirmMetrics = input.bool(true, title="Show Prop Firm Metrics Dashboard", group=grp_ui)
 showTradeDecisionPanel = input.bool(true, "Show Trade / Wait / Skip Panel", group=grp_ui)
-showFibDecisionLabels = input.bool(true, "Show Changes in Fib Wait / Skip Reason", group=grp_ui, tooltip="Labels mark when the engine's reason changes, not every bar or every candidate. SKIP NOW means blocked at that calculation; temporary blockers may retry until expiry. Limit labels remain separate from actual TradingView fill markers.")
+cleanTradeChart = input.bool(true, "Clean Chart: Orders and Trend Changes Only", group=grp_ui, tooltip="Hide raw Fib candidates, candidate-only levels and diagnostic WAIT/SKIP labels. Submitted-limit labels and native fill/exit markers remain visible. Does not disable S/R, trend or risk filters.")
+showFibDecisionLabels = input.bool(false, "Show Debug Changes in Fib Wait / Skip Reason", group=grp_ui, tooltip="Only when Clean Chart is OFF. Diagnostic labels are restricted to trend-aligned candidates; they are not trade signals.")
 
 showStopLine = input.bool(true, title="Show Stop Loss", group=grp_ui, tooltip="Shows the stop loss line that cancels a setup or exits a position")
 
@@ -491,7 +499,7 @@ f_tp_json(bool is_entry, string debug_str, string uuid, float sl_price_val = na,
 
     string action_str = "{{strategy.order.action}}" // TradingView automatically assigns "buy" or "sell" even for exits
     string core_fields = '{\n  "ticker": "' + webhookTicker + '",\n  "action": "' + action_str + '"' + sentiment_block + ',\n  "orderType": "' + order_type + '",\n  "price": {{close}}' + limit_block + ',\n  "quantity": {{strategy.order.contracts}},\n  "time": "{{timenow}}"' + sl_block + cancel_block + ','
-    string extras_fields = '\n  "extras": {\n    "strategy_version": "v88-BlindFib",\n    "order_id": "{{strategy.order.id}}",\n    "position_after_trade": "{{strategy.market_position}}",\n    "trade_uuid": "' + uuid + '",\n    "debug": "' + debug_str + '"\n  }\n}'
+    string extras_fields = '\n  "extras": {\n    "strategy_version": "v90-BlindFib",\n    "order_id": "{{strategy.order.id}}",\n    "position_after_trade": "{{strategy.market_position}}",\n    "trade_uuid": "' + uuid + '",\n    "debug": "' + debug_str + '"\n  }\n}'
     core_fields + extras_fields
 
 
@@ -541,6 +549,9 @@ if dailyKillswitch or not inSession
 
 chart_atr = ta.atr(atrLength)
 
+f_fib_structure_large_enough(float hi, float lo) =>
+    not useNoiseReduction or (not na(chart_atr) and hi - lo >= chart_atr * minFibImpulseAtr)
+
 // Structure is evaluated only on closed bars against previously known pivots.
 // Freeze the break level while confirming; a newly detected pivot cannot move it.
 float trendPivotHigh = ta.pivothigh(high, trendSwingBars, trendSwingBars)
@@ -563,8 +574,9 @@ if barstate.isconfirmed
             trendPendingCloses := 0
     if trendPendingDir == 0
         bool initialRangeReady = not na(trendKnownHigh) and not na(trendKnownLow) and trendKnownHigh > trendKnownLow
-        float bullBreak = trendKnownHigh + trendBreakTicks * syminfo.mintick
-        float bearBreak = trendKnownLow - trendBreakTicks * syminfo.mintick
+        float trendBuffer = math.max(trendBreakTicks * syminfo.mintick, useNoiseReduction and not na(chart_atr) ? chart_atr * trendNoiseAtr : 0.0)
+        float bullBreak = trendKnownHigh + trendBuffer
+        float bearBreak = trendKnownLow - trendBuffer
         // Once direction is known, its opposite swing is sufficient for change
         // detection even if the independently updated reference bounds invert.
         bool canConfirmBull = confirmedTrendDir == -1 or (confirmedTrendDir == 0 and initialRangeReady)
@@ -584,8 +596,8 @@ if barstate.isconfirmed
         trendKnownHigh := trendPivotHigh
     if not na(trendPivotLow)
         trendKnownLow := trendPivotLow
-bool trendLongAllowed = not useConfirmedTrend or (confirmedTrendDir == 1 and trendPendingDir == 0)
-bool trendShortAllowed = not useConfirmedTrend or (confirmedTrendDir == -1 and trendPendingDir == 0)
+bool trendLongAllowed = confirmedTrendDir == 1 and trendPendingDir == 0
+bool trendShortAllowed = confirmedTrendDir == -1 and trendPendingDir == 0
 plotshape(showTrendChanges and trendConfirmedThisBar and confirmedTrendDir == 1, title="Bullish Trend Confirmed", text="TREND UP", style=shape.labelup, location=location.belowbar, color=color.teal, textcolor=color.white, size=size.tiny)
 plotshape(showTrendChanges and trendConfirmedThisBar and confirmedTrendDir == -1, title="Bearish Trend Confirmed", text="TREND DOWN", style=shape.labeldown, location=location.abovebar, color=color.maroon, textcolor=color.white, size=size.tiny)
 
@@ -597,6 +609,7 @@ var int[] srRoles = array.new_int()
 var int[] srTouches = array.new_int()
 var int[] srLastTouches = array.new_int()
 var int[] srBreakCounts = array.new_int()
+var float[] srBreakMargins = array.new_float()
 f_sr_remove(int i) =>
     array.remove(srCenters, i)
     array.remove(srWidths, i)
@@ -604,6 +617,7 @@ f_sr_remove(int i) =>
     array.remove(srTouches, i)
     array.remove(srLastTouches, i)
     array.remove(srBreakCounts, i)
+    array.remove(srBreakMargins, i)
 
 f_sr_add(float price, int role, float width) =>
     int match = -1
@@ -627,6 +641,7 @@ f_sr_add(float price, int role, float width) =>
         array.push(srTouches, 1)
         array.push(srLastTouches, bar_index)
         array.push(srBreakCounts, 0)
+        array.push(srBreakMargins, math.max(syminfo.mintick * 2, useNoiseReduction ? chart_atr * srNoiseAtr : 0.0))
 
 float srPivotHigh = ta.pivothigh(high, srPivotBars, srPivotBars)
 float srPivotLow = ta.pivotlow(low, srPivotBars, srPivotBars)
@@ -640,7 +655,8 @@ if barstate.isconfirmed
             int role = array.get(srRoles, srIndex)
             float center = array.get(srCenters, srIndex)
             float width = array.get(srWidths, srIndex)
-            bool broke = role == 1 ? close > center + width + syminfo.mintick * 2 : close < center - width - syminfo.mintick * 2
+            float breakMargin = array.get(srBreakMargins, srIndex)
+            bool broke = role == 1 ? close > center + width + breakMargin : close < center - width - breakMargin
             int count = broke ? array.get(srBreakCounts, srIndex) + 1 : 0
             if count >= srBreakCloses
                 array.set(srRoles, srIndex, -role)
@@ -709,13 +725,13 @@ var int blindSwingLowBar = na
 var int blindSwingDir = 0
 if barstate.isconfirmed
     // Simultaneous high/low pivots have ambiguous ordering: update reference points only.
-    if not na(blindPivotHigh) and na(blindPivotLow) and not na(blindLastLowBar) and bar_index - blindFibPivotBars > blindLastLowBar and blindPivotHigh > blindLastLow
+    if not na(blindPivotHigh) and na(blindPivotLow) and not na(blindLastLowBar) and bar_index - blindFibPivotBars > blindLastLowBar and blindPivotHigh > blindLastLow and f_fib_structure_large_enough(blindPivotHigh, blindLastLow)
         blindSwingHigh := blindPivotHigh
         blindSwingLow := blindLastLow
         blindSwingHighBar := bar_index - blindFibPivotBars
         blindSwingLowBar := blindLastLowBar
         blindSwingDir := 1
-    if not na(blindPivotLow) and na(blindPivotHigh) and not na(blindLastHighBar) and bar_index - blindFibPivotBars > blindLastHighBar and blindPivotLow < blindLastHigh
+    if not na(blindPivotLow) and na(blindPivotHigh) and not na(blindLastHighBar) and bar_index - blindFibPivotBars > blindLastHighBar and blindPivotLow < blindLastHigh and f_fib_structure_large_enough(blindLastHigh, blindPivotLow)
         blindSwingHigh := blindLastHigh
         blindSwingLow := blindPivotLow
         blindSwingHighBar := blindLastHighBar
@@ -768,7 +784,7 @@ if barstate.isconfirmed
         if close <= deviationMax * (1.0 - deviationFraction)
             deviationLockedHigh := deviationMax
             deviationLockedHighBar := deviationMaxBar
-            if not na(deviationLockedLowBar) and deviationLockedLowBar < deviationLockedHighBar and deviationLockedHigh > deviationLockedLow
+            if not na(deviationLockedLowBar) and deviationLockedLowBar < deviationLockedHighBar and deviationLockedHigh > deviationLockedLow and f_fib_structure_large_enough(deviationLockedHigh, deviationLockedLow)
                 deviationPairHigh := deviationLockedHigh
                 deviationPairLow := deviationLockedLow
                 deviationPairHighBar := deviationLockedHighBar
@@ -785,7 +801,7 @@ if barstate.isconfirmed
         if close >= deviationMin * (1.0 + deviationFraction)
             deviationLockedLow := deviationMin
             deviationLockedLowBar := deviationMinBar
-            if not na(deviationLockedHighBar) and deviationLockedHighBar < deviationLockedLowBar and deviationLockedHigh > deviationLockedLow
+            if not na(deviationLockedHighBar) and deviationLockedHighBar < deviationLockedLowBar and deviationLockedHigh > deviationLockedLow and f_fib_structure_large_enough(deviationLockedHigh, deviationLockedLow)
                 deviationPairHigh := deviationLockedHigh
                 deviationPairLow := deviationLockedLow
                 deviationPairHighBar := deviationLockedHighBar
@@ -808,10 +824,11 @@ bool fibCandidateReady = blindCandidateDir != 0 and not na(blindCandidateHighBar
 bool newFibSeries = fibCandidateReady and (na(blindCandidateHighBar[1]) or na(blindCandidateLowBar[1]) or blindCandidateHighBar != blindCandidateHighBar[1] or blindCandidateLowBar != blindCandidateLowBar[1] or blindCandidateDir != blindCandidateDir[1])
 float fibCandidateEntry = math.round_to_mintick((blindCandidateHigh + blindCandidateLow) * 0.5 + blindCandidateDir * blindFibEntryTicks * syminfo.mintick)
 float fibCandidateTarget = math.round_to_mintick((blindCandidateDir == 1 ? blindCandidateLow + (blindCandidateHigh - blindCandidateLow) * blindFibTargetRatio : blindCandidateHigh - (blindCandidateHigh - blindCandidateLow) * blindFibTargetRatio) - blindCandidateDir * blindFibTargetTicks * syminfo.mintick)
-plotshape(showFibSignals and barstate.isconfirmed and newFibSeries and blindCandidateDir == 1, title="Confirmed Long Fib Setup", text="FIB L", style=shape.triangleup, location=location.belowbar, color=color.lime, size=size.tiny)
-plotshape(showFibSignals and barstate.isconfirmed and newFibSeries and blindCandidateDir == -1, title="Confirmed Short Fib Setup", text="FIB S", style=shape.triangledown, location=location.abovebar, color=color.red, size=size.tiny)
-plot(showFibAnchorBounds and fibCandidateReady ? blindCandidateHigh : na, "Selected Confirmed Anchor High", color=color.gray, style=plot.style_linebr)
-plot(showFibAnchorBounds and fibCandidateReady ? blindCandidateLow : na, "Selected Confirmed Anchor Low", color=color.gray, style=plot.style_linebr)
+bool candidateMatchesTrend = blindCandidateDir == 1 ? trendLongAllowed : blindCandidateDir == -1 ? trendShortAllowed : false
+plotshape(not cleanTradeChart and showFibSignals and barstate.isconfirmed and newFibSeries and blindCandidateDir == 1 and trendLongAllowed, title="Confirmed Long Fib Setup", text="FIB L", style=shape.triangleup, location=location.belowbar, color=color.lime, size=size.tiny)
+plotshape(not cleanTradeChart and showFibSignals and barstate.isconfirmed and newFibSeries and blindCandidateDir == -1 and trendShortAllowed, title="Confirmed Short Fib Setup", text="FIB S", style=shape.triangledown, location=location.abovebar, color=color.red, size=size.tiny)
+plot(not cleanTradeChart and showFibAnchorBounds and fibCandidateReady and candidateMatchesTrend ? blindCandidateHigh : na, "Selected Confirmed Anchor High", color=color.gray, style=plot.style_linebr)
+plot(not cleanTradeChart and showFibAnchorBounds and fibCandidateReady and candidateMatchesTrend ? blindCandidateLow : na, "Selected Confirmed Anchor Low", color=color.gray, style=plot.style_linebr)
 
 
 
@@ -1005,7 +1022,7 @@ fibEntryStatus := result_f_manage_blind_fib_fibEntryStatus
 // Limit their number and draw only changes of reason to reduce chart clutter.
 var label[] fibDecisionLabels = array.new_label()
 bool fibReasonChanged = fibEntryStatus != fibEntryStatus[1]
-if showFibDecisionLabels and barstate.isconfirmed and fibCandidateReady and fib_order_dir == 0 and strategy.position_size == 0 and fibReasonChanged
+if not cleanTradeChart and showFibDecisionLabels and barstate.isconfirmed and fibCandidateReady and candidateMatchesTrend and fib_order_dir == 0 and strategy.position_size == 0 and fibReasonChanged
     bool isWaitReason = str.startswith(fibEntryStatus, "Waiting:")
     bool isSkipReason = str.startswith(fibEntryStatus, "Blocked:")
     bool isCancelReason = str.startswith(fibEntryStatus, "Canceled:")
@@ -1047,8 +1064,8 @@ if barstate.isconfirmed and fib_order_dir != 0 and blind_order_bar == bar_index
     fibSubmittedCount += 1
 int fibFilledCount = strategy.closedtrades + strategy.opentrades
 
-plot(showFibConfluence ? (fib_order_dir != 0 ? fib_order_entry : fibCandidateReady ? fibCandidateEntry : na) : na, "Fib 50% Candidate / Frozen Order Entry", color=color.orange, linewidth=2, style=plot.style_linebr)
-plot(showFibConfluence ? (fib_order_dir != 0 ? fib_order_target : fibCandidateReady ? fibCandidateTarget : na) : na, "Fib Candidate / Frozen Order Profit Target", color=color.rgb(212, 175, 55), linewidth=2, style=plot.style_linebr)
+plot(showFibConfluence ? (fib_order_dir != 0 ? fib_order_entry : not cleanTradeChart and fibCandidateReady and candidateMatchesTrend ? fibCandidateEntry : na) : na, "Fib 50% Candidate / Frozen Order Entry", color=color.orange, linewidth=2, style=plot.style_linebr)
+plot(showFibConfluence ? (fib_order_dir != 0 ? fib_order_target : not cleanTradeChart and fibCandidateReady and candidateMatchesTrend ? fibCandidateTarget : na) : na, "Fib Candidate / Frozen Order Profit Target", color=color.rgb(212, 175, 55), linewidth=2, style=plot.style_linebr)
 plot(showStopLine and useFibLevelExecution and fib_order_dir != 0 ? fib_order_stop : na, "Frozen Fib Stop", color=color.fuchsia, linewidth=1, style=plot.style_linebr)
 
 
@@ -1148,29 +1165,30 @@ float signalRelativeVolume = not na(volume) and signalPriorVolume > 0 ? volume /
 float signalReward = blindCandidateDir == 1 ? fibCandidateTarget - fibCandidateEntry : fibCandidateEntry - fibCandidateTarget
 [visibleSrObstacle, visibleSrStrength] = f_sr_obstacle(economicsEntry, economicsTarget, economicsLong)
 [signalSrObstacle, signalSrStrength] = f_sr_obstacle(fibCandidateEntry, fibCandidateTarget, blindCandidateDir == 1)
-plot(showStrongSr ? visibleSrObstacle : na, "Strong S/R Target Obstacle Edge", color=color.orange, linewidth=2, style=plot.style_linebr)
-var table tradeDecisionTable = table.new(position.top_right, 1, 6, bgcolor=color.new(color.black, 15), border_width=1)
+plot(showStrongSr and (fib_order_dir != 0 or (not cleanTradeChart and candidateMatchesTrend)) ? visibleSrObstacle : na, "Strong S/R Target Obstacle Edge", color=color.orange, linewidth=2, style=plot.style_linebr)
+var table tradeDecisionTable = table.new(position.top_right, 1, 7, bgcolor=color.new(color.black, 15), border_width=1)
 if barstate.islast
     if showTradeDecisionPanel
         bool hasSubmittedLimit = fib_order_dir != 0
         bool hasFilledPosition = strategy.position_size != 0
         string tradeSide = hasFilledPosition ? (strategy.position_size > 0 ? "LONG" : "SHORT") : hasSubmittedLimit ? (fib_order_dir == 1 ? "LONG" : "SHORT") : (blindCandidateDir == 1 ? "LONG" : "SHORT")
-        string decisionTitle = hasFilledPosition ? tradeSide + " OPEN" : hasSubmittedLimit ? tradeSide + " LIMIT SUBMITTED — WAIT FOR FILL" : str.startswith(fibEntryStatus, "Blocked:") ? "SKIP NOW: " + tradeSide : str.startswith(fibEntryStatus, "Canceled:") ? "CANCELED — WAIT FOR A NEW PAIR" : "WAIT — NO ENTRY ORDER"
+        string decisionTitle = hasFilledPosition ? tradeSide + " OPEN" : hasSubmittedLimit ? tradeSide + " LIMIT SUBMITTED — WAIT FOR FILL" : not candidateMatchesTrend ? "WAIT — NO TREND-ALIGNED FIB" : str.startswith(fibEntryStatus, "Blocked:") ? "SKIP NOW: " + tradeSide : str.startswith(fibEntryStatus, "Canceled:") ? "CANCELED — WAIT FOR A NEW PAIR" : "WAIT — NO ENTRY ORDER"
         color decisionColor = hasFilledPosition ? color.lime : hasSubmittedLimit ? color.aqua : str.startswith(fibEntryStatus, "Blocked:") ? color.orange : color.silver
         string localTrendText = confirmedTrendDir == 1 ? "bullish" : confirmedTrendDir == -1 ? "bearish" : "unknown"
         if trendPendingDir != 0
             localTrendText += " | change awaiting confirmation " + str.tostring(trendPendingCloses) + "/" + str.tostring(trendConfirmCloses)
         table.cell(tradeDecisionTable, 0, 0, decisionTitle, text_color=decisionColor, text_size=size.normal)
         table.cell(tradeDecisionTable, 0, 1, "Local structure: " + localTrendText, text_color=color.white, text_size=size.small)
-        string decisionLevels = not hasSubmittedLimit and not fibCandidateReady ? "No confirmed Fib candidate" : (hasSubmittedLimit ? "Order" : "Candidate only") + " | Entry " + str.tostring(economicsEntry, format.mintick) + " | Target " + str.tostring(economicsTarget, format.mintick)
+        string decisionLevels = not hasSubmittedLimit and (not fibCandidateReady or not candidateMatchesTrend) ? "No trend-aligned confirmed Fib candidate" : (hasSubmittedLimit ? "Order" : "Candidate only") + " | Entry " + str.tostring(economicsEntry, format.mintick) + " | Target " + str.tostring(economicsTarget, format.mintick)
         table.cell(tradeDecisionTable, 0, 2, decisionLevels, text_color=color.white, text_size=size.small)
         string decisionRisk = hasSubmittedLimit ? "Stop " + str.tostring(fib_order_stop, format.mintick) + " | Qty " + str.tostring(fib_order_qty) : "No active order: candidate prices are not an entry instruction"
         table.cell(tradeDecisionTable, 0, 3, decisionRisk, text_color=color.silver, text_size=size.small)
         table.cell(tradeDecisionTable, 0, 4, fibEntryStatus, text_color=decisionColor, text_size=size.small)
-        string decisionEconomics = na(visibleNetReward) ? "Waiting for valid economics" : "Estimated net target distance " + str.tostring(visibleNetReward, "0.00") + " | Net R/R " + str.tostring(visibleNetRatio, "0.0000")
+        string decisionEconomics = not hasSubmittedLimit and not candidateMatchesTrend ? "Countertrend candidates filtered out" : na(visibleNetReward) ? "Waiting for valid economics" : "Estimated net target distance " + str.tostring(visibleNetReward, "0.00") + " | Net R/R " + str.tostring(visibleNetRatio, "0.0000")
         table.cell(tradeDecisionTable, 0, 5, decisionEconomics, text_color=not na(visibleNetReward) and visibleNetReward <= 0 ? color.red : color.silver, text_size=size.small)
+        table.cell(tradeDecisionTable, 0, 6, "Noise " + (useNoiseReduction ? "ON" : "OFF") + " | New Fib >= " + str.tostring(minFibImpulseAtr) + " ATR | Trend buffer " + str.tostring(trendNoiseAtr) + " ATR | S/R buffer " + str.tostring(srNoiseAtr) + " ATR", text_color=color.silver, text_size=size.small)
     else
-        table.clear(tradeDecisionTable, 0, 0, 0, 5)
+        table.clear(tradeDecisionTable, 0, 0, 0, 6)
 float signalTargetCosts = (fibCandidateEntry + fibCandidateTarget) * estFeePct / 100.0 + syminfo.mintick * estSlippageTicks * 2.0
 var table status_tbl = table.new(position.bottom_right, 1, 16, bgcolor=color.new(color.black, 80), border_width=1, border_color=color.new(color.gray, 50))
 if barstate.islast
@@ -1195,7 +1213,7 @@ if barstate.islast
     table.cell(status_tbl, 0, 3, breakEvenText, text_color=not na(visibleNetReward) and visibleNetReward <= 0 ? color.red : color.silver, text_size=size.small)
     table.cell(status_tbl, 0, 4, "TP exits: " + str.tostring(targetExitCount) + " (net losers: " + str.tostring(losingTargetCount) + ") | SL exits: " + str.tostring(stopExitCount), text_color=color.white, text_size=size.small)
     table.cell(status_tbl, 0, 5, lastCompletedReason + (na(lastCompletedNet) ? "" : " | Net " + str.tostring(lastCompletedNet, "#.##")), text_color=not na(lastCompletedNet) and lastCompletedNet < 0 ? color.red : color.silver, text_size=size.small)
-    table.cell(status_tbl, 0, 6, "v88 | Pairs " + str.tostring(fibSetupCount) + " | Order attempts " + str.tostring(fibSubmittedCount) + " | Filled " + str.tostring(fibFilledCount), text_color=color.white, text_size=size.small)
+    table.cell(status_tbl, 0, 6, "v90 | Pairs " + str.tostring(fibSetupCount) + " | Order attempts " + str.tostring(fibSubmittedCount) + " | Filled " + str.tostring(fibFilledCount), text_color=color.white, text_size=size.small)
     table.cell(status_tbl, 0, 7, "At confirmation: crossed " + str.tostring(fibCrossedCount) + " | fee-blocked " + str.tostring(fibNetCostBlockedCount), text_color=color.orange, text_size=size.small)
     table.cell(status_tbl, 0, 8, "At confirmation: safety-blocked " + str.tostring(fibSafetyBlockedCount) + " | busy " + str.tostring(fibBusyCount) + " (counts overlap)", text_color=color.silver, text_size=size.small)
     float targetProgress = blindFibTargetRatio - 0.5
