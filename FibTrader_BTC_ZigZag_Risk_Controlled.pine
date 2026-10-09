@@ -1,0 +1,1488 @@
+//@version=6
+// BTC RISK-CONTROLLED VARIANT. Defaults are conservative starting points, not optimized.
+// Percent commission 0.06%/side, slippage 2 ticks, 100% margin: set your actual costs.
+// Equity risk 0.15% incl. modeled costs/gap allowance, fractional BTC sizing,
+// max 1 BTC and max 1x equity notional, 1% daily equity loss limit at bar close.
+// Always require positive estimated net proceeds at the unchanged Fib target.
+// One trade per swing by default; expire setups after 48 chart bars.
+// Stronger rejection/EMA filters default OFF for controlled comparisons.
+// No OHLCV backtest is embedded here; the earlier export belongs to the old version.
+// Legacy TargetLossInTicks affects only legacy visuals/scaling, not this sizing.
+// MC mode cannot bypass the BTC cost, sizing, expiry or daily equity controls.
+// Failure signals never open trades in this version.
+// Confirmed Zig Zag variant: chart-timeframe, close-confirmed swing reversals.
+// Completed legs only; anchors never move after creation. First pivot seeds the engine.
+// Engine timeframe and StartAnchor apply only to legacy engines. No performance claim.
+// Usage: paste the complete file into a NEW TradingView Pine Editor script and compile.
+// Requires access to tradeca2021/PropFirm_News_Dates/6 (same import as supplied FibTrader).
+// Default: v5, confirm at 23.6% swing retracement, then wait for rejection at 50%.
+// Short: touch 50%, bearish body and close below it; long is the mirror rule.
+// Rejection must occur AFTER confirmation. Enter on the next available tick,
+// not retroactively at 50%. Size uses the rejection close; actual fills may gap.
+// Fixed Fib targets/stops remain; a rejection past the target is not chased.
+// Optional modes: original 2.5% price deviation and resting 50% limit entries.
+// Existing MinMove, stop-distance, schedule and opposing-Fib filters still apply.
+// Wicks crossing the configured stop invalidate candidates, including on their birth bar.
+// No entries are backdated to pivot bars. First pivot only seeds; wait for the second.
+// Compare v5 vs v3 on identical symbol, timeframe, period, costs and saved inputs.
+// Local model/source checks are supplementary; native compilation/fills are unverified.
+// Historical calibration/performance notes below describe the supplied legacy engines.
+// FibTrader 50to382 — Pine port of the MultiCharts _CFL_s_FibTrader / FibTrade50To382 strategy.
+//
+// What is ported 1:1 from FibTrade50To382.cs:
+//   entry  = fib 50%   + NumTicksToFrontRun50 (towards price, i.e. filled earlier)
+//   target = fib level ptLevel + NumTicksToFrontRunPt (default 0% = swing extreme, measured from MC's
+//            exits; the C# calls TargetPrice(0.382) - set ptLevel 0.382 for that reading)
+//   stop   = violation price (the 100% anchor) + 1 tick beyond it
+//   extension fibs never trade
+//   OnlyAllowTradesClearOfOpposing50: the target may not sit beyond an opposing fib's 50% entry
+//
+// What is RECONSTRUCTED (FibMove / UpdateData / FibRetracement were not in the screenshots):
+//   how swings become fibs (MinMove, ReversalLevel), when a fib becomes an extension (ExtensionLevel),
+//   and how contracts are sized from TargetLossInTicks. See the notes on each input.
+//
+// Historical source note for the legacy engines (this variant calculates at bar close): so on a live chart every tick can extend a fib's 0% anchor,
+// which moves its 38.2/50/61.8 levels and re-prices the resting limit orders — as in MultiCharts.
+// On history each bar is walked low->high (up bar) or high->low (down bar).
+strategy("FibTrader BTC Zig Zag Risk Controlled", shorttitle = "FibTrader BTC RC", overlay = true,
+     calc_on_every_tick = false, pyramiding = 1, use_bar_magnifier = true,
+     max_lines_count = 500, max_labels_count = 500, max_boxes_count = 500, max_bars_back = 5000,
+     default_qty_type = strategy.fixed, default_qty_value = 1, margin_long = 100, margin_short = 100,
+     commission_type = strategy.commission.percent, commission_value = 0.06, slippage = 2)
+
+// News calendar: same library and call pattern as Range_Breakout_v152_Futures.pine.
+// If this line fails to compile, change the account prefix to the one that owns the library in My scripts.
+import tradeca2021/PropFirm_News_Dates/6 as newsDates
+
+// ─────────────────────────── Inputs (names mirror the MultiCharts signal) ───────────────────────────
+// BTC risk controls apply in every engine and are never disabled by MC mode.
+G_BTC = "BTC cost and account risk controls"
+riskPct = input.float(0.15, "Equity risk per trade (%)", minval = 0.01, maxval = 5, step = 0.01, group = G_BTC)
+qtyStepBTC = input.float(0.001, "Quantity step (BTC)", minval = 0.000001, group = G_BTC)
+minQtyBTC = input.float(0.001, "Minimum quantity (BTC)", minval = 0.000001, group = G_BTC)
+maxQtyBTC = input.float(1.0, "Maximum quantity (BTC)", minval = 0.000001, group = G_BTC)
+maxExposurePct = input.float(100, "Maximum notional / equity (%)", minval = 1, maxval = 100, group = G_BTC, tooltip = "100 = maximum 1x account equity. Strategy Properties also defaults to 100% margin. No minimum-one-BTC rounding.")
+modeledFeePct = input.float(0.06, "Modeled fee per side (%)", minval = 0, step = 0.01, group = G_BTC, tooltip = "Illustrative default, not a statement of your exchange fee. Match Strategy Properties commission to this value.")
+modeledSlippageTicks = input.int(2, "Modeled slippage per side (ticks)", minval = 0, group = G_BTC, tooltip = "Match Strategy Properties slippage. Spread and funding are not included.")
+riskGapATR = input.float(0.25, "Sizing allowance for stop gaps (ATR)", minval = 0, step = 0.05, group = G_BTC, tooltip = "Extra risk allowance reduces quantity; it does not move the actual stop or guarantee a maximum loss.")
+minNetRR = input.float(0.0, "Minimum net target / modeled risk (0 = positive net target only)", minval = 0, step = 0.05, group = G_BTC, tooltip = "Costs are evaluated at the fixed Fib target, even when that level activates a trailing exit. Positive estimated target proceeds are always required. This does not forecast trailing profits.")
+setupLifeBars = input.int(48, "Zig Zag setup lifetime after confirmation (bars)", minval = 1, group = G_BTC)
+dailyEquityLossPct = input.float(1.0, "Daily equity loss limit (%)", minval = 0.1, maxval = 10, step = 0.1, group = G_BTC, tooltip = "Includes realized plus open PnL since the exchange-calendar day began. On a closed-bar breach, cancel entries and close positions. Gaps/intrabar moves can exceed it.")
+strongRejection = input.bool(false, "Require stronger rejection close (experimental)", group = G_BTC)
+minCloseStrength = input.float(0.65, "Minimum directional close position in candle", minval = 0.5, maxval = 1, step = 0.05, group = G_BTC, tooltip = "Long: close in upper fraction; short: lower fraction. Applies only when stronger rejection is enabled. Unoptimized; compare separately.")
+useTrendBias = input.bool(false, "Require EMA trend alignment (experimental)", group = G_BTC)
+trendLenBTC = input.int(200, "Trend EMA length", minval = 2, group = G_BTC)
+
+G_T = "Trading (MultiCharts inputs)"
+mcMode          = input.bool(false,     "MULTICHARTS MODE (turns off every non-MC extra)", group = G_T, tooltip = "On: behaves and looks like the MC FibTrader - no fib-failure markers/trades, no breakeven, no R:R / ATR / news / daily-loss / emergency filters, no next-level labels, trend lines or diagnostics table. Off: each extra follows its own setting below.")
+tickSizeIn      = input.float(0,      "TickSize (0 = symbol min tick)", minval = 0, group = G_T, tooltip = "0 (default since 2026-09-26) = the symbol's own tick, so the script works on any market (crypto, FX, stocks). On ES/MES/NQ/MNQ the symbol tick is 0.25, the same as the old default, so futures results do not change. A fixed 0.25 on a low-priced coin made the entry front-run bigger than the whole fib, so no trades.")
+startAnchor     = input.float(0.0,    "StartAnchor (0 = auto from first bar)", group = G_T, tooltip = "MultiCharts example: 7599.25")
+targetLossTicks = input.int(200,      "TargetLossInTicks", minval = 1, group = G_T, tooltip = "Reconstructed: contracts = floor(TargetLossInTicks / stop ticks), min 1, when risk sizing is on.")
+presetIn        = input.string("None (use inputs below)", "Preset", options = ["None (use inputs below)", "MNQ 1% drawdown"], group = G_T, tooltip = "MNQ 1% drawdown: 1 fixed contract, MaxSlFromEntryInTicks 70 (about 60 MNQ points), daily loss limit $250. Overrides those inputs while selected. MNQ-year sim (1 MNQ, v66 trades): max DD -$948 vs -$1,566, PF 1.48, halves 1.31/1.60, net about $3.5K/yr on $100K; the 60-point cap was picked on the same year, so confirm with an export.")
+useRiskSizingIn = input.bool(true,    "Size from equity risk (BTC)", group = G_T, tooltip = "On = fractional quantity from equity risk including modeled fees, slippage and gap allowance. Off = fixed quantity, still capped by the risk and exposure budgets.")
+fixedQtyIn      = input.int(1,        "Requested fixed BTC (still risk capped)", minval = 1, group = G_T)
+maxSlTicksIn    = input.int(150,      "MaxSlFromEntryInTicks", minval = 1, group = G_T)
+minSlTicks      = input.int(20,       "MinSlFromEntryInTicks", minval = 0, group = G_T)
+fr50Ticks       = input.int(2,        "NumTicksToFrontRun50", minval = 0, group = G_T)
+frPtTicks       = input.int(4,        "NumTicksToFrontRunPt", minval = 0, group = G_T)
+ptLevel         = input.float(0.382,  "Target fib level (C# TargetPrice)", step = 0.001, group = G_T, tooltip = "FibTrade50To382.cs: PT = TargetPrice(0.382). Trade-level calibration against 11 measured MC trades: this model (target 38.2%, stop 61.8%) matches 8-9 of 11; the earlier 0%/100% reading matched 0.")
+stopLevel       = input.float(0.618,  "Stop fib level (C# ViolationPrice)", step = 0.001, group = G_T, tooltip = "Stop = this level + 1 tick. 0.618 = MC ViolationPrice (the far edge of the pink/green box). 1.0 = the fib's 100%.")
+autoScale       = input.bool(true,    "Auto-scale MinMove / MinSl / MaxSl to price", group = G_T, tooltip = "Settings are calibrated on ES at ~7,730. On: they scale by close / Scale reference price (and by tick size), so the same inputs work on NQ/YM/RTY and in older years (ES was ~2,800 in 2019). ES today is ~unchanged. Checked on 4 hourly markets: same pattern as fixed settings.")
+scaleRefPx      = input.float(7730,   "Scale reference price", minval = 1, group = G_T)
+fibEngine       = input.string("v5 (confirmed Zig Zag)", "Fib engine", options = ["v5 (confirmed Zig Zag)", "v3 (trade-calibrated)", "v2 (MC reconstruction)", "v1 (swing legs)", "v4 (major anchor)"], group = G_T, tooltip = "v5: completed, close-confirmed chart-timeframe Zig Zag legs with immutable anchors. Choose swing-relative confirmation for earlier pullback setups or the original price-deviation confirmation. Legacy v2 reproduces 6 of 8 fibs read off the MC screenshots (v1: 2 of 8; luck control 0.4): a fib's 0% freezes after a pullback of ReversalLevel x range and >= Freeze points; price breaking a frozen 0% spawns a same-direction fib from that 0% plus a copy from the same 100%; a broken 100% spawns an opposite fib anchored there; one fib per (direction, 100% price), newest wins. Hypothesis, not MC's source code. v4 = one fib per major anchor (rule R2, calib_agentD/maj15): no leg engine; see the v4 inputs.")
+zzConfirmation = input.string("Swing retracement", "Zig Zag: confirmation basis", options = ["Swing retracement", "Price deviation"], group = G_T, tooltip = "Swing retracement confirms a reversal after a fraction of the leg's own range, so it can confirm before the 50% entry. Price deviation uses a percentage of the extreme's price and can confirm too late for smaller legs.")
+zzRetracement = input.float(0.236, "Zig Zag: confirming swing retracement", minval = 0.01, maxval = 0.49, step = 0.001, group = G_T, tooltip = "Fraction of the tracked leg, not percentage of the symbol price. Closed-bar confirmation still can arrive beyond 50% on a large reversal candle; no entry is backdated. MinMove also applies. First pivot seeds the engine without creating a trade.")
+zzEntryMode = input.string("50% rejection candle", "Zig Zag: entry trigger", options = ["50% rejection candle", "Resting 50% limit"], group = G_T, tooltip = "Rejection: after swing confirmation, a closed candle must touch the exact tick-rounded 50% level, close back on the continuation side and have a directional body. Submit a market entry for the next available tick, retaining the Fib stop/target; quantity uses rejection close. Entry front-run ticks apply only to resting limit mode. Legacy engines are unchanged.")
+zzDeviation = input.float(2.5, "Zig Zag: close reversal (%)", minval = 0.01, maxval = 99.0, step = 0.1, group = G_T, tooltip = "Used only with Price deviation confirmation. Chart timeframe only. A closed price reversing this percentage from the tracked extreme confirms a pivot. First pivot seeds the engine; subsequent alternating pivots create immutable Fib legs. Larger settings delay confirmation and can miss entries. StartAnchor and engine timeframe are ignored in this mode.")
+engineTf        = input.timeframe("60", "Fib engine timeframe", group = G_T, tooltip = "Bars fed to the fib engine. 60 scored best against MC (6/8, ~42 live fibs); on charts slower than this the chart timeframe is used. Empty = chart timeframe.")
+v3Htf           = input.bool(false,   "v3: build fibs on the engine timeframe", group = G_T, tooltip = "Off (default) = v3 builds fibs from chart bars and the Fib engine timeframe is ignored. On = chart bars are aggregated into engine-timeframe bars (e.g. 60) and the engine steps once per completed engine bar, like v2, so fibs anchor on bigger swings. Untested: compare an export with it on vs off on the same 1-minute chart.")
+v3Freeze        = input.float(0.5,    "v3: freeze 0% after pullback of x range", step = 0.05, group = G_T, tooltip = "v3 = best of ~50 engines scored trade-by-trade against 11 measured MC trades (9/11 matched; luck control ~1). 0% stops moving after this pullback; a pullback beyond 61.8% retires the fib from trading (ViolationPrice).")
+v3Clone         = input.float(0.236,  "v3: overshoot of a frozen 0% that starts a new fib (x range)", step = 0.001, group = G_T)
+v3ExtRule       = input.bool(true,    "v3: mark ExtensionLevel extensions (not traded)", group = G_T, tooltip = "A fib that pulled back and then runs more than |ExtensionLevel| (0.382) x range past its 0% becomes an extension and stops trading. MNQ 5m 1y sim (bar-by-bar exit): PF 1.031 -> 1.011, first half 0.99 -> 0.93.")
+v3NoClone       = input.bool(true,    "v3: do not trade clone fibs (extension of a frozen fib)", group = G_T, tooltip = "Clones are new fibs from the same 100% after price overshoots a frozen 0%. Same sim: PF 1.031 -> 1.032 with 35% fewer trades, first half 0.99 -> 0.94. Both rules together: 1.046, halves 0.90 / 1.16.")
+v3RevPts        = input.float(80.0,   "v3: min counter-move for a new swing (points, auto-scaled)", minval = 0, group = G_T, tooltip = "Default 80 since 2026-09-24 (was 30). MNQ-year sim: PF 1.52 vs 1.10, max DD -10R vs -60R, 227 vs 713 trades, all quarters > 1; picked in 3/4 walk-forward folds, but best-of-256 and not significant (z 0.18); walk-forward OOS PF 1.106. 30 = previous calibration against MC.")
+v4Hours         = input.int(250,      "v4: anchor = extreme of the previous N calendar hours", minval = 1, maxval = 4900, group = G_T, tooltip = "v4 (major anchor, rule R2): at a bar close, a high >= the highest high of the previous N calendar hours (this bar excluded) starts a short fib (100% = that high, 0% = the low on a down bar, else the close) and retires older short fibs whose 100% is at or below it; lows mirror this for long fibs. R2 reproduced 24 of 25 MC trades (#18-#42) and drew all 11 MC fibs, but it was NOT profitable over the MNQ year: PF 0.93 with the bar-by-bar trail, 1.05 with a fixed target (neither significant). Use it for MC-style fibs and comparison, not for P&L. Needs N hours of history before the first anchor.")
+v4Freeze        = input.float(0.236,  "v4: freeze 0% after pullback of x range", minval = 0, step = 0.001, group = G_T, tooltip = "v4: once price pulls back this fraction of the range from the 0%, the 0% stops following price. A pullback beyond 61.8% makes the fib untradeable until its 0% is redrawn. R2 as fitted: 0.236.")
+v4Ext           = input.float(0.236,  "v4: overshoot of a frozen 0% that redraws it (x range)", minval = 0, step = 0.001, group = G_T, tooltip = "v4: price beyond a frozen 0% by more than this fraction of the range moves the 0% there and unfreezes the fib (tradeable again); smaller overshoots are ignored. No clones or extension fibs in v4. R2 as fitted: 0.236.")
+freezePts       = input.float(20.0,   "v2 freeze: min pullback (points, auto-scaled)", minval = 0, group = G_T)
+minMove         = input.float(10.0,   "MinMove (points)", minval = 0, group = G_T, tooltip = "A swing must span at least this many points before it becomes a fib.")
+extensionLevel  = input.float(-0.382, "ExtensionLevel", maxval = 0, group = G_T, tooltip = "Reconstructed: once a fib has retraced, a new extreme beyond this extension of its old range marks it as an extension fib (drawn faded, never traded).")
+reversalLevel   = input.float(0.236,  "ReversalLevel", minval = 0, maxval = 1, group = G_T, tooltip = "Reconstructed: a retrace of this fraction of the current swing confirms the swing and starts the opposing one.")
+minRevAtrIn     = input.float(0.0,    "Min reversal size (ATRs, 0 = off, not in MC)", minval = 0, step = 0.5, group = G_T, tooltip = "A counter-move must also be at least this many ATRs before a new swing starts. Stops small pullbacks spawning ever-smaller fibs; scales itself between ES and NQ.")
+atrLen          = input.int(14,       "ATR length", minval = 1, group = G_T)
+startTime       = input.time(timestamp("2025-04-04 10:00"), "StartDate", group = G_T)
+onlyClear       = input.bool(true,    "OnlyAllowTradesClearOfOpposing50", group = G_T)
+clearAllIn      = input.bool(false,   "...every opposing fib must be clear (stricter than MC)", group = G_T, tooltip = "Off = exactly the C#: the loop overwrites isClear for each opposing fib, so the LAST opposing fib in the list decides. On = all must be clear, which blocks almost every trade once many fibs are live.")
+maxTradesPerFib = input.int(1,        "Max trades per fib (0 = unlimited)", minval = 0, group = G_T)
+minPtTicksIn    = input.int(0,        "Min entry->target distance in ticks (0 = off, not in MC)", minval = 0, group = G_T, tooltip = "Skips fibs so small that the front-runs leave only a tick or two of profit against a 20+ tick stop.")
+tradeLong       = input.bool(true,    "Take LONG trades", group = G_T)
+tradeShort      = input.bool(true,    "Take SHORT trades", group = G_T)
+perFibOrders    = input.bool(true,    "One resting order per qualifying fib (MultiCharts style)", group = G_T, tooltip = "FibTrade50To382 returns a trade for EVERY qualifying fib, so several can fill together. Off = only the fib nearest price gets an order, one position at a time.")
+int maxPositions = 1 // Single-position risk budget; no stacking in the BTC variant.
+anchorPriority  = input.bool(false,   "Order priority: strongest anchor (not nearest entry)", group = G_T, tooltip = "MNQ-year sim (cf20): PF 1.200 vs 1.101, halves 1.10/1.26, max DD -30R vs -60R, 488 vs 713 trades; did NOT pass the significance test (z 0.56). Anchor strength = hours since price last traded beyond the fib's 100% before it formed. Applies in MULTICHARTS MODE too.")
+G_R = "Drawdown controls (not in MC)"
+minRRIn         = input.float(0.0,     "Min reward:risk (target dist / stop dist, 0 = off)", minval = 0, step = 0.01, group = G_R, tooltip = "The 50->38.2 target is at most ~0.24x the stop, and the 2+4 tick front-runs eat most of it on small fibs. 0.15 drops fibs under ~36 ES points.")
+exitModeIn      = input.string("Bar-by-bar trail", "Exit mode", options = ["Fixed target", "Bar-by-bar trail", "ATR trail"], group = G_R, tooltip = "Bar-by-bar (as RBO v71): when price reaches the 38.2% target the trade is NOT closed; from then on the stop follows the low (long) / high (short) of the last 2 bars +/- buffer, only tightening. MNQ 5m 1y sim: PF fixed 0.88 -> ATR trail 0.96 -> bar-by-bar 1.03, max DD 143R -> 49R, win rate 51% -> 40%. Not in MC.")
+exitInMc        = input.bool(true,    "Use this Exit mode in MULTICHARTS MODE too", group = G_R, tooltip = "Off = MC mode forces the MC fixed 38.2% target (strict MC parity). On (default since 2026-09-25) = MC mode uses the Exit mode above (bar-by-bar trail). MNQ-year sim at v65 settings: bar-by-bar PF 1.414, +49.2R, DD -13.4R, halves 1.22/1.58 vs fixed target PF 1.190, +25.9R, DD -12.4R, halves 1.12/1.25.")
+knifeAtr        = input.float(0,      "Skip entry after a fast move into the level (x ATR, 0 = off)", minval = 0, step = 0.5, group = G_R, tooltip = "No resting long if the last bar fell more than this many ATR(14) (no short if it rose). MNQ 5m 1y sim with bar-by-bar exit: 2.0 -> PF 1.031 -> 1.040, 21 of 1457 trades removed - marginal, within noise. Cooldown after exits was worse (0.99).")
+confirmTurnIn   = input.bool(true,    "Only trade against the current leg after it turns", group = G_R, tooltip = "No long while the newest down-fib (the leg still running) has not pulled back at least ReversalLevel (23.6%) of its range, and vice versa: switch direction only once the move has turned, not while price is still making new extremes. MNQ 5m 1y sim: PF 1.046 -> 1.101, halves 0.90/1.16 -> 0.97/1.20, max DD 65R -> 60R, trades -20%. Moving the entry to the leg's 0% instead was worse. Not in MC.")
+bbbBufTicks     = input.int(2,        "Bar-by-bar trail buffer (ticks)", minval = 0, group = G_R)
+showTradeBox    = input.bool(true,    "Draw trade risk / reward boxes and trail line", group = G_R)
+useTrailIn      = input.bool(false,   "Trail after target instead of exiting (not in MC)", group = G_R, tooltip = "When price reaches the 0% target the trade is not closed; a stop trails 0.8 ATR(14) behind the best price. Tested on 7 datasets (MC-mode baseline, gap fills at the open): PF better on 7/7, e.g. ES 1h 0.59 -> 0.80, NQ 1h 0.65 -> 0.95, MNQ 15m 0.63 -> 0.79, but still below 1 everywhere.")
+useBEIn         = input.bool(false,   "Breakeven stop after the BE level is touched (not in MC)", group = G_R, tooltip = "Not in MultiCharts: an MC short on Sep 17 was held through 38.2% and still reached its target. Once price trades through the BE fib level after the fill, the stop moves to entry + 1 tick. In the Python replica it raised PF on ES 1m/15m/1h (0.78->0.93, 0.73->1.14, 0.79->0.89).")
+beLevel         = input.float(0.382,  "BE trigger fib level", step = 0.001, group = G_R)
+minFibAtrIn     = input.float(0,      "Min fib range in ATRs (0 = off)", minval = 0, step = 0.5, group = G_R, tooltip = "Only trade fibs whose 100%->0% range is at least this many ATR(14). Scan 2026-09-24: 2.0 on ES 1h gave PF 1.11 discovery / 2.24 holdout (37 trades, t 1.65 - not significant), no help on 15m/1m.")
+minFibPts       = input.float(0,      "Min fib range in points (0 = off)", minval = 0, group = G_R, tooltip = "Candidate filter: skip a fib whose |100% - 0%| is under this many points (not auto-scaled; ES points, ~3x for NQ/MNQ). 60 would drop MC's best fib (40 pts, 9 trades +$13.2K): on MC's 42 trades PF 1.87 -> 1.79. MNQ-year sim at 60: PF 1.08 vs 1.10, DD -19R vs -60R. Applies in MULTICHARTS MODE too.")
+bigTrendPts     = input.float(0,      "Big opposing leg: min range in points (0 = off)", minval = 0, group = G_R, tooltip = "Candidate filter: if a newer live opposite fib of at least this range exists, skip this fib until price has pulled back from that fib's 0% by 23.6% of its range (current close). Untested. Applies in MULTICHARTS MODE too.")
+noReentryAfterStop = input.bool(false, "No re-entry on a fib after a losing trade", group = G_R, tooltip = "Once a 50to382 trade on a fib closes with a loss (net of commission), that fib is never traded again. Untested. Applies in MULTICHARTS MODE too.")
+volSpikeSkip    = input.bool(false,   "No new entries in a 5m vol-spike band", group = G_R, tooltip = "Blocks new entries while ATR(14) / SMA(ATR(14), 288) on 5-minute bars is >= low and < high. MNQ-year sim: trades taken in this band lost about -0.2 to -0.36R each; skipping them raised the second half's PF 1.20 -> 1.32, but it did NOT pass a multiple-testing correction. Open trades keep their bracket. Applies in MULTICHARTS MODE too.")
+volSpikeLo      = input.float(1.48,   "Vol-spike band: low (ATR ratio, inclusive)", minval = 0, step = 0.01, group = G_R)
+volSpikeHi      = input.float(1.89,   "Vol-spike band: high (ATR ratio, exclusive)", minval = 0, step = 0.01, group = G_R)
+extDaySkip      = input.bool(false,   "No new entries on an extended day", group = G_R, tooltip = "Blocks new entries once the futures-session range (high - low since 18:00 ET) is >= this many x SMA(ATR(14), 288) on 5-minute bars. Sim: skipped trades lost -0.17R each in both halves; the kept trades' PF rose 1.20 -> 1.32 in the second half; not significant. Open trades keep their bracket. Applies in MULTICHARTS MODE too.")
+extDayMult      = input.float(17,     "Extended day: session range / 5m avg ATR >=", minval = 0, group = G_R)
+G_SES = "Sessions"
+skipSunday      = input.bool(true,    "No new entries on Sunday evening (Globex open)", group = G_SES, tooltip = "ES 5m v3 export 2026-09-24: Sunday entries lost in both halves (PF 0.54 / 0.87). Without them PF 1.132 -> 1.154, net +$192K -> +$213K, max DD -$53.7K -> -$45.2K, both halves up.")
+sundayInMc      = input.bool(true,    "Apply the Sunday filter in MULTICHARTS MODE too", group = G_SES, tooltip = "ES 1m full-year export (MC mode, 2026-09-24): Sunday entries 56 trades, PF 0.75, halves 0.55 / 0.88, -$12.4K; the Sunday filter was being ignored in MC mode. Off = strict MC parity.")
+dayOnly         = input.bool(false,   "Only enter 03:00-16:00 ET (exploratory)", group = G_SES, tooltip = "Same export: PF 1.168, max DD -$40.8K, but first half 1.08 / second 1.26, and the first half alone would have picked the Asia session instead, so this is not a confirmed rule.")
+rthOnly         = input.bool(false,   "Only enter 09:30-15:45 ET (RTH)", group = G_SES, tooltip = "No new entries outside 09:30-15:45 America/New_York (bar open time). Open trades keep their bracket. Untested. Applies in MULTICHARTS MODE too.")
+G_SAFE = "Safety (emergency exits)"
+riskInMc        = input.bool(true,    "Apply risk controls in MULTICHARTS MODE too", group = G_SAFE, tooltip = "On: daily loss limit, hard daily loss, max consecutive losses, EOD liquidation and the prop dashboard work in MC mode (all are off/0 by default, so nothing changes until you set them). The emergency stop stays MC-off. Export 14 replay (ES 1m, full year): Daily loss limit $5,000 -> net $144K vs $126K, max DD -$31.8K vs -$37.7K, PF 1.163 (1.20 / 1.12) vs 1.135; picked from 6 rules on the same trades, so confirm with a real run.")
+maxConsLossesIn = input.int(0,        "Max consecutive losses per day (0 = off)", minval = 0, group = G_SAFE, tooltip = "As RBO v71: no new entries for the rest of the session after N losing trades in a row.")
+useEodIn        = input.bool(false,   "End-of-day liquidation", group = G_SAFE, tooltip = "Cancel orders and close open trades during the EOD session below (NY time); no new entries in it.")
+eodSession      = input.session("1630-1645", "EOD liquidation session", group = G_SAFE)
+flatWeekendIn   = input.bool(false,   "Flat before the weekend (Friday)", group = G_SAFE, tooltip = "Friday, during the session below (NY time): cancel orders, close open trades, no new entries. Same export: one weekend hold (Oct 24 2025) gapped through its target for +$24.6K = 20% of the year's net; the same exposure can gap against you. Works in MC mode too.")
+weekendSession  = input.session("1640-1700", "Friday flat session", group = G_SAFE)
+showPropIn      = input.bool(false,   "Prop firm drawdown dashboard", group = G_SAFE)
+propDDLimit     = input.float(3000,   "Prop firm trailing drawdown $", minval = 0, group = G_SAFE)
+useEmergencyIn  = input.bool(true,    "Emergency stop at entry +/- ticks", group = G_SAFE, tooltip = "Market-closes any open trade whose loss passes this distance from its entry, whatever its normal stop says. Backstop for gaps, missed fills, or a stop that was never placed. Not in MC (TargetLossInTicks there is position sizing). Default 200 ticks sits beyond MaxSl, so it only acts on gaps / missed stops.")
+emergencyTicks  = input.int(200,      "Emergency stop distance (ticks)", minval = 1, group = G_SAFE)
+dayLossUsdIn    = input.float(2500,   "Daily loss limit $ (0 = off)", minval = 0, group = G_R, tooltip = "No new entries for the rest of the session once realized P&L for the day reaches -this. Open trades keep their stop/target. Default 2,500 = about one full loss at TargetLossInTicks 200 on ES (set it to about one trade's risk if you change size or trade MES). Real ES export replay: DD -$30.6K vs -$37.7K, PF 1.22 vs 1.135 in-sample; walk-forward kept ~1 loss/day in every fold. Needs 'Apply risk controls in MULTICHARTS MODE' on (default).")
+showConnect     = input.bool(true,    "Connecting line entry -> exit", group = G_T)
+showDebugIn     = input.bool(true,    "Status panel (why it trades or not, open trade, resting orders, today)", group = G_T)
+dbgPos          = input.string("top_right", "Status panel position", options = ["top_right", "bottom_right", "top_left", "bottom_left", "middle_right"], group = G_T)
+dbgSize         = input.string("small", "Status panel text size", options = ["tiny", "small", "normal"], group = G_T)
+
+G_N = "News filter (PropFirm_News_Dates library)"
+useNewsIn     = input.bool(true,  "Block new entries around news", group = G_N)
+blockCPI      = input.bool(true,  "CPI", group = G_N, inline = "t1")
+blockNFP      = input.bool(true,  "NFP", group = G_N, inline = "t1")
+blockFOMC     = input.bool(true,  "FOMC", group = G_N, inline = "t1")
+fomcMode      = input.string("Decision day 12:00-16:00 ET", "FOMC block mode", options = ["Decision day 12:00-16:00 ET", "Full meeting days"], group = G_N, tooltip = "As RBO v71: decision-day mode blocks new entries 12:00-16:00 ET and closes open trades at 13:45 ET, 15 minutes before the 14:00 release.")
+blockPPI      = input.bool(false, "PPI", group = G_N, inline = "t2")
+blockISMMfg   = input.bool(false, "ISM Mfg", group = G_N, inline = "t2")
+blockISMSrv   = input.bool(false, "ISM Srv", group = G_N, inline = "t2")
+blockJolts    = input.bool(false, "JOLTS", group = G_N, inline = "t2")
+blockMichSent = input.bool(false, "Mich sentiment", group = G_N, inline = "t2")
+newsPreMin    = input.int(15,     "Minutes before window", minval = 0, group = G_N)
+newsPostMin   = input.int(0,      "Minutes after window", minval = 0, group = G_N)
+newsFlatten   = input.bool(false, "Close open trades when a window starts", group = G_N, tooltip = "Off = open trades keep their stop/target through the release; only new entries are blocked and resting orders are cancelled.")
+userNewsWin   = input.string("",  "Extra windows (YYYY-MM-DD HHMM-HHMM, comma separated, NY time)", group = G_N)
+userNoDays    = input.string("",  "Extra no-trade days (YYYY-MM-DD, comma separated)", group = G_N)
+
+G_S = "Fib-failure signals (markers + alerts only, no trades)"
+showFailIn   = input.bool(true,   "Show fib-failure markers", group = G_S, tooltip = "Marks the bar that closes through a live fib's level, pointing the opposite way (e.g. a long fib failing -> SHORT). Signals only: as an automated entry this lost on all 6 test datasets (pooled z -5.2), so use it with your own judgement.")
+failLvl      = input.float(0.5,   "Failure level", step = 0.001, group = G_S, tooltip = "0.5 = close through the 50%. 0.618 was tested too and did worse as an entry.")
+failMinPts   = input.float(0,     "Min fib range for signals (points, 0 = any)", minval = 0, group = G_S, tooltip = "Raise this to ignore failures of small fibs.")
+failMinAtr   = input.float(2.0,   "Min fib range for signals (ATRs, 0 = off)", minval = 0, step = 0.5, group = G_S, tooltip = "Scale-free chop filter. On 6 test datasets it cut markers 40-75% on 15m/1h and roughly halved their losses (pooled z -4.4 -> -2.2). Barely filters on 1m, where ATR is tiny; use the points setting there.")
+failAtrTf    = input.timeframe("15", "ATR timeframe for that filter", group = G_S, tooltip = "The ATR is measured on this timeframe, or on the chart timeframe if that is higher. 15 makes 1m charts use the same fib-size filter that was tested on 15m; on 15m/1h charts nothing changes.")
+failNewest   = input.bool(true,   "Only the newest fib of each direction", group = G_S, tooltip = "Checking all ~40 live fibs fired a marker on almost every bar.")
+failOnce     = input.bool(true,   "One signal per fib", group = G_S, tooltip = "Stops the same fib re-signalling each time price wiggles back through its level.")
+failSlLimits = input.bool(true,   "Stop must fit MinSl/MaxSl ticks (as tested)", group = G_S)
+failShowPx   = input.bool(true,   "Show stop / target on the marker", group = G_S)
+failBlockBars = input.int(0,       "Block 50to382 entries against a fresh fib failure (bars, 0 = off)", minval = 0, group = G_S, tooltip = "Filter for the main strategy: after a Fib fail SHORT, no new 50to382 LONG orders for this many bars (and vice versa). Works in MULTICHARTS MODE too (signals are computed even when the markers are hidden). Untested - compare a TradingView run with 0 vs e.g. 6.")
+
+G_NX = "Next fib level"
+showNextIn   = input.bool(true,   "Show next fib level above / below price", group = G_NX)
+nextHidden   = input.bool(false,  "Include fibs that are not drawn", group = G_NX, tooltip = "Off = only levels you can see on the chart.")
+nextMomBars  = input.int(5,       "Bars that set the heading", minval = 1, group = G_NX, tooltip = "Heading = down if close < close N bars ago, else up. The level in the heading direction is highlighted.")
+nextConfTk   = input.int(2,       "Confluence tolerance (ticks)", minval = 0, group = G_NX)
+
+G_D = "Drawing"
+showDiag     = input.bool(true,   "Fib diagonal 100% -> 0% (dotted)", group = G_D)
+cDiag        = input.color(color.new(#D1D4DC, 30), "Fib diagonal", group = G_D)
+G_TL = "Trend lines"
+showTrendIn  = input.bool(true,   "Auto trend lines through the last two swing highs / lows", group = G_TL)
+trendKeep    = input.int(2,       "Keep last N lines per side", minval = 1, maxval = 20, group = G_TL)
+cTrendUp     = input.color(color.new(#00BCD4, 0), "Support (swing lows)", group = G_TL)
+cTrendDn     = input.color(color.new(#00BCD4, 0), "Resistance (swing highs)", group = G_TL)
+trendWidth   = input.int(1,       "Width", minval = 1, maxval = 4, group = G_TL)
+maxFibs      = input.int(100,     "Max live fibs", minval = 1, maxval = 200, group = G_D, tooltip = "MC keeps every fib until price breaks its 100%. A low cap kills old fibs early: at 12 the 7,575 -> 7,848 swing stopped extending at 7,771. ES 15m peaks at ~70 live fibs.")
+showLabels   = input.bool(true,   "Level labels  e.g. 38.20% (7,743.74)", group = G_D)
+showExtLine  = input.bool(true,   "Draw extension line", group = G_D)
+extDrawLevel = input.float(-0.236, "Extension line level", group = G_D)
+showZone     = input.bool(true,   "Draw trade zone entry->stop (stair-steps as the fib extends)", group = G_D)
+zoneA        = input.float(0.5,   "Zone edge A (50% = entry)", group = G_D)
+zoneB        = input.float(0.618, "Zone edge B", group = G_D, tooltip = "MC boxes span 50% -> 61.8% (measured on the daily chart: 6,822/6,582 = 50/61.8 of 5,806.88 -> 7,836.58). 1.0 = entry-to-stop box.")
+zonesTradeable = input.bool(false, "Zones only for fibs whose stop fits Min/MaxSl", group = G_D, tooltip = "Keeps big untradeable fibs from shading the whole chart.")
+zonesQuoted  = input.bool(false,   "Zones only while the fib has a resting order or open trade (MC style)", group = G_D, tooltip = "MC draws one box per traded fib, ending where the trade exits. Off = every tradeable fib shades its 50-100 zone, which overlaps into one big block on 1m.")
+zoneCap      = input.bool(false,   "Cap zone depth at TargetLossInTicks", group = G_D, tooltip = "Hypothesis from the MC chart: the green box under the 7,323.71->7,820.57 fib runs ~50 pts (200 ticks) below its 50% entry, not all the way to the 100% stop.")
+keepDead     = input.bool(true,   "Keep lines of violated fibs", group = G_D)
+drawN        = input.int(3,       "Draw only the newest N fibs", minval = 1, maxval = 40, group = G_D, tooltip = "Drawing only. Every live fib still trades and still counts for OnlyAllowTradesClearOfOpposing50.")
+labelsNewest = input.bool(true,   "Labels on newest fib only", group = G_D)
+drawQuoted   = input.bool(true,   "Always draw fibs with an order or open trade", group = G_D, tooltip = "On top of the newest N, so the fib behind every trade stays visible.")
+extNewest    = input.bool(true,   "Extension (-23.6%) line on newest fib only", group = G_D, tooltip = "The thick yellow extension lines of older fibs were most of the clutter.")
+dimOlder     = input.int(55,      "Transparency of older fibs (0-100)", minval = 0, maxval = 100, group = G_D)
+hideExtFibs  = input.bool(true,   "Hide extension fibs", group = G_D)
+cZero        = input.color(color.new(#D1D4DC, 0), "0% / 100%", group = G_D)
+c382         = input.color(color.new(#FFEB3B, 0), "38.2%", group = G_D)
+c50          = input.color(color.new(#00E676, 0), "50%", group = G_D)
+c618         = input.color(color.new(#FF5252, 0), "61.8%", group = G_D)
+cExt         = input.color(color.new(#FFC107, 0), "Extension", group = G_D)
+cZoneShort   = input.color(color.new(#FFC0CB, 20), "Zone SHORT fib", group = G_D)
+cZoneLong    = input.color(color.new(#8FBC8F, 45), "Zone LONG fib", group = G_D)
+
+// Effective settings: MULTICHARTS MODE forces every non-MC extra off.
+bool mcRiskOff = mcMode and not riskInMc
+int  maxConsLosses = mcRiskOff ? 0 : maxConsLossesIn
+string exitMode = (mcMode and not exitInMc) ? "Fixed target" : exitModeIn
+bool useTrail = exitMode == "ATR trail" or (exitMode == "Fixed target" and not mcMode and useTrailIn)
+bool useBBB   = exitMode == "Bar-by-bar trail"
+bool confirmTurn = confirmTurnIn   // applies in MULTICHARTS MODE too (user choice 2026-09-24)
+bool useEod = mcRiskOff ? false : useEodIn
+bool showProp = mcRiskOff ? false : showPropIn
+float minRevAtr = mcMode ? 0.0 : minRevAtrIn
+bool clearAll = mcMode ? false : clearAllIn
+int minPtTicks = mcMode ? 0 : minPtTicksIn
+float minRR = mcMode ? 0.0 : minRRIn
+bool useBE = mcMode ? false : useBEIn
+float minFibAtr = mcMode ? 0.0 : minFibAtrIn
+bool useEmergency = mcMode ? false : useEmergencyIn
+var float riskDayEquity = na
+var float riskDayMark = na
+if na(riskDayEquity) or timeframe.change("D")
+    riskDayEquity := math.max(strategy.equity, 0.0)
+    riskDayMark := strategy.netprofit + strategy.openprofit
+float hardDayLossUsd = riskDayEquity * dailyEquityLossPct / 100.0
+bool  PRESET_MNQ1 = presetIn == "MNQ 1% drawdown"
+bool  useRiskSizing = PRESET_MNQ1 ? false : useRiskSizingIn
+int   fixedQty = PRESET_MNQ1 ? 1 : fixedQtyIn
+int   maxSlTicks = PRESET_MNQ1 ? 70 : maxSlTicksIn
+float dayLossUsd = mcRiskOff ? 0.0 : (PRESET_MNQ1 ? 250.0 : dayLossUsdIn)
+bool showDebug = showDebugIn   // diagnostics stay available in MULTICHARTS MODE (table only, no trading effect)
+bool useNews = mcMode ? false : useNewsIn
+bool showFail = mcMode ? false : showFailIn
+bool tradeFail = false // BTC variant: failure signals are observation-only, never bypass sizing.
+bool showNext = mcMode ? false : showNextIn
+bool showTrend = mcMode ? false : showTrendIn
+bool ZZ = fibEngine == "v5 (confirmed Zig Zag)"
+bool ZZ_REJECTION = ZZ and zzEntryMode == "50% rejection candle"
+bool V4 = fibEngine == "v4 (major anchor)"
+float TICK = tickSizeIn > 0 ? tickSizeIn : syminfo.mintick
+// No strategy.risk.max_position_size: TradingView counted the re-priced entry order against it and cut every
+// fill to cap - label (24 of 156 trades in the 2026-09-24 export, e.g. label 7 filled 3). The position limit is
+// enforced below instead, by closing any trade beyond Max simultaneous entries right after it fills.
+float PXS      = autoScale ? close / scaleRefPx : 1.0
+float TKS      = autoScale ? PXS * 0.25 / TICK : 1.0      // ES tick = 0.25
+float MINMOVE_E = minMove * PXS
+float MINSL_E   = minSlTicks * TKS
+float MAXSL_E   = maxSlTicks * TKS
+float MINREV = minRevAtr * nz(ta.atr(atrLen))
+float ATR14  = nz(ta.atr(14))
+float trendEMA = ta.ema(close, trendLenBTC)
+string SIG_TF = timeframe.in_seconds(failAtrTf) > timeframe.in_seconds() ? failAtrTf : timeframe.period
+float ATR_SIG = nz(request.security(syminfo.tickerid, SIG_TF, ta.atr(14)), ATR14)
+
+var array<float> LEVELS = array.from(0.0, 0.382, 0.5, 0.618, 1.0, extDrawLevel)
+var array<color> LCOL   = array.from(cZero, c382, c50, c618, cZero, cExt)
+var array<int>   LWID   = array.from(1, 1, 2, 1, 1, 3)
+
+// ─────────────────────────── Types ───────────────────────────
+type Fib
+    int   id
+    bool  isLong            // long fib = up swing: 100% at the low (anchor), 0% at the high (ext)
+    float anchor            // 100% — the violation price
+    float ext               // 0%   — follows price tick by tick while the swing extends
+    int   anchorBar
+    int   extBar
+    int   confirmedBar = na // v5: bar when the completed leg became known
+    bool  alive    = true
+    bool  retraced = false
+    bool  isExt    = false
+    bool  quoted   = false
+    bool  zoneOff  = false
+    float pL                 // failure level at the previous confirmed bar close
+    bool  failed   = false
+    bool  frozen   = false
+    bool  viol     = false   // v3: pulled back beyond 61.8% - no longer traded
+    bool  spawned  = false
+    int   kind     = 0     // 0 leg, 1 break-of-frozen-0%, 2 clone, 3 flip at broken 100%, 4 v4 major anchor, 5 confirmed Zig Zag
+    int   trades   = 0
+    float strength = 0.0   // anchorPriority: hours back from the anchor bar to the last earlier bar beyond the 100% (set at birth)
+    array<line>  lns
+    array<label> lbs
+    box   zone
+    array<box>   segs
+    line  diag
+
+type Leg
+    int   dir      = 0
+    float start
+    int   startBar
+    float ext
+    int   extBar
+    bool  hasFib   = false
+    int   nextId   = 1
+
+// Zig Zag state is updated only on closed chart bars.
+type ZigState
+    int dir = 0
+    float extreme
+    int extremeBar
+    float origin // startup reference only; not a confirmed tradable anchor
+    float pivot
+    int pivotBar
+    bool seeded = false
+
+// Same formula for both directions: 0 -> ext, 1 -> anchor, negative -> beyond ext.
+method lvl(Fib f, float p) =>
+    f.ext + p * (f.anchor - f.ext)
+
+method rng(Fib f) =>
+    math.abs(f.anchor - f.ext)
+
+rt(float x) =>
+    math.round(x / TICK) * TICK
+
+// TradingView refuses drawings more than 10,000 bars back; long-lived fibs exceed that.
+bx(int b) =>
+    math.max(b, bar_index - 9990)
+
+// ─────────────────────────── Swing / fib engine ───────────────────────────
+var array<float> PIV_HI_P = array.new<float>()
+var array<int>   PIV_HI_B = array.new<int>()
+var array<float> PIV_LO_P = array.new<float>()
+var array<int>   PIV_LO_B = array.new<int>()
+
+// Anchor strength history (anchorPriority only). A 1-minute chart reaches back ~5,000 bars, so completed hours are
+// kept here: open time, high, low, at most 3000 hours. On charts of 60 minutes or slower every chart bar is an "hour".
+var array<int>   AH_T = array.new<int>()
+var array<float> AH_H = array.new<float>()
+var array<float> AH_L = array.new<float>()
+var int   AH_CT = na     // current hour: open time, running high / low
+var float AH_CH = na
+var float AH_CL = na
+bool AH_NEW = timeframe.in_seconds() >= 3600 or timeframe.change("60")   // evaluated every bar
+if anchorPriority
+    if AH_NEW or na(AH_CT)
+        if not na(AH_CT)
+            AH_T.push(AH_CT)
+            AH_H.push(AH_CH)
+            AH_L.push(AH_CL)
+            if AH_T.size() > 3000
+                AH_T.shift()
+                AH_H.shift()
+                AH_L.shift()
+        AH_CT := time
+        AH_CH := high
+        AH_CL := low
+    else
+        AH_CH := math.max(AH_CH, high)
+        AH_CL := math.min(AH_CL, low)
+
+// cf20 "AP" anchor strength of a new fib: calendar hours from the anchor bar back to the last earlier bar that traded
+// beyond the anchor (short fib, anchor = a high: high > a; long fib, anchor = a low: low < a). k = bars back to the
+// anchor bar. The anchor's own hour is scanned on chart bars, older hours from the arrays above; if none is beyond,
+// the hours covered by the history (cap). Returns 0 when anchorPriority is off.
+anchorStrength(bool isLong, float a, int k) =>
+    float res = 0.0
+    if anchorPriority and not na(AH_CT)
+        int   n     = AH_T.size()
+        int   idx   = n - 1          // next completed hour to test
+        int   aT    = na
+        bool  found = false
+        float hrs   = na
+        if k <= 4900
+            aT := time[k]
+            int hs = AH_CT
+            if aT < AH_CT
+                while idx >= 0 and AH_T.get(idx) > aT
+                    idx -= 1
+                hs := idx >= 0 ? AH_T.get(idx) : aT
+                idx -= 1
+            // chart bars of the anchor's hour, before the anchor bar
+            int i = k + 1
+            while not found and i <= 4900 and i <= bar_index and time[i] >= hs
+                if isLong ? low[i] < a : high[i] > a
+                    found := true
+                    hrs   := (aT - time[i]) / 3600000.0
+                i += 1
+        else
+            // anchor bar beyond the chart history buffer: its hour = the newest completed hour that printed the anchor
+            while idx >= 0 and not (isLong ? AH_L.get(idx) <= a : AH_H.get(idx) >= a)
+                idx -= 1
+            if idx >= 0
+                aT := AH_T.get(idx)
+                idx -= 1
+        while not found and idx >= 0
+            if isLong ? AH_L.get(idx) < a : AH_H.get(idx) > a
+                found := true
+                hrs   := (aT - AH_T.get(idx)) / 3600000.0
+            idx -= 1
+        if not found and not na(aT)
+            hrs := math.max(0, aT - (n > 0 ? AH_T.get(0) : AH_CT)) / 3600000.0
+        res := nz(hrs)
+    res
+
+// One price point (a bar's high or low, in the order it most likely traded).
+step(Leg lg, array<Fib> fs, float p) =>
+    // 1. every live fib: violate, extend, or register a retrace
+    bool v2 = fibEngine == "v2 (MC reconstruction)"
+    bool v3 = fibEngine == "v3 (trade-calibrated)"
+    array<Fib> born = array.new<Fib>()
+    for f in fs
+        if f.alive and v3
+            float fr = f.rng()
+            if f.isLong ? p < f.anchor : p > f.anchor
+                f.alive := false
+            else if f.isLong ? p > f.ext : p < f.ext
+                if f.frozen
+                    if math.abs(p - f.ext) > v3Clone * fr and not f.isExt
+                        f.isExt := true
+                        born.push(Fib.new(isLong = f.isLong, anchor = f.anchor, ext = p, anchorBar = f.anchorBar, extBar = bar_index, kind = 2, strength = f.strength))
+                else
+                    if v3ExtRule and f.retraced and math.abs(p - f.ext) > math.abs(extensionLevel) * fr
+                        f.isExt := true
+                    f.ext      := p
+                    f.extBar   := bar_index
+                    f.retraced := false
+            else
+                float back = math.abs(f.ext - p)
+                if back >= reversalLevel * fr
+                    f.retraced := true
+                if back > 0.618 * fr
+                    f.viol   := true
+                    f.frozen := true
+                if back >= v3Freeze * fr
+                    f.frozen := true
+        else if f.alive
+            float fr = f.rng()
+            bool violated = f.isLong ? p < f.anchor : p > f.anchor
+            bool extends  = f.isLong ? p > f.ext : p < f.ext
+            if violated
+                f.alive := false
+                if v2 and f.kind != 3 and fr >= MINMOVE_E
+                    born.push(Fib.new(isLong = not f.isLong, anchor = f.anchor, ext = p, anchorBar = f.anchorBar, extBar = bar_index, kind = 3, strength = anchorStrength(not f.isLong, f.anchor, bar_index - f.anchorBar)))
+            else if extends
+                if v2 and f.frozen
+                    if not f.spawned
+                        f.spawned := true
+                        born.push(Fib.new(isLong = f.isLong, anchor = f.ext, ext = p, anchorBar = f.extBar, extBar = bar_index, kind = 1, strength = anchorStrength(f.isLong, f.ext, bar_index - f.extBar)))
+                        born.push(Fib.new(isLong = f.isLong, anchor = f.anchor, ext = p, anchorBar = f.anchorBar, extBar = bar_index, kind = 2, strength = f.strength))
+                else
+                    if f.retraced and math.abs(p - f.ext) > math.abs(extensionLevel) * fr
+                        f.isExt := true
+                    f.ext      := p
+                    f.extBar   := bar_index
+                    f.retraced := false
+            else if math.abs(f.ext - p) >= reversalLevel * fr
+                f.retraced := true
+                if v2 and math.abs(f.ext - p) >= freezePts * PXS
+                    f.frozen := true
+    for nf in born
+        nf.id := lg.nextId
+        lg.nextId += 1
+        fs.push(nf)
+    // 2. the swing tracker that gives birth to new fibs
+    if lg.dir != 0
+        bool up = lg.dir == 1
+        if up ? p > lg.ext : p < lg.ext
+            lg.ext    := p
+            lg.extBar := bar_index
+        else
+            float lr     = math.abs(lg.ext - lg.start)
+            float back   = math.abs(lg.ext - p)
+            bool  broken = up ? p < lg.start : p > lg.start
+            if (lr >= MINMOVE_E and back >= math.max(reversalLevel * lr, MINREV) and (not v3 or back >= v3RevPts * PXS)) or broken
+                if lr >= MINMOVE_E
+                    if up
+                        PIV_HI_P.push(lg.ext)
+                        PIV_HI_B.push(lg.extBar)
+                    else
+                        PIV_LO_P.push(lg.ext)
+                        PIV_LO_B.push(lg.extBar)
+                lg.start    := lg.ext
+                lg.startBar := lg.extBar
+                lg.ext      := p
+                lg.extBar   := bar_index
+                lg.dir      := -lg.dir
+                lg.hasFib   := false
+        if not lg.hasFib and math.abs(lg.ext - lg.start) >= MINMOVE_E
+            fs.push(Fib.new(id = lg.nextId, isLong = lg.dir == 1, anchor = lg.start, ext = lg.ext, anchorBar = lg.startBar, extBar = lg.extBar, strength = anchorStrength(lg.dir == 1, lg.start, bar_index - lg.startBar)))
+            lg.nextId += 1
+            lg.hasFib := true
+    if v2 and fs.size() > 1
+        for i = fs.size() - 1 to 1
+            Fib a = fs.get(i)
+            if a.alive
+                for j = i - 1 to 0
+                    Fib b = fs.get(j)
+                    if b.alive and b.isLong == a.isLong and math.abs(b.anchor - a.anchor) < TICK * 0.5
+                        b.alive := false
+
+// Confirmed Zig Zag: close establishes reversal order after the bar's extreme.
+// Start the next leg at close, not the opposite wick (whose order is unknown).
+stepZig(ZigState z, Leg lg, array<Fib> fs) =>
+    if z.dir == 0
+        z.dir := close >= open ? 1 : -1
+        z.extreme := z.dir == 1 ? high : low
+        z.extremeBar := bar_index
+        z.origin := z.dir == 1 ? low : high
+    else
+        bool up = z.dir == 1
+        if up ? high > z.extreme : low < z.extreme
+            z.extreme := up ? high : low
+            z.extremeBar := bar_index
+        float origin = z.seeded ? z.pivot : z.origin
+        float legRange = math.abs(z.extreme - origin)
+        float reversalDistance = zzConfirmation == "Swing retracement" ? legRange * zzRetracement : math.abs(z.extreme) * zzDeviation / 100.0
+        bool validLeg = zzConfirmation != "Swing retracement" or (legRange >= math.max(MINMOVE_E, TICK) and (up ? z.extreme > origin : z.extreme < origin))
+        bool reversed = validLeg and (up ? close <= z.extreme - reversalDistance : close >= z.extreme + reversalDistance)
+        if reversed
+            if up
+                PIV_HI_P.push(z.extreme)
+                PIV_HI_B.push(z.extremeBar)
+            else
+                PIV_LO_P.push(z.extreme)
+                PIV_LO_B.push(z.extremeBar)
+            // Never manufacture a first anchor; require chronological alternating pivots.
+            if z.seeded and z.extremeBar > z.pivotBar and (up ? z.extreme > z.pivot : z.extreme < z.pivot) and math.abs(z.extreme - z.pivot) >= MINMOVE_E
+                fs.push(Fib.new(id = lg.nextId, isLong = up, anchor = z.pivot, ext = z.extreme, anchorBar = z.pivotBar, extBar = z.extremeBar, confirmedBar = bar_index, frozen = true, retraced = true, kind = 5, strength = anchorStrength(up, z.pivot, bar_index - z.pivotBar)))
+                lg.nextId += 1
+            z.pivot := z.extreme
+            z.pivotBar := z.extremeBar
+            z.seeded := true
+            z.dir := -z.dir
+            z.extreme := close
+            z.extremeBar := bar_index
+    // Conservative wick invalidation, including the confirmation bar. No clones,
+    // extensions, or moving anchors; filled positions retain their existing exits.
+    for f in fs
+        if f.alive
+            float violation = rt(f.lvl(stopLevel) + (f.isLong ? -TICK : TICK))
+            if f.isLong ? low <= violation : high >= violation
+                f.alive := false
+                f.viol := true
+
+// v4 (major anchor) = rule R2 of calib_agentD/maj15_rules.py (MajEngine "nhigh" + upd). No leg engine, no clones,
+// no extension fibs. One price point for every live fib:
+stepV4(array<Fib> fs, float p) =>
+    for f in fs
+        if f.alive
+            float fr = f.rng()
+            if f.isLong ? p < f.anchor : p > f.anchor
+                f.alive := false
+            else if f.isLong ? p > f.ext : p < f.ext
+                // not frozen: the 0% follows price; frozen: only an overshoot > v4Ext x range redraws it (and unfreezes)
+                if not f.frozen or math.abs(p - f.ext) > v4Ext * fr
+                    f.ext      := p
+                    f.extBar   := bar_index
+                    f.frozen   := false
+                    f.viol     := false
+                    f.retraced := false
+            else
+                float back = math.abs(f.ext - p)
+                if back >= reversalLevel * fr
+                    f.retraced := true
+                if back > 0.618 * fr
+                    f.viol   := true
+                    f.frozen := true
+                if back >= v4Freeze * fr
+                    f.frozen := true
+
+// New major anchors at the bar close (after stepV4). hh / ll = extreme of the previous v4Hours hours, this bar excluded.
+v4Anchors(array<Fib> fs, Leg lg, float hh, float ll) =>
+    if not na(hh) and high >= hh
+        for g in fs
+            if g.alive and not g.isLong and g.anchor <= high
+                g.alive := false
+        fs.push(Fib.new(id = lg.nextId, isLong = false, anchor = high, ext = close < open ? low : close, anchorBar = bar_index, extBar = bar_index, kind = 4, strength = anchorStrength(false, high, 0)))
+        lg.nextId += 1
+    if not na(ll) and low <= ll
+        for g in fs
+            if g.alive and g.isLong and g.anchor >= low
+                g.alive := false
+        fs.push(Fib.new(id = lg.nextId, isLong = true, anchor = low, ext = close >= open ? high : close, anchorBar = bar_index, extBar = bar_index, kind = 4, strength = anchorStrength(true, low, 0)))
+        lg.nextId += 1
+
+// Highest high / lowest low of the bars that OPENED in the previous v4Hours calendar hours, the current bar excluded
+// (R2 MajEngine._win). na until v4Hours of history exist, and always na when v4 is not selected (saves the loop).
+v4Win(bool on) =>
+    var int t0 = time
+    float hh = na
+    float ll = na
+    if on and time - t0 >= v4Hours * 3600000
+        int lim = time - v4Hours * 3600000
+        for i = 1 to v4Hours
+            if na(time[i]) or time[i] < lim
+                break
+            hh := na(hh) ? high[i] : math.max(hh, high[i])
+            ll := na(ll) ? low[i] : math.min(ll, low[i])
+    [hh, ll]
+
+// ─────────────────────────── Drawing ───────────────────────────
+method makeDrawings(Fib f) =>
+    if showDiag
+        f.diag := line.new(bx(f.anchorBar), f.anchor, bx(f.extBar), f.ext, color = cDiag, style = line.style_dotted, width = 1)
+    f.lns := array.new<line>()
+    f.lbs := array.new<label>()
+    for i = 0 to LEVELS.size() - 1
+        line  ln = na
+        label lb = na
+        if i != 5 or showExtLine
+            float y = f.lvl(LEVELS.get(i))
+            ln := line.new(bx(f.anchorBar), y, bar_index, y, color = LCOL.get(i), width = LWID.get(i), style = (i == 0 or i == 4) ? line.style_dashed : line.style_solid)
+            if showLabels
+                lb := label.new(bx(f.anchorBar), y, "", style = label.style_label_right, color = color.new(color.black, 100), textcolor = LCOL.get(i), size = size.small)
+        f.lns.push(ln)
+        f.lbs.push(lb)
+
+method redraw(Fib f, bool newest) =>
+    int tr = f.isExt ? (hideExtFibs ? 100 : 65) : 0
+    if not na(f.diag)
+        f.diag.set_xy1(bx(f.anchorBar), f.anchor)
+        f.diag.set_xy2(bx(f.extBar), f.ext)
+        f.diag.set_color(color.new(cDiag, math.max(tr, color.t(cDiag))))
+    for i = 0 to LEVELS.size() - 1
+        line ln = f.lns.get(i)
+        if not na(ln)
+            float lv = LEVELS.get(i)
+            float y  = f.lvl(lv)
+            ln.set_xy1(bx(f.anchorBar), y)
+            ln.set_xy2(bar_index, y)
+            int trL = (i == 5 and extNewest and not newest) ? 100 : math.max(tr, newest ? 0 : dimOlder)
+            ln.set_color(color.new(LCOL.get(i), trL))
+            label lb = f.lbs.get(i)
+            if not na(lb)
+                lb.set_xy(bx(f.anchorBar), y)
+                lb.set_text((newest or not labelsNewest) ? str.tostring(lv * 100, "0.00") + "% (" + str.tostring(y, "#,##0.00") + ")" : "")
+                lb.set_textcolor(color.new(LCOL.get(i), trL))
+
+// The zone steps (a new box each time the fib's levels move), which gives the staircase look.
+method zoneStep(Fib f) =>
+    float slT0 = 0.5 * f.rng() / TICK
+    if showZone and (not zonesQuoted or f.quoted) and (not zonesTradeable or (not f.isExt and slT0 >= MINSL_E and slT0 <= MAXSL_E))
+        float za  = f.lvl(zoneA)
+        float zb  = f.lvl(zoneB)
+        if zoneCap and math.abs(zb - za) > targetLossTicks * TKS * TICK
+            zb := za + math.sign(zb - za) * targetLossTicks * TKS * TICK
+        float top = math.max(za, zb)
+        float bot = math.min(za, zb)
+        color zc  = f.isLong ? cZoneLong : cZoneShort
+        if na(f.segs)
+            f.segs := array.new<box>()
+        // MC: each segment starts at the fib's 0% bar, a new segment per extension, and the box stops
+        // extending once price trades through the far edge (61.8%); the next extension re-arms it.
+        bool moved = na(f.zone) or f.zone.get_top() != top or f.zone.get_bottom() != bot
+        if moved
+            f.zoneOff := false
+            if not na(f.zone) and f.zone.get_left() == bx(f.extBar)
+                f.zone.set_top(top)
+                f.zone.set_bottom(bot)
+            else
+                f.zone := box.new(bx(f.extBar), top, bar_index, bot, border_color = color.new(zc, 100), bgcolor = zc)
+                f.segs.push(f.zone)
+        if not f.zoneOff
+            f.zone.set_right(bar_index)
+            float far = f.lvl(zoneB)
+            if f.isLong ? low <= far : high >= far
+                f.zoneOff := true
+
+method wipe(Fib f) =>
+    if not na(f.lns)
+        for ln in f.lns
+            line.delete(ln)
+        for lb in f.lbs
+            label.delete(lb)
+    if not na(f.segs)
+        for b in f.segs
+            box.delete(b)
+        f.segs.clear()
+    line.delete(f.diag)
+    f.diag := na
+    f.zone := na
+    f.lns  := na
+    f.lbs  := na
+
+method retire(Fib f) =>
+    bool keep = keepDead and not na(f.lns)
+    if keep
+        f.redraw(false)
+    if not keep
+        f.wipe()
+
+drawFibs(array<Fib> fs) =>
+    while fs.size() > maxFibs
+        Fib old = fs.shift()
+        old.alive := false
+        old.retire()
+    if fs.size() > 0
+        int shown = 0
+        for i = fs.size() - 1 to 0
+            Fib f = fs.get(i)
+            bool isNew  = shown < drawN
+            bool inView = f.alive and not (f.isExt and hideExtFibs) and (isNew or (drawQuoted and f.quoted))
+            if inView
+                shown += isNew ? 1 : 0
+                if na(f.lns)
+                    f.makeDrawings()
+                f.redraw(shown == 1 and isNew)
+                f.zoneStep()
+            else if f.alive and not na(f.lns)
+                f.wipe()
+            if not f.alive
+                f.retire()
+                fs.remove(i)
+
+// ─────────────────────────── Trade selection (FibTrade50To382) ───────────────────────────
+unitRiskFor(float e, float s) =>
+    float pv = syminfo.pointvalue
+    (math.abs(e - s) + 2.0 * modeledSlippageTicks * TICK + riskGapATR * ATR14) * pv + (math.abs(e) + math.abs(s)) * pv * modeledFeePct / 100.0
+
+netTargetFor(float e, float t) =>
+    float pv = syminfo.pointvalue
+    (math.abs(t - e) - 2.0 * modeledSlippageTicks * TICK) * pv - (math.abs(e) + math.abs(t)) * pv * modeledFeePct / 100.0
+
+qtyFor(float e, float s) =>
+    float equity = math.max(strategy.equity, 0.0)
+    float unitRisk = unitRiskFor(e, s)
+    float riskQty = unitRisk > 0 ? equity * riskPct / 100.0 / unitRisk : 0.0
+    float remainingNotional = math.max(0.0, equity * maxExposurePct / 100.0 - math.abs(strategy.position_size) * close * syminfo.pointvalue)
+    float notionalQty = e > 0 and syminfo.pointvalue > 0 ? remainingNotional / (e * syminfo.pointvalue) : 0.0
+    float requested = useRiskSizing ? riskQty : math.min(float(fixedQty), riskQty)
+    float capped = math.min(requested, math.min(notionalQty, maxQtyBTC))
+    float qty = math.floor(capped / qtyStepBTC) * qtyStepBTC
+    qty >= minQtyBTC ? qty : 0.0
+
+// Losing 50to382 trades per fib id (filled from strategy.closedtrades below, only when noReentryAfterStop is on).
+var map<int, int> FIBLOSS = map.new<int, int>()
+
+// bigTrendPts: the newest live opposite fib that is newer than f and at least bigTrendPts big must have pulled
+// back 23.6% of its range from its 0% (toward f's direction) at the current close, else f is skipped.
+bigTrendOk(array<Fib> fs, Fib f) =>
+    int   gId  = -1
+    float gExt = na
+    float gRng = 0.0
+    for g in fs
+        if g.alive and g.isLong != f.isLong and g.id > f.id and g.id > gId and g.rng() >= bigTrendPts
+            gId  := g.id
+            gExt := g.ext
+            gRng := g.rng()
+    gId < 0 or (f.isLong ? close - gExt >= 0.236 * gRng : gExt - close >= 0.236 * gRng)
+
+// FibTrade50To382 returns one TradeDetails per qualifying fib. best = the entry price would be hit first
+// (highest long entry below price, lowest short entry above price) for the one-order mode; with anchorPriority on,
+// best = the strongest anchor (Fib.strength), ties -> the nearest entry, then the first seen.
+candidates(array<Fib> fs, bool wantLong) =>
+    array<int>   ids = array.new<int>()
+    array<int>   pos = array.new<int>()
+    int ix = -1
+    array<float> es  = array.new<float>()
+    array<float> ps  = array.new<float>()
+    array<float> ss  = array.new<float>()
+    array<float> bs  = array.new<float>()
+    array<float> gs  = array.new<float>()
+    int best = -1
+    float d = wantLong ? 1.0 : -1.0
+    // newest opposing fib = the leg currently running against this direction
+    int   oppId  = -1
+    bool  oppRet = true
+    for g in fs
+        if g.alive and g.isLong != wantLong and g.id > oppId
+            oppId  := g.id
+            oppRet := g.retraced
+    for f in fs
+        if f.alive
+            ix += 1
+        if f.alive and not f.isExt and not f.viol and not (v3NoClone and f.kind == 2) and not (confirmTurn and oppId > f.id and not oppRet) and f.isLong == wantLong and (f.kind != 5 or (not na(f.confirmedBar) and bar_index - f.confirmedBar < setupLifeBars)) and (maxTradesPerFib == 0 or f.trades < maxTradesPerFib) and (minFibPts == 0 or f.rng() >= minFibPts) and not (noReentryAfterStop and FIBLOSS.contains(f.id)) and (bigTrendPts == 0 or bigTrendOk(fs, f))
+            float touch = rt(f.lvl(0.5) + (ZZ_REJECTION ? 0.0 : d * fr50Ticks * TICK))
+            // A pivot label may be drawn in the past; its rejection cannot be.
+            bool rejection = not ZZ_REJECTION or (barstate.isconfirmed and not na(f.confirmedBar) and bar_index > f.confirmedBar and (wantLong ? (low <= touch and close > touch and close > open) : (high >= touch and close < touch and close < open)))
+            float e   = ZZ_REJECTION ? rt(close) : touch
+            float t   = rt(f.lvl(ptLevel) - d * frPtTicks * TICK)
+            float sl  = rt(f.lvl(stopLevel) - d * TICK)
+            float slT = math.abs(e - sl) / TICK
+            bool priceOk = ZZ_REJECTION ? (wantLong ? sl < e and e < t : t < e and e < sl) : (wantLong ? (t > e and close > e) : (t < e and close < e))
+            float netTarget = netTargetFor(e, t)
+            float modeledRisk = unitRiskFor(e, sl)
+            bool economicOk = netTarget > 0 and modeledRisk > 0 and netTarget >= minNetRR * modeledRisk
+            float candleRange = high - low
+            float closeStrength = candleRange > 0 ? (wantLong ? (close - low) / candleRange : (high - close) / candleRange) : 0.0
+            bool qualityOk = not ZZ_REJECTION or not strongRejection or closeStrength >= minCloseStrength
+            bool trendOk = not useTrendBias or (wantLong ? close > trendEMA and trendEMA > trendEMA[1] : close < trendEMA and trendEMA < trendEMA[1])
+            bool sizeOk = qtyFor(e, sl) > 0
+            bool ok = economicOk and qualityOk and trendOk and sizeOk and rejection and priceOk and slT >= MINSL_E and slT <= MAXSL_E and math.abs(t - e) / TICK >= minPtTicks and (minRR == 0 or math.abs(t - e) >= minRR * math.abs(e - sl)) and (minFibAtr == 0 or f.rng() >= minFibAtr * ATR14)
+            if ok and onlyClear
+                // C#: opposing50 = checkFib.TargetPrice(0.5) - entryFrontRun; long needs opposing50 >= PT.
+                // The C# loop assigns isClear per opposing fib, so the LAST one in the list decides.
+                bool clear = true
+                for o in fs
+                    if o.alive and o.isLong != wantLong
+                        float opp = o.lvl(0.5) - d * fr50Ticks * TICK
+                        bool thisClear = wantLong ? opp >= t : opp <= t
+                        clear := clearAll ? (clear and thisClear) : thisClear
+                ok := clear
+            if ok
+                bool nearer = best >= 0 and (wantLong ? e > es.get(best) : e < es.get(best))
+                if best < 0 or (anchorPriority ? (f.strength > gs.get(best) or (f.strength == gs.get(best) and nearer)) : nearer)
+                    best := ids.size()
+                ids.push(f.id)
+                pos.push(ix)
+                es.push(e)
+                ps.push(t)
+                ss.push(sl)
+                bs.push(rt(f.lvl(beLevel)))
+                gs.push(f.strength)
+    [ids, es, ps, ss, best, pos, bs, gs]
+
+var map<string, float> PTM  = map.new<string, float>()   // target of the resting/filled order, per entry id
+var map<string, float> BEM  = map.new<string, float>()   // breakeven trigger price, per entry id
+var map<string, bool>  BEON = map.new<string, bool>()    // breakeven already applied
+var map<string, float> SLM  = map.new<string, float>()   // current stop of each entry id (moved by breakeven)
+var map<string, string> CMT = map.new<string, string>()  // exit comment suffix per entry id
+
+hasOpen(string eid) =>
+    bool r = false
+    if strategy.opentrades > 0
+        for i = 0 to strategy.opentrades - 1
+            if strategy.opentrades.entry_id(i) == eid
+                r := true
+    r
+
+var array<float> QUOTE = array.new<float>(8, na)
+var array<float> QSTR  = array.new<float>(2, na)    // anchor strength (hours) of the resting order shown, long / short
+
+placeSide(array<Fib> fs, bool isL, array<string> want, array<int> stats) =>
+    [ids, es, ps, ss, best, pos, bs, gs] = candidates(fs, isL)
+    stats.set(isL ? 0 : 1, ids.size())
+    int n = ids.size()
+    if n > 0
+        // anchorPriority with several positions: rest only the maxPositions strongest anchors (ties -> nearest entry)
+        // instead of every qualifying fib.
+        array<bool> pick = array.new<bool>(n, false)
+        if anchorPriority and perFibOrders and maxPositions > 1
+            for r = 1 to math.min(maxPositions, n)
+                int b = -1
+                for j = 0 to n - 1
+                    if not pick.get(j) and (b < 0 or gs.get(j) > gs.get(b) or (gs.get(j) == gs.get(b) and (isL ? es.get(j) > es.get(b) : es.get(j) < es.get(b))))
+                        b := j
+                pick.set(b, true)
+        for i = 0 to n - 1
+            // With one position allowed, rest only the order nearest price (strongest anchor with anchorPriority):
+            // several resting orders all filled on the same opening tick in the 2026-09-24 1m export (split 5+2+3+2
+            // fills, 31 'Over max' closes).
+            if (perFibOrders and maxPositions > 1 and (not anchorPriority or pick.get(i))) or i == best
+                float  qty  = qtyFor(es.get(i), ss.get(i))
+                string fid  = str.tostring(qty)
+                string side = isL ? "LONG " : "SHORT "
+                string eid  = (isL ? "L" : "S") + str.tostring(ids.get(i))
+                want.push(eid)
+                if not hasOpen(eid)
+                    PTM.put(eid, ps.get(i))
+                    SLM.put(eid, ss.get(i))
+                    CMT.put(eid, side + fid)
+                    BEM.put(eid, bs.get(i))
+                    BEON.remove(eid)
+                    stats.set(2, stats.get(2) + 1)
+                    int qb = isL ? 0 : 4
+                    QUOTE.set(qb, es.get(i))
+                    QUOTE.set(qb + 1, ss.get(i))
+                    QUOTE.set(qb + 2, ps.get(i))
+                    QUOTE.set(qb + 3, qty)
+                    QSTR.set(isL ? 0 : 1, gs.get(i))
+                    strategy.entry(eid, isL ? strategy.long : strategy.short, qty, limit = ZZ_REJECTION ? na : es.get(i), comment = (ZZ_REJECTION ? "50% Rejection " : "50to382 Entry ") + side + fid)
+                    strategy.exit(eid + "x", eid, limit = (useTrail or useBBB) ? na : ps.get(i), stop = ss.get(i), trail_price = useTrail ? ps.get(i) : na, trail_offset = useTrail ? math.max(1, math.round(0.8 * ATR14 / TICK)) : na, comment_trailing = "Trail exit " + side + fid, comment_profit = "50to382 PT " + side + fid, comment_loss = "Stoploss " + side + fid)
+
+bumpTrades(array<Fib> fs, int id) =>
+    for f in fs
+        if f.id == id
+            f.trades += 1
+
+// ─────────────────────────── Main ───────────────────────────
+var ZigState zig = ZigState.new()
+var Leg leg = Leg.new()
+var array<Fib> fibs = array.new<Fib>()
+var int seenTrades  = 0
+
+bool active = time >= startTime
+var float EB_O = na
+var float EB_H = na
+var float EB_L = na
+var float EB_C = na
+bool EB_NEW = timeframe.change(engineTf == "" ? timeframe.period : engineTf)   // evaluated every bar
+
+// v4 anchor threshold. 250 h is ~15,000 1-minute bars, beyond Pine's history, so the completed prior hours come
+// from 60-minute bars (the chart timeframe on charts of 60 minutes or slower) and the current, incomplete hour is
+// tracked here on chart bars. lookahead_on is safe: v4Win reads only bars [1] and older plus the hour's open time,
+// so every value is from completed hours (the standard non-repainting idiom; lookahead_off would lag an hour).
+string V4TF = timeframe.in_seconds() >= 3600 ? timeframe.period : "60"
+[V4_HH, V4_LL] = request.security(syminfo.tickerid, V4TF, v4Win(V4), lookahead = barmerge.lookahead_on)
+var float V4_CH = na     // high / low of the current hour so far, before this bar
+var float V4_CL = na
+if timeframe.change(V4TF)
+    V4_CH := na
+    V4_CL := na
+float v4Hh = na(V4_HH) ? na : na(V4_CH) ? V4_HH : math.max(V4_HH, V4_CH)
+float v4Ll = na(V4_LL) ? na : na(V4_CL) ? V4_LL : math.min(V4_LL, V4_CL)
+V4_CH := na(V4_CH) ? high : math.max(V4_CH, high)
+V4_CL := na(V4_CL) ? low : math.min(V4_CL, low)
+
+if active
+    if leg.dir == 0
+        if startAnchor > 0
+            leg.dir   := close >= startAnchor ? 1 : -1
+            leg.start := startAnchor
+            leg.ext   := leg.dir == 1 ? high : low
+        else
+            leg.dir   := close >= open ? 1 : -1
+            leg.start := leg.dir == 1 ? low : high
+            leg.ext   := leg.dir == 1 ? high : low
+        leg.startBar := bar_index
+        leg.extBar   := bar_index
+    bool useHtf = (fibEngine == "v2 (MC reconstruction)" or (v3Htf and fibEngine == "v3 (trade-calibrated)")) and engineTf != "" and timeframe.in_seconds(engineTf) > timeframe.in_seconds()
+    if ZZ
+        if barstate.isconfirmed
+            stepZig(zig, leg, fibs)
+    else if V4
+        // v4: chart bars walked low->high (up bar) / high->low (down bar); no leg engine; anchors at the bar close.
+        bool lf4 = close >= open
+        stepV4(fibs, lf4 ? low : high)
+        stepV4(fibs, lf4 ? high : low)
+        if barstate.isconfirmed
+            v4Anchors(fibs, leg, v4Hh, v4Ll)
+    else if not useHtf
+        bool lowFirst = close >= open
+        step(leg, fibs, lowFirst ? low : high)
+        step(leg, fibs, lowFirst ? high : low)
+    else
+        // Aggregate chart bars into engine-timeframe bars; step the engine once per completed engine bar.
+        if EB_NEW and not na(EB_O)
+            bool lf = EB_C >= EB_O
+            step(leg, fibs, lf ? EB_L : EB_H)
+            step(leg, fibs, lf ? EB_H : EB_L)
+            EB_O := na
+        if na(EB_O)
+            EB_O := open
+            EB_H := high
+            EB_L := low
+        EB_H := math.max(EB_H, high)
+        EB_L := math.min(EB_L, low)
+        EB_C := close
+
+drawFibs(fibs)
+
+// ─────────────────────────── Fib-failure signals (no orders) ───────────────────────────
+// A bar closes through a live fib's failLvl, having closed on the 0% side of it the bar before. Newest fib wins.
+bool   sigLong  = false
+bool   sigShort = false
+string sigTxt   = ""
+float  sigStop  = na
+float  sigTgt   = na
+int    sigId    = na
+if (showFail or failBlockBars > 0) and barstate.isconfirmed and fibs.size() > 0
+    bool seenL = false
+    bool seenS = false
+    for i = fibs.size() - 1 to 0
+        Fib f = fibs.get(i)
+        // size filter first, then "newest": the newest fib that is big enough, not just the newest fib
+        if f.alive and not f.isExt and f.rng() >= failMinPts and f.rng() >= failMinAtr * ATR_SIG
+            bool newestOfSide = f.isLong ? not seenL : not seenS
+            if f.isLong
+                seenL := true
+            else
+                seenS := true
+            bool eligible = not na(f.pL) and not (sigLong or sigShort) and (not failNewest or newestOfSide) and not (failOnce and f.failed)
+            bool crossed = eligible and (f.isLong ? (close[1] > f.pL and close <= f.pL) : (close[1] < f.pL and close >= f.pL))
+            float stopPx = rt(f.ext + (f.isLong ? TICK : -TICK))
+            float tgtPx  = rt(f.anchor + (f.isLong ? frPtTicks * TICK : -frPtTicks * TICK))
+            float slTk   = math.abs(close - stopPx) / TICK
+            if crossed and (not failSlLimits or (slTk >= MINSL_E and slTk <= MAXSL_E))
+                f.failed := true
+                sigStop  := stopPx
+                sigTgt   := tgtPx
+                sigId    := f.id
+                sigShort := f.isLong
+                sigLong  := not f.isLong
+                sigTxt   := (sigShort ? "Fib fail SHORT" : "Fib fail LONG") + (failShowPx ? "\nstop " + str.tostring(stopPx, "#,##0.00") + "  tgt " + str.tostring(tgtPx, "#,##0.00") : "")
+    for f in fibs
+        if f.alive
+            f.pL := f.lvl(failLvl)
+var int lastFailShortBar = na
+var int lastFailLongBar  = na
+if sigShort
+    lastFailShortBar := bar_index
+if sigLong
+    lastFailLongBar := bar_index
+bool blockLongs  = failBlockBars > 0 and not na(lastFailShortBar) and bar_index - lastFailShortBar <= failBlockBars
+bool blockShorts = failBlockBars > 0 and not na(lastFailLongBar) and bar_index - lastFailLongBar <= failBlockBars
+if showFail and (sigShort or sigLong)
+    label.new(bar_index, sigShort ? high : low, sigTxt, style = sigShort ? label.style_label_down : label.style_label_up,
+         color = sigShort ? color.new(color.red, 20) : color.new(color.teal, 20), textcolor = color.white, size = size.small)
+    alert(sigTxt + " @ " + str.tostring(close, "#,##0.00") + " (" + syminfo.ticker + ")", alert.freq_once_per_bar_close)
+alertcondition(sigShort, "Fib failure SHORT", "Fib failure SHORT on {{ticker}} @ {{close}}")
+alertcondition(sigLong, "Fib failure LONG", "Fib failure LONG on {{ticker}} @ {{close}}")
+
+// ─────────────────────────── Next fib level above / below price ───────────────────────────
+fibName(Fib f, float lv) =>
+    str.tostring(lv * 100, "0.0") + "% of " + (f.isLong ? "up" : "down") + " fib " + str.tostring(f.anchor, "#,##0.00") + " → " + str.tostring(f.ext, "#,##0.00")
+
+var label nxUpL = na
+var label nxDnL = na
+var line  nxUpLn = na
+var line  nxDnLn = na
+if showNext and barstate.islast
+    float  upPx = na
+    float  dnPx = na
+    string upTx = ""
+    string dnTx = ""
+    for f in fibs
+        if f.alive and (nextHidden or not na(f.lns))
+            for lv in LEVELS
+                float y = f.lvl(lv)
+                if y > close + TICK * 0.5 and (na(upPx) or y < upPx)
+                    upPx := y
+                    upTx := fibName(f, lv)
+                if y < close - TICK * 0.5 and (na(dnPx) or y > dnPx)
+                    dnPx := y
+                    dnTx := fibName(f, lv)
+    int upN = 0
+    int dnN = 0
+    for f in fibs
+        if f.alive and (nextHidden or not na(f.lns))
+            for lv in LEVELS
+                float y = f.lvl(lv)
+                upN += not na(upPx) and math.abs(y - upPx) <= nextConfTk * TICK ? 1 : 0
+                dnN += not na(dnPx) and math.abs(y - dnPx) <= nextConfTk * TICK ? 1 : 0
+    bool headingDown = close < close[nextMomBars]
+    label.delete(nxUpL)
+    label.delete(nxDnL)
+    line.delete(nxUpLn)
+    line.delete(nxDnLn)
+    if not na(upPx)
+        color c = headingDown ? color.new(color.gray, 30) : color.new(color.lime, 0)
+        nxUpLn := line.new(bar_index, upPx, bar_index + 8, upPx, color = c, width = headingDown ? 1 : 2, style = line.style_dotted)
+        nxUpL  := label.new(bar_index + 8, upPx, (headingDown ? "" : "HEADING ") + "▲ " + str.tostring(upPx, "#,##0.00") + "  " + str.tostring((upPx - close) / TICK, "0") + "t\n" + upTx + (upN > 1 ? "  (x" + str.tostring(upN) + " confluence)" : ""),
+             style = label.style_label_left, color = color.new(color.black, 30), textcolor = c, size = size.small)
+    if not na(dnPx)
+        color c = headingDown ? color.new(color.red, 0) : color.new(color.gray, 30)
+        nxDnLn := line.new(bar_index, dnPx, bar_index + 8, dnPx, color = c, width = headingDown ? 2 : 1, style = line.style_dotted)
+        nxDnL  := label.new(bar_index + 8, dnPx, (headingDown ? "HEADING " : "") + "▼ " + str.tostring(dnPx, "#,##0.00") + "  " + str.tostring((close - dnPx) / TICK, "0") + "t\n" + dnTx + (dnN > 1 ? "  (x" + str.tostring(dnN) + " confluence)" : ""),
+             style = label.style_label_left, color = color.new(color.black, 30), textcolor = c, size = size.small)
+
+var array<line> TL_UP = array.new<line>()
+var array<line> TL_DN = array.new<line>()
+var int seenHi = 0
+var int seenLo = 0
+
+trendLine(array<line> keep, array<float> pp, array<int> pb, color c) =>
+    int n = pp.size()
+    line ln = line.new(bx(pb.get(n - 2)), pp.get(n - 2), bx(pb.get(n - 1)), pp.get(n - 1), extend = extend.right, color = c, width = trendWidth)
+    keep.push(ln)
+    if keep.size() > trendKeep
+        line.delete(keep.shift())
+
+if showTrend
+    if PIV_HI_P.size() >= 2 and PIV_HI_P.size() > seenHi
+        trendLine(TL_DN, PIV_HI_P, PIV_HI_B, cTrendDn)
+    if PIV_LO_P.size() >= 2 and PIV_LO_P.size() > seenLo
+        trendLine(TL_UP, PIV_LO_P, PIV_LO_B, cTrendUp)
+while PIV_HI_P.size() > 10
+    PIV_HI_P.shift()
+    PIV_HI_B.shift()
+while PIV_LO_P.size() > 10
+    PIV_LO_P.shift()
+    PIV_LO_B.shift()
+seenHi := PIV_HI_P.size()
+seenLo := PIV_LO_P.size()
+
+// Count fills per fib: the entry id carries the fib id ("L123" / "S123").
+int totalTrades = strategy.closedtrades + strategy.opentrades
+if totalTrades > seenTrades
+    for k = seenTrades to totalTrades - 1
+        string eid = k < strategy.closedtrades ? strategy.closedtrades.entry_id(k) : strategy.opentrades.entry_id(k - strategy.closedtrades)
+        bumpTrades(fibs, int(nz(str.tonumber(str.substring(eid, 1)), -1)))
+    seenTrades := totalTrades
+
+// noReentryAfterStop: count losing closed 50to382 trades per fib id (entry ids "L123" / "S123"; "F" fail trades ignored).
+var int seenClosedNR = 0
+if noReentryAfterStop and strategy.closedtrades > seenClosedNR
+    for k = seenClosedNR to strategy.closedtrades - 1
+        string ceid = strategy.closedtrades.entry_id(k)
+        if strategy.closedtrades.profit(k) < 0 and (str.startswith(ceid, "L") or str.startswith(ceid, "S"))
+            int cfid = int(nz(str.tonumber(str.substring(ceid, 1)), -1))
+            if cfid >= 0
+                FIBLOSS.put(cfid, (FIBLOSS.contains(cfid) ? FIBLOSS.get(cfid) : 0) + 1)
+    seenClosedNR := strategy.closedtrades
+
+// MultiCharts "Connecting Line": dotted entry -> exit, green for a win, red for a loss.
+var int seenClosed = 0
+if strategy.closedtrades > seenClosed
+    if showConnect
+        for k = seenClosed to strategy.closedtrades - 1
+            line.new(bx(strategy.closedtrades.entry_bar_index(k)), strategy.closedtrades.entry_price(k), strategy.closedtrades.exit_bar_index(k), strategy.closedtrades.exit_price(k), color = strategy.closedtrades.profit(k) >= 0 ? color.lime : color.red, style = line.style_dotted, width = 1)
+    seenClosed := strategy.closedtrades
+
+// ─────────────────────────── News windows ───────────────────────────
+var array<int> NW_S = array.new<int>()     // window start (ms), sorted
+var array<int> NW_E = array.new<int>()     // window end (ms)
+var array<int> FOMC_D = array.new<int>()   // FOMC decision days (NY midnight)
+var array<int> ND   = array.new<int>()     // no-trade day starts (ms, NY midnight)
+var int   nwPtr = 0
+
+if barstate.isfirst
+    string wins = ""
+    if blockCPI
+        wins += newsDates.getCPI() + ","
+    if blockPPI
+        wins += newsDates.getPPI() + ","
+    if blockNFP
+        wins += newsDates.getNFP() + ","
+    if blockISMMfg
+        wins += newsDates.getISMMfg() + ","
+    if blockISMSrv
+        wins += newsDates.getISMSrv() + ","
+    if blockJolts
+        wins += newsDates.getJOLTS() + ","
+    if blockMichSent
+        wins += newsDates.getMichSent() + ","
+    if blockFOMC and fomcMode == "Decision day 12:00-16:00 ET"
+        for dday in str.split(newsDates.getFOMCDecisionDays(), ",")
+            string dd0 = str.trim(dday)
+            if str.length(dd0) >= 10
+                wins += dd0 + " 1200-1600,"
+                FOMC_D.push(timestamp("America/New_York", int(str.tonumber(str.substring(dd0, 0, 4))), int(str.tonumber(str.substring(dd0, 5, 7))), int(str.tonumber(str.substring(dd0, 8, 10))), 0, 0))
+    wins += userNewsWin
+    for item in str.split(wins, ",")
+        string it = str.trim(item)
+        if str.length(it) >= 20
+            int y  = int(str.tonumber(str.substring(it, 0, 4)))
+            int mo = int(str.tonumber(str.substring(it, 5, 7)))
+            int dd = int(str.tonumber(str.substring(it, 8, 10)))
+            int sh = int(str.tonumber(str.substring(it, 11, 13)))
+            int sm = int(str.tonumber(str.substring(it, 13, 15)))
+            int eh = int(str.tonumber(str.substring(it, 16, 18)))
+            int em = int(str.tonumber(str.substring(it, 18, 20)))
+            int ts = timestamp("America/New_York", y, mo, dd, sh, sm)
+            int te = timestamp("America/New_York", y, mo, dd, eh, em)
+            if te < ts
+                te += 86400000
+            NW_S.push(ts - newsPreMin * 60000)
+            NW_E.push(te + newsPostMin * 60000)
+    string days = (blockFOMC and fomcMode == "Full meeting days" ? newsDates.getFOMC() + "," : "") + userNoDays
+    for item in str.split(days, ",")
+        string it = str.trim(item)
+        if str.length(it) >= 10
+            ND.push(timestamp("America/New_York", int(str.tonumber(str.substring(it, 0, 4))), int(str.tonumber(str.substring(it, 5, 7))), int(str.tonumber(str.substring(it, 8, 10))), 0, 0))
+    if NW_S.size() > 1
+        array<int> idx = NW_S.sort_indices()
+        array<int> s0  = NW_S.copy()
+        array<int> e0  = NW_E.copy()
+        for i = 0 to idx.size() - 1
+            NW_S.set(i, s0.get(idx.get(i)))
+            NW_E.set(i, e0.get(idx.get(i)))
+
+while nwPtr < NW_S.size() and time >= NW_E.get(nwPtr)
+    nwPtr += 1
+bool inNewsWin = nwPtr < NW_S.size() and time >= NW_S.get(nwPtr)
+int  nyDay     = timestamp("America/New_York", year(time, "America/New_York"), month(time, "America/New_York"), dayofmonth(time, "America/New_York"), 0, 0)
+bool newsDay   = ND.includes(nyDay)
+bool newsBlocked = useNews and (inNewsWin or newsDay)
+if newsBlocked and newsFlatten and strategy.opentrades > 0 and not newsBlocked[1]
+    strategy.close_all(comment = "News flat")
+// FOMC decision day: flat at 13:45 ET, 15 minutes before the release (RBO v71 behaviour).
+int  fomcFlatT = timestamp("America/New_York", year(time, "America/New_York"), month(time, "America/New_York"), dayofmonth(time, "America/New_York"), 13, 45)
+int  fomcEndT  = timestamp("America/New_York", year(time, "America/New_York"), month(time, "America/New_York"), dayofmonth(time, "America/New_York"), 16, 0)
+if useNews and FOMC_D.includes(nyDay) and time_close >= fomcFlatT and time < fomcEndT and strategy.opentrades > 0
+    strategy.cancel_all()
+    strategy.close_all(comment = "FOMC pre-release close")
+bgcolor(useNews and newsBlocked ? color.new(color.orange, 88) : na, title = "News block")
+
+// Legacy/limit mode: one resting order per qualifying Fib. Zig Zag rejection mode:
+// market entry only after a closed rejection candle. Filled exits stay managed below.
+var array<string> LIVE = array.new<string>()
+var array<int> STATS = array.from(0, 0, 0)     // long candidates now, short candidates now, orders sent (cumulative)
+STATS.set(0, 0)
+STATS.set(1, 0)
+array<string> want = array.new<string>()
+var float dayStartPnl = 0.0
+if ta.change(time("D")) != 0
+    dayStartPnl := strategy.netprofit
+bool dayBlocked = dayLossUsd > 0 and strategy.netprofit - dayStartPnl <= -dayLossUsd
+var bool hardHit = false
+if ta.change(time("D")) != 0
+    hardHit := false
+if hardDayLossUsd > 0 and not hardHit and strategy.netprofit + strategy.openprofit - riskDayMark <= -hardDayLossUsd
+    hardHit := true
+    strategy.cancel_all()
+    strategy.close_all(comment = "Hard daily loss")
+dayBlocked := dayBlocked or hardHit
+// Consecutive losses per session day.
+var int lossStreak = 0
+var int seenClosedCL = 0
+if ta.change(time("D")) != 0
+    lossStreak := 0
+if strategy.closedtrades > seenClosedCL
+    for k = seenClosedCL to strategy.closedtrades - 1
+        lossStreak := strategy.closedtrades.profit(k) < 0 ? lossStreak + 1 : 0
+    seenClosedCL := strategy.closedtrades
+dayBlocked := dayBlocked or (maxConsLosses > 0 and lossStreak >= maxConsLosses)
+// End-of-day liquidation.
+bool inEod = useEod and not na(time(timeframe.period, eodSession + ":1234567", "America/New_York"))
+if inEod
+    strategy.cancel_all()
+    if strategy.opentrades > 0
+        strategy.close_all(comment = "EOD close")
+dayBlocked := dayBlocked or inEod
+// Flat before the weekend (Friday session, NY time).
+bool inWkFlat = flatWeekendIn and dayofweek(time, "America/New_York") == dayofweek.friday and not na(time(timeframe.period, weekendSession + ":1234567", "America/New_York"))
+if inWkFlat
+    strategy.cancel_all()
+    if strategy.opentrades > 0
+        strategy.close_all(comment = "Weekend flat")
+dayBlocked := dayBlocked or inWkFlat
+// Session filters (entries only; open trades keep their bracket).
+int  nyMin = hour(time, "America/New_York") * 60 + minute(time, "America/New_York")
+bool sesBlocked = (skipSunday and (not mcMode or sundayInMc) and dayofweek(time, "America/New_York") == dayofweek.sunday) or (dayOnly and not mcMode and (nyMin < 180 or nyMin >= 960)) or (rthOnly and (nyMin < 570 or nyMin >= 945))   // rthOnly: 09:30-15:45 ET, also in MC mode
+dayBlocked := dayBlocked or sesBlocked
+// Regime filters (entries only; open trades keep their bracket). 5m ATR vs its ~1-day average, and the futures
+// session range (from 18:00 ET) vs that average. Both apply in MULTICHARTS MODE too.
+[VS_ATR5, VS_AVG5] = request.security(syminfo.tickerid, "5", [ta.atr(14), ta.sma(ta.atr(14), 288)], lookahead = barmerge.lookahead_off)
+float volRatio = nz(VS_AVG5) > 0 ? VS_ATR5 / VS_AVG5 : na
+var float FS_HI = na
+var float FS_LO = na
+bool newFutSes = (nyMin >= 1080 and nz(nyMin[1], 1440) < 1080) or time - nz(time[1], time) >= 86400000   // 18:00 ET crossed (or a gap of a day+)
+if newFutSes or na(FS_HI)
+    FS_HI := high
+    FS_LO := low
+else
+    FS_HI := math.max(FS_HI, high)
+    FS_LO := math.min(FS_LO, low)
+float extRatio = nz(VS_AVG5) > 0 ? (FS_HI - FS_LO) / VS_AVG5 : na
+bool volSpikeBlocked = volSpikeSkip and not na(volRatio) and volRatio >= volSpikeLo and volRatio < volSpikeHi
+bool extDayBlocked = extDaySkip and not na(extRatio) and extRatio >= extDayMult
+dayBlocked := dayBlocked or volSpikeBlocked or extDayBlocked
+// Emergency stop: per open trade, independent of its bracket.
+if useEmergency and strategy.opentrades > 0
+    for i = strategy.opentrades - 1 to 0
+        float ep  = strategy.opentrades.entry_price(i)
+        bool  isL = strategy.opentrades.size(i) > 0
+        if isL ? low <= ep - emergencyTicks * TKS * TICK : high >= ep + emergencyTicks * TKS * TICK
+            strategy.close(strategy.opentrades.entry_id(i), comment = "Emergency stop", immediately = true)
+QUOTE.fill(na)
+QSTR.fill(na)
+if active and not dayBlocked and not newsBlocked and strategy.opentrades < maxPositions
+    if tradeLong and strategy.position_size >= 0
+        if not blockLongs and not (knifeAtr > 0 and open - close > knifeAtr * ATR14)
+            placeSide(fibs, true, want, STATS)
+    if tradeShort and strategy.position_size <= 0
+        if not blockShorts and not (knifeAtr > 0 and close - open > knifeAtr * ATR14)
+            placeSide(fibs, false, want, STATS)
+for eid in LIVE
+    if not want.includes(eid) and not hasOpen(eid)
+        strategy.cancel(eid)
+LIVE := want
+
+// Bar-by-bar trail: activate when the target is reached, then stop = extreme of last 2 bars +/- buffer (tightening only).
+var map<string, bool> ACT = map.new<string, bool>()
+var box   TB_RISK = na
+var box   TB_REW  = na
+var line  TB_TRL  = na
+var float TB_LAST = na
+if strategy.opentrades == 0
+    ACT.clear()
+    TB_RISK := na
+    TB_REW  := na
+    TB_TRL  := na
+    TB_LAST := na
+if strategy.opentrades > 0
+    string aid = strategy.opentrades.entry_id(0)
+    bool   aL  = strategy.opentrades.size(0) > 0
+    float  aE  = strategy.opentrades.entry_price(0)
+    if useBBB and PTM.contains(aid) and SLM.contains(aid)
+        if not ACT.contains(aid) and (aL ? high >= PTM.get(aid) : low <= PTM.get(aid))
+            ACT.put(aid, true)
+        if ACT.contains(aid) and barstate.isconfirmed
+            float ns = aL ? math.min(low, low[1]) - bbbBufTicks * TICK : math.max(high, high[1]) + bbbBufTicks * TICK
+            SLM.put(aid, aL ? math.max(SLM.get(aid), ns) : math.min(SLM.get(aid), ns))
+    if showTradeBox and PTM.contains(aid) and SLM.contains(aid)
+        int eb = strategy.opentrades.entry_bar_index(0)
+        if na(TB_RISK)
+            float s0 = SLM.get(aid)
+            TB_RISK := box.new(eb, math.max(aE, s0), bar_index, math.min(aE, s0), border_color = color.new(color.red, 100), bgcolor = color.new(color.red, 80))
+            TB_REW  := box.new(eb, math.max(aE, PTM.get(aid)), bar_index, math.min(aE, PTM.get(aid)), border_color = color.new(color.green, 100), bgcolor = color.new(color.green, 82))
+        if not ACT.contains(aid)
+            TB_RISK.set_right(bar_index)
+            TB_REW.set_right(bar_index)
+        else
+            float cs = SLM.get(aid)
+            if na(TB_TRL) or cs != TB_LAST
+                if not na(TB_TRL)
+                    TB_TRL.set_x2(bar_index)
+                    line.new(bar_index, TB_LAST, bar_index, cs, color = color.orange, style = line.style_dashed, width = 2)
+                TB_TRL := line.new(bar_index, cs, bar_index + 1, cs, color = color.orange, style = line.style_dashed, width = 2)
+                TB_LAST := cs
+            else
+                TB_TRL.set_x2(bar_index + 1)
+// Bracket guarantee: re-send stop + target for every open trade on every bar, so no position can be left
+// without an exit (the 2026-09-24 1m export had a 2-lot short open since Nov 2025 at -$90.8K with no stop).
+if strategy.opentrades > 0
+    for i = 0 to strategy.opentrades - 1
+        string oid = strategy.opentrades.entry_id(i)
+        if SLM.contains(oid) and PTM.contains(oid)
+            bool   oL  = strategy.opentrades.size(i) > 0
+            string sx  = CMT.contains(oid) ? CMT.get(oid) : (oL ? "LONG" : "SHORT")
+            bool   ff  = str.startswith(oid, "F")
+            bool   tr  = useTrail and not ff
+            bool   bb  = useBBB and not ff
+            strategy.exit(oid + "x", oid, limit = (tr or bb) ? na : PTM.get(oid), stop = SLM.get(oid), trail_price = tr ? PTM.get(oid) : na, trail_offset = tr ? math.max(1, math.round(0.8 * ATR14 / TICK)) : na, comment_trailing = "Trail exit " + sx, comment_profit = (ff ? "Fib fail PT " : "50to382 PT ") + sx, comment_loss = (bb and ACT.contains(oid) ? "Exit (BBB) " : BEON.contains(oid) ? "BE stop " : ff ? "Fib fail stop " : "Stoploss ") + sx)
+        else
+            strategy.close(oid, comment = "No bracket - closed", immediately = true)
+// Resting orders on several fibs can fill on the same bar; keep only the first Max simultaneous entries trades.
+if strategy.opentrades > maxPositions
+    for i = strategy.opentrades - 1 to maxPositions
+        strategy.close(strategy.opentrades.entry_id(i), comment = "Over max positions", immediately = true)
+
+// Optional: trade the fib-failure signal (off by default - see the input tooltip).
+if tradeFail and (sigShort or sigLong) and active and not dayBlocked and not newsBlocked and strategy.opentrades < maxPositions and (strategy.position_size == 0 or (strategy.position_size > 0) == sigLong)
+    string feid = "F" + str.tostring(sigId)
+    string side = sigLong ? "LONG" : "SHORT"
+    strategy.entry(feid, sigLong ? strategy.long : strategy.short, fixedQty, comment = "Fib fail " + side)
+    strategy.exit(feid + "x", feid, limit = sigTgt, stop = sigStop, comment_profit = "Fib fail PT " + side, comment_loss = "Fib fail stop " + side)
+    PTM.put(feid, sigTgt)
+    SLM.put(feid, sigStop)
+    CMT.put(feid, "FF " + side)
+    // No breakeven for fib-failure trades: they exit only at their stop or target.
+
+// Which fibs are quoted (resting order or open trade) -> drives the MC-style zone boxes on the next bar.
+for f in fibs
+    string idS = str.tostring(f.id)
+    f.quoted := want.includes("L" + idS) or want.includes("S" + idS) or hasOpen("L" + idS) or hasOpen("S" + idS)
+
+// Breakeven: once price trades through the BE level on a bar after the fill, stop -> entry + 1 tick.
+if useBE and strategy.opentrades > 0
+    for i = 0 to strategy.opentrades - 1
+        string eid = strategy.opentrades.entry_id(i)
+        if BEM.contains(eid) and not BEON.contains(eid) and bar_index > strategy.opentrades.entry_bar_index(i)
+            bool  isL = strategy.opentrades.size(i) > 0
+            float be  = BEM.get(eid)
+            if isL ? high >= be : low <= be
+                float ep = strategy.opentrades.entry_price(i)
+                string side = isL ? "LONG" : "SHORT"
+                strategy.exit(eid + "x", eid, limit = useTrail ? na : PTM.get(eid), stop = ep + (isL ? TICK : -TICK), trail_price = useTrail ? PTM.get(eid) : na, trail_offset = useTrail ? math.max(1, math.round(0.8 * ATR14 / TICK)) : na, comment_trailing = "Trail exit " + side, comment_profit = "50to382 PT " + side, comment_loss = "BE stop " + side)
+                BEON.put(eid, true)
+                SLM.put(eid, ep + (isL ? TICK : -TICK))
+
+// Status panel: plain-language answer to "can it trade now, and if not why".
+f_pos(string p) =>
+    switch p
+        "bottom_right" => position.bottom_right
+        "top_left"     => position.top_left
+        "bottom_left"  => position.bottom_left
+        "middle_right" => position.middle_right
+        => position.top_right
+f_sz(string z) => z == "tiny" ? size.tiny : z == "normal" ? size.normal : size.small
+f_px(float v) => na(v) ? "-" : str.tostring(v, "#,##0.00")
+var table DBG = table.new(f_pos(dbgPos), 2, 22, bgcolor = color.new(color.black, 15), border_color = color.new(color.gray, 60), border_width = 1)
+if showDebug and barstate.islast
+    color cH = color.new(#2962FF, 35)
+    color cOK = color.lime
+    color cBad = color.new(#FF5252, 0)
+    color cW = color.white
+    color cG = color.new(color.gray, 20)
+    ts = f_sz(dbgSize)
+    int r = 0
+    // ---- why / why not
+    string why = not active ? "before StartDate" : hardHit ? "hard daily loss hit" : (dayLossUsd > 0 and strategy.netprofit - dayStartPnl <= -dayLossUsd) ? "daily loss limit hit" : (maxConsLosses > 0 and lossStreak >= maxConsLosses) ? "max losses in a row" : inEod ? "end-of-day window" : inWkFlat ? "Friday weekend-flat window" : sesBlocked ? "session filter (Sunday / hours)" : volSpikeBlocked ? "vol spike filter" : extDayBlocked ? "extended day filter" : newsBlocked ? "news window" : strategy.opentrades >= maxPositions ? "in a trade (max positions)" : ""
+    bool canTrade = why == ""
+    string sideNote = (blockLongs ? "longs blocked by fib fail  " : "") + (blockShorts ? "shorts blocked by fib fail" : "")
+    DBG.cell(0, r, "STATUS", text_color = cW, bgcolor = cH, text_size = ts)
+    DBG.cell(1, r, canTrade ? "READY - looking for entries" : "NO NEW ENTRIES: " + why, text_color = canTrade ? cOK : cBad, bgcolor = cH, text_size = ts, text_halign = text.align_left)
+    r += 1
+    if sideNote != ""
+        DBG.cell(0, r, "note", text_color = cG, text_size = ts)
+        DBG.cell(1, r, sideNote, text_color = color.orange, text_size = ts, text_halign = text.align_left)
+        r += 1
+    DBG.cell(0, r, "mode", text_color = cG, text_size = ts)
+    DBG.cell(1, r, (mcMode ? "MultiCharts" : "extended") + " | " + fibEngine + (ZZ ? " | " + zzConfirmation + " | " + zzEntryMode : "") + (V4 ? " " + str.tostring(v4Hours) + "h" : "") + " | " + timeframe.period + (v3Htf and fibEngine == "v3 (trade-calibrated)" ? " | fibs " + engineTf : "") + (useTrail ? " | ATR trail" : "") + (useBBB ? " | BBB trail" : "") + (confirmTurn ? " | turn" : "") + (v3ExtRule or v3NoClone ? " | no-ext" : "") + (useBE ? " | BE" : "") + (minFibPts > 0 ? " | min" + str.tostring(minFibPts, "#.##") : "") + (bigTrendPts > 0 ? " | big" + str.tostring(bigTrendPts, "#.##") : "") + (noReentryAfterStop ? " | no-reentry" : "") + (rthOnly ? " | rth" : "") + (skipSunday and (not mcMode or sundayInMc) ? " | no-sun" : "") + (flatWeekendIn ? " | wk-flat" : "") + (dayLossUsd > 0 ? " | dayloss " + str.tostring(dayLossUsd, "#") : "") + (PRESET_MNQ1 ? " | PRESET MNQ 1%DD" : "") + (volSpikeSkip ? " | volspike" : "") + (extDaySkip ? " | extday" : "") + (anchorPriority ? " | anchor-prio" : ""), text_color = cW, text_size = ts, text_halign = text.align_left)
+    r += 1
+    DBG.cell(0, r, "BTC risk / costs", text_color = cG, text_size = ts)
+    DBG.cell(1, r, str.tostring(riskPct, "0.00") + "% risk | " + str.tostring(maxExposurePct, "0") + "% exposure | " + str.tostring(modeledFeePct, "0.00") + "% fee/side | net target > costs", text_color = cW, text_size = ts, text_halign = text.align_left)
+    r += 1
+    // ---- open trade
+    DBG.cell(0, r, "OPEN TRADE", text_color = cW, bgcolor = cH, text_size = ts)
+    DBG.cell(1, r, "", bgcolor = cH, text_size = ts)
+    r += 1
+    if strategy.opentrades > 0
+        string oid = strategy.opentrades.entry_id(0)
+        bool oL = strategy.opentrades.size(0) > 0
+        float op = strategy.openprofit
+        DBG.cell(0, r, oL ? "LONG" : "SHORT", text_color = oL ? cOK : cBad, text_size = ts)
+        DBG.cell(1, r, str.tostring(math.abs(strategy.opentrades.size(0))) + " @ " + f_px(strategy.opentrades.entry_price(0)) + "   P&L " + str.tostring(op, "$#,##0"), text_color = op >= 0 ? cOK : cBad, text_size = ts, text_halign = text.align_left)
+        r += 1
+        DBG.cell(0, r, "stop / target", text_color = cG, text_size = ts)
+        DBG.cell(1, r, f_px(SLM.contains(oid) ? SLM.get(oid) : na) + "  /  " + f_px(PTM.contains(oid) ? PTM.get(oid) : na) + (BEON.contains(oid) ? "  (at breakeven)" : ""), text_color = cW, text_size = ts, text_halign = text.align_left)
+        r += 1
+    else
+        DBG.cell(0, r, "-", text_color = cG, text_size = ts)
+        DBG.cell(1, r, "flat", text_color = cG, text_size = ts, text_halign = text.align_left)
+        r += 1
+    // ---- resting orders
+    DBG.cell(0, r, ZZ_REJECTION ? "REJECTION SIGNALS" : "RESTING ORDERS", text_color = cW, bgcolor = cH, text_size = ts)
+    DBG.cell(1, r, "entry / stop / target x qty", text_color = cW, bgcolor = cH, text_size = ts)
+    r += 1
+    for k = 0 to 1
+        int qb = k * 4
+        bool has = not na(QUOTE.get(qb))
+        DBG.cell(0, r, k == 0 ? (ZZ_REJECTION ? "buy after rejection" : "buy limit") : (ZZ_REJECTION ? "sell after rejection" : "sell limit"), text_color = k == 0 ? cOK : cBad, text_size = ts)
+        DBG.cell(1, r, has ? f_px(QUOTE.get(qb)) + " / " + f_px(QUOTE.get(qb + 1)) + " / " + f_px(QUOTE.get(qb + 2)) + "  x" + str.tostring(QUOTE.get(qb + 3), "#") + (anchorPriority and not na(QSTR.get(k)) ? "  anchor " + str.tostring(QSTR.get(k), "0") + "h" : "") : "none  (" + str.tostring(STATS.get(k)) + " fibs qualify)", text_color = has ? cW : cG, text_size = ts, text_halign = text.align_left)
+        r += 1
+    // ---- fibs
+    int aliveN = 0
+    int tradeN = 0
+    for f in fibs
+        if f.alive
+            aliveN += 1
+            tradeN += (not f.isExt and not f.viol) ? 1 : 0
+    DBG.cell(0, r, "fibs live / tradeable", text_color = cG, text_size = ts)
+    DBG.cell(1, r, str.tostring(aliveN) + " / " + str.tostring(tradeN), text_color = cW, text_size = ts, text_halign = text.align_left)
+    r += 1
+    // ---- today
+    float dayPnl = strategy.netprofit - dayStartPnl + strategy.openprofit
+    DBG.cell(0, r, "TODAY", text_color = cW, bgcolor = cH, text_size = ts)
+    DBG.cell(1, r, str.tostring(dayPnl, "$#,##0") + "   losses in a row: " + str.tostring(lossStreak), text_color = dayPnl >= 0 ? cOK : cBad, bgcolor = cH, text_size = ts, text_halign = text.align_left)
+    r += 1
+    // ---- totals
+    int nC = strategy.closedtrades
+    float pfv = strategy.grossloss > 0 ? strategy.grossprofit / strategy.grossloss : na
+    DBG.cell(0, r, "ALL TRADES", text_color = cW, bgcolor = cH, text_size = ts)
+    DBG.cell(1, r, str.tostring(nC) + " trades   win " + (nC > 0 ? str.tostring(100.0 * strategy.wintrades / nC, "0.0") + "%" : "-") + "   PF " + (na(pfv) ? "-" : str.tostring(pfv, "0.00")), text_color = cW, bgcolor = cH, text_size = ts, text_halign = text.align_left)
+    r += 1
+    DBG.cell(0, r, "net / max DD", text_color = cG, text_size = ts)
+    DBG.cell(1, r, str.tostring(strategy.netprofit, "$#,##0") + "  /  " + str.tostring(-strategy.max_drawdown, "$#,##0"), text_color = strategy.netprofit >= 0 ? cOK : cBad, text_size = ts, text_halign = text.align_left)
+    r += 1
+    DBG.cell(0, r, "news windows / build", text_color = cG, text_size = ts)
+    DBG.cell(1, r, str.tostring(NW_S.size()) + " loaded  |  2026-09-26 mnq-preset", text_color = cG, text_size = ts, text_halign = text.align_left)
+
+// Prop firm trailing-drawdown dashboard (closed-trade basis, as RBO v71).
+var float peakEq = strategy.initial_capital
+var float maxDD  = 0.0
+var float lowBuf = propDDLimit
+var int   seenClosedP = 0
+if strategy.closedtrades > seenClosedP
+    float eqC = strategy.initial_capital + strategy.netprofit
+    peakEq := math.max(peakEq, eqC)
+    maxDD  := math.max(maxDD, peakEq - eqC)
+    lowBuf := math.min(lowBuf, eqC - math.min(strategy.initial_capital, peakEq - propDDLimit))
+    seenClosedP := strategy.closedtrades
+var table PROP = table.new(position.bottom_left, 2, 5, bgcolor = color.new(color.black, 20), border_width = 1)
+if showProp and barstate.islast
+    float curBuf = strategy.initial_capital + strategy.netprofit - math.min(strategy.initial_capital, peakEq - propDDLimit)
+    PROP.cell(0, 0, "Prop firm (closed trades)", text_color = color.white)
+    PROP.cell(1, 0, "limit $" + str.tostring(propDDLimit, "#,###"), text_color = color.white)
+    PROP.cell(0, 1, "Peak equity", text_color = color.gray)
+    PROP.cell(1, 1, str.tostring(peakEq, "$#,###"), text_color = color.white)
+    PROP.cell(0, 2, "Max closed drawdown", text_color = color.gray)
+    PROP.cell(1, 2, str.tostring(maxDD, "$#,###"), text_color = color.red)
+    PROP.cell(0, 3, "Lowest buffer left", text_color = color.gray)
+    PROP.cell(1, 3, str.tostring(lowBuf, "$#,###"), text_color = lowBuf > 0 ? color.lime : color.red)
+    PROP.cell(0, 4, "Current buffer left", text_color = color.gray)
+    PROP.cell(1, 4, str.tostring(curBuf, "$#,###"), text_color = curBuf > 0 ? color.lime : color.red)
