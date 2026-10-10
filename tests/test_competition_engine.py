@@ -78,6 +78,23 @@ class ReplayTests(unittest.TestCase):
         self.assertNotIn('partial_time',trades[0])
         self.assertLess(trades[0]['net'],0)
 
+    def test_live_endpoint_does_not_wait_for_future_pivot_confirmation(self):
+        bars,lower,prepared=self.fixture()
+        prepared[1][8]=None
+        _,old,_,_=m.replay(bars,lower,[],m.Rules(),0,len(bars),prepared=prepared)
+        _,live,_,_=m.replay(bars,lower,[],m.Rules(live_endpoint=True),0,len(bars),prepared=prepared)
+        self.assertEqual(old,[])
+        self.assertEqual(len(live),1)
+        self.assertAlmostEqual(live[0]['target'],110)
+        self.assertEqual(live[0]['entry_time'],9300)
+
+    def test_live_endpoint_rejects_unknown_order_of_extension_and_touch(self):
+        bars,lower,prepared=self.fixture()
+        bars[9]=m.f.Candle(8100,99,111,98,101)
+        result,trades,_,_=m.replay(bars,lower,[],m.Rules(live_endpoint=True),0,len(bars),prepared=prepared)
+        self.assertEqual(trades,[])
+        self.assertEqual(result['counts']['ambiguous_endpoint'],1)
+
     def test_signed_funding_accounted_once_and_before_exit(self):
         bars,lower,prepared=self.fixture()
         results=[]

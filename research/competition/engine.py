@@ -18,6 +18,7 @@ class Rules:
     breakout_filter:str='none'
     target_net_r:float=0.0
     split_exit:bool=False
+    live_endpoint:bool=False
 
 
 def net_r_target(entry,stop,atr,d,multiple,cfg):
@@ -150,13 +151,25 @@ def replay(bars,lower,rates,rules,start,end,fee=.0007,slippage_ticks=2,prepared=
                     long=short=False
             if long or short:
                 d=1 if long else -1;origin=sl[0] if long else sh[0];breakout=i;phase=1;count('breakouts')
+                if rules.live_endpoint:endpoint=b.high if d==1 else b.low
                 if long:used_h=sh[1]
                 else:used_l=sl[1]
         if phase and (not (up if d==1 else down) or (b.low<=origin if d==1 else b.high>=origin) or i-breakout>=60):
             if pending:count('cancellations')
             pending=None;phase=0;count('invalidated')
         ev=events[i];a=atrs[i]
-        if phase==1 and ev and ev[0]==d and ev[2]>=breakout:
+        if phase==1 and rules.live_endpoint and i>breakout:
+            span=d*(endpoint-origin)
+            mid=f.round_price(endpoint-d*span*rules.retracement,cfg.tick);deep=f.round_price(endpoint-d*span*.618,cfg.tick)
+            touched=b.low<=mid if d==1 else b.high>=mid
+            extended=b.high>endpoint if d==1 else b.low<endpoint
+            if touched:
+                if extended:phase=0;count('ambiguous_endpoint')
+                elif a and span>=2*a:
+                    phase=2;extreme=b.low if d==1 else b.high;count('impulses')
+                else:phase=0;count('small_impulse')
+            elif extended:endpoint=b.high if d==1 else b.low
+        if phase==1 and not rules.live_endpoint and ev and ev[0]==d and ev[2]>=breakout:
             endpoint=ev[1];span=d*(endpoint-origin)
             mid=f.round_price(endpoint-d*span*rules.retracement,cfg.tick);deep=f.round_price(endpoint-d*span*.618,cfg.tick)
             missed=any(x.low<=mid if d==1 else x.high>=mid for x in bars[ev[2]+1:i])

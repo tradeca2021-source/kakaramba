@@ -1,0 +1,373 @@
+//@version=6
+// Experimental live impulse redesign: favorable known-period research, no fresh validation.
+// Freeze a causal running extreme at the first pullback; skip ambiguous candles.
+strategy("Fibonacci Live Impulse Pullback v1", shorttitle="Fib Live Pullback v1", overlay=true,
+     initial_capital=100000, pyramiding=1, calc_on_every_tick=false,
+     process_orders_on_close=false, use_bar_magnifier=true,
+     default_qty_type=strategy.fixed, commission_type=strategy.commission.percent,
+     commission_value=0.07, slippage=2, margin_long=100, margin_short=100, max_labels_count=200)
+
+G_SETUP = "Breakout and first pullback"
+pivotBars = input.int(5, "Confirmed pivot left/right bars", minval=2, maxval=30, group=G_SETUP)
+trendTF = input.timeframe("240", "Higher trend timeframe", group=G_SETUP)
+trendLength = input.int(50, "Higher timeframe EMA", minval=2, group=G_SETUP)
+setupBars = input.int(60, "Maximum bars after breakout", minval=5, group=G_SETUP)
+triggerBars = input.int(3, "Entry trigger life (bars)", minval=1, group=G_SETUP)
+breakoutQuality = input.string("None", "Breakout quality (experimental)", options=["None", "Displacement", "Fresh origin", "Both"], group=G_SETUP)
+minImpulseATR = input.float(2.0, "Minimum impulse / ATR", minval=0.5, step=0.25, group=G_SETUP)
+atrLength = input.int(14, "ATR length", minval=2, group=G_SETUP)
+allowLong = input.bool(true, "Long entries", group=G_SETUP)
+allowShort = input.bool(true, "Short entries", group=G_SETUP)
+allowTwoCandle = input.bool(true, "Allow next-candle midpoint reclaim", group=G_SETUP)
+showReasons = input.bool(true, "Label rejection decisions", group=G_SETUP)
+showSignals = input.bool(true, "Show breakout/rejection/order markers", group=G_SETUP)
+showPanel = input.bool(true, "Show setup diagnostics", group=G_SETUP)
+G_RISK = "Fixed exits and account risk"
+stopBufferATR = input.float(0.15, "Pullback stop buffer / ATR", minval=0, step=0.05, group=G_RISK)
+protectEntryPrice = input.bool(false, "Cap adverse entry price with stop-limit", group=G_RISK)
+minimumNetR = input.float(1.5, "Minimum net reward / stopped risk", minval=0.1, step=0.1, group=G_RISK)
+riskPercent = input.float(0.25, "Equity risk per entry (%)", minval=0.01, maxval=2, step=0.01, group=G_RISK)
+exposurePercent = input.float(95, "Maximum notional / equity (%)", minval=1, maxval=100, group=G_RISK)
+quantityStep = input.float(0.001, "Quantity step (BTC defaults)", minval=0.000001, group=G_RISK)
+minimumQuantity = input.float(0.001, "Minimum quantity", minval=0.000001, group=G_RISK)
+maximumQuantity = input.float(1, "Maximum quantity", minval=0.000001, group=G_RISK)
+feePercent = input.float(0.06, "Exchange fee per side (%)", minval=0, maxval=5, step=0.01, group=G_RISK)
+executionReservePercent = input.float(0.01, "Additional execution reserve per side (%)", minval=0, maxval=1, step=0.01, group=G_RISK)
+slippageTicks = input.int(2, "Modeled slippage per side (ticks)", minval=0, group=G_RISK)
+gapAllowanceATR = input.float(0.25, "Stop-gap sizing allowance / ATR", minval=0, step=0.05, group=G_RISK)
+
+G_DATES = "Competition/test dates"
+useDates = input.bool(false, "Restrict entry and exit dates", group=G_DATES)
+firstDate = input.time(timestamp("2026-01-01 00:00 +0000"), "Start (inclusive)", group=G_DATES)
+lastDate = input.time(timestamp("2027-01-01 00:00 +0000"), "End (exclusive)", group=G_DATES)
+bool inDates = not useDates or (time >= firstDate and time_close < lastDate)
+if useDates and firstDate >= lastDate
+    runtime.error("Test start must precede test end")
+
+if timeframe.in_seconds(trendTF) <= timeframe.in_seconds()
+    runtime.error("Choose a trend timeframe higher than the chart timeframe")
+// Prior CLOSED HTF values only. lookahead_on is safe with these [1]/[2] offsets.
+[htfClose, htfEMA, priorEMA] = request.security(syminfo.tickerid, trendTF,
+     [close[1], ta.ema(close, trendLength)[1], ta.ema(close, trendLength)[2]], lookahead=barmerge.lookahead_on)
+bool upTrend = htfClose > htfEMA and htfEMA > priorEMA
+bool downTrend = htfClose < htfEMA and htfEMA < priorEMA
+float atr = ta.atr(atrLength)
+float tick = syminfo.mintick
+float ph = ta.pivothigh(high, pivotBars, pivotBars)
+float pl = ta.pivotlow(low, pivotBars, pivotBars)
+// Exclude today's confirmation candle: an earlier touch would be a missed first pullback.
+
+roundPrice(float price) =>
+    math.round(price / syminfo.mintick) * syminfo.mintick
+
+// These functions account for entry/exit fees at their respective prices.
+modeledUnitRisk(float entry, float stop, float atrValue) =>
+    float pv = syminfo.pointvalue
+    (math.abs(entry - stop) + 2.0 * slippageTicks * syminfo.mintick + gapAllowanceATR * atrValue) * pv + (math.abs(entry) + math.abs(stop)) * pv * (feePercent + executionReservePercent) / 100.0
+
+modeledNetReward(float entry, float target) =>
+    float pv = syminfo.pointvalue
+    (math.abs(target - entry) - 2.0 * slippageTicks * syminfo.mintick) * pv - (math.abs(entry) + math.abs(target)) * pv * (feePercent + executionReservePercent) / 100.0
+
+// Worst price consistent with the net-R floor. Point value cancels in the ratio.
+rewardPriceBoundary(float stop, float target, float atrValue, bool isLong) =>
+    float fee = (feePercent + executionReservePercent) / 100.0
+    float r = minimumNetR
+    float slip = 2.0 * slippageTicks * syminfo.mintick
+    float gap = gapAllowanceATR * atrValue
+    float rawLong = ((target + r * stop) * (1.0 - fee) - (1.0 + r) * slip - r * gap) / ((1.0 + r) * (1.0 + fee))
+    float rawShort = ((target + r * stop) * (1.0 + fee) + (1.0 + r) * slip + r * gap) / ((1.0 + r) * (1.0 - fee))
+    isLong ? math.floor(rawLong / syminfo.mintick) * syminfo.mintick : math.ceil(rawShort / syminfo.mintick) * syminfo.mintick
+
+riskQuantity(float entry, float stop, float atrValue, float notionalPrice) =>
+    float equity = math.max(strategy.equity, 0.0)
+    float unitRisk = modeledUnitRisk(entry, stop, atrValue)
+    float riskQty = unitRisk > 0 ? equity * riskPercent / 100.0 / unitRisk : 0.0
+    float exposureQty = notionalPrice > 0 and syminfo.pointvalue > 0 ? equity * exposurePercent / 100.0 / (notionalPrice * syminfo.pointvalue) : 0.0
+    float rawQty = math.min(riskQty, math.min(exposureQty, maximumQuantity))
+    float qty = math.floor(rawQty / quantityStep) * quantityStep
+    qty >= minimumQuantity ? qty : 0.0
+
+var float swingHigh = na
+var float swingLow = na
+var int swingHighBar = na
+var int swingLowBar = na
+var int usedHighBar = na
+var int usedLowBar = na
+// 0 idle, 1 awaiting endpoint confirmation, 2 awaiting first zone touch,
+// 3 first pullback underway, 4 resting breakout-of-rejection stop order.
+var int phase = 0
+var int direction = 0
+var int breakoutBar = na
+var int rejectionBar = na
+var int firstTouchBar = na
+var float origin = na
+var float endpoint = na
+var float midpoint = na
+var float deep = na
+var float pullbackExtreme = na
+var float trigger = na
+var float entryLimit = na
+var float tradeStop = na
+var float tradeTarget = na
+var float plannedQty = na
+var float plannedNetR = na
+var int observedClosed = 0
+var string reason = "Waiting for confirmed structure breakout"
+var int breakouts = 0
+var int qualityRejected = 0
+var int impulses = 0
+var int missedPullbacks = 0
+var int zoneVisits = 0
+var int rejections = 0
+var int payoffSkips = 0
+var int quantitySkips = 0
+var int geometrySkips = 0
+var int submittedOrders = 0
+var int canceledOrders = 0
+var int invalidatedSetups = 0
+var int filledOrders = 0
+var int submittedClosedCount = 0
+var bool fillObserved = false
+bool breakoutSignal = false
+bool qualityRejectedSignal = false
+bool rejectionSignal = false
+bool submittedSignal = false
+var int firstLoaded = time
+// Count a fill once, including entries that fill and exit between calculations.
+if not fillObserved and (strategy.position_size != 0 or strategy.closedtrades > submittedClosedCount)
+    filledOrders += 1
+    fillObserved := true
+
+if strategy.closedtrades > observedClosed
+    observedClosed := strategy.closedtrades
+    phase := 0
+    tradeStop := na
+    tradeTarget := na
+    reason := "Trade closed; waiting for a new breakout"
+if strategy.position_size != 0
+    phase := 0
+    reason := "Position open; fixed stop and swing-extreme target"
+
+// Indicators/pivots warm up before the window; no setup/order starts outside it.
+if useDates and not inDates and phase > 0
+    if phase == 4
+        canceledOrders += 1
+    strategy.cancel("Fib")
+    strategy.cancel("Fib exit")
+    phase := 0
+    reason := "Outside test dates"
+if useDates and time_close >= lastDate
+    strategy.cancel("Fib")
+    if strategy.position_size != 0
+        strategy.close_all(comment="Test window end", immediately=true)
+
+if barstate.isconfirmed
+    // Evaluate breakouts using structure known BEFORE this candle's newly confirmed pivots.
+    bool longBreak = allowLong and upTrend and not na(swingHigh) and not na(swingLow) and close > swingHigh and close[1] <= swingHigh and (na(usedHighBar) or usedHighBar != swingHighBar)
+    bool shortBreak = allowShort and downTrend and not na(swingHigh) and not na(swingLow) and close < swingLow and close[1] >= swingLow and (na(usedLowBar) or usedLowBar != swingLowBar)
+    float breakoutRange = high - low
+    bool longDisplacement = not na(atr) and atr > 0 and breakoutRange > 0 and close - open >= 0.5 * atr and close - low >= 0.75 * breakoutRange and not na(swingHigh) and close - swingHigh >= 0.1 * atr
+    bool shortDisplacement = not na(atr) and atr > 0 and breakoutRange > 0 and open - close >= 0.5 * atr and high - close >= 0.75 * breakoutRange and not na(swingLow) and swingLow - close >= 0.1 * atr
+    bool longFresh = not na(swingLowBar) and bar_index - swingLowBar >= 1 and bar_index - swingLowBar <= 40
+    bool shortFresh = not na(swingHighBar) and bar_index - swingHighBar >= 1 and bar_index - swingHighBar <= 40
+    bool longQualityOK = breakoutQuality == "None" or (breakoutQuality == "Displacement" and longDisplacement) or (breakoutQuality == "Fresh origin" and longFresh) or (breakoutQuality == "Both" and longDisplacement and longFresh)
+    bool shortQualityOK = breakoutQuality == "None" or (breakoutQuality == "Displacement" and shortDisplacement) or (breakoutQuality == "Fresh origin" and shortFresh) or (breakoutQuality == "Both" and shortDisplacement and shortFresh)
+    if inDates and phase == 0 and strategy.position_size == 0 and (longBreak or shortBreak)
+        bool qualityOK = longBreak ? longQualityOK : shortQualityOK
+        if not qualityOK
+            qualityRejected += 1
+            qualityRejectedSignal := true
+            reason := "Breakout rejected by " + breakoutQuality + " filter"
+            longBreak := false
+            shortBreak := false
+    if inDates and phase == 0 and strategy.position_size == 0 and (longBreak or shortBreak)
+        breakouts += 1
+        breakoutSignal := true
+        direction := longBreak ? 1 : -1
+        origin := longBreak ? swingLow : swingHigh
+        breakoutBar := bar_index
+        if longBreak
+            usedHighBar := swingHighBar
+        else
+            usedLowBar := swingLowBar
+        endpoint := direction == 1 ? high : low
+        midpoint := na
+        deep := na
+        tradeStop := na
+        tradeTarget := na
+        trigger := na
+        entryLimit := na
+        plannedQty := na
+        plannedNetR := na
+        phase := 1
+        reason := "Breakout confirmed; tracking closed-bar impulse extreme"
+
+    bool trendOK = direction == 1 ? upTrend : downTrend
+    bool originBroken = direction == 1 ? low <= origin : high >= origin
+    bool expired = phase > 0 and bar_index - breakoutBar >= setupBars
+    if phase > 0 and (not trendOK or originBroken or expired)
+        invalidatedSetups += 1
+        if phase == 4
+            canceledOrders += 1
+        strategy.cancel("Fib")
+        strategy.cancel("Fib exit")
+        phase := 0
+        reason := expired ? "Setup expired" : originBroken ? "Impulse origin broken" : "Higher timeframe trend lost"
+
+    // Simultaneous high/low pivots are skipped because their ordering is unknown.
+    bool highEvent = not na(ph) and na(pl)
+    bool lowEvent = not na(pl) and na(ph)
+    // Evaluate the first retracement using the endpoint known before this candle.
+    // A candle that both extends and retraces has unknown intrabar ordering.
+    if phase == 1 and bar_index > breakoutBar
+        float span = direction * (endpoint - origin)
+        midpoint := roundPrice(endpoint - direction * span * 0.5)
+        deep := roundPrice(endpoint - direction * span * 0.618)
+        bool firstTouch = direction == 1 ? low <= midpoint : high >= midpoint
+        bool endpointExtended = direction == 1 ? high > endpoint : low < endpoint
+        if firstTouch
+            if endpointExtended
+                phase := 0
+                missedPullbacks += 1
+                reason := "Skipped: endpoint extension and retracement in same candle"
+            else if not na(atr) and span >= minImpulseATR * atr
+                impulses += 1
+                phase := 2
+                pullbackExtreme := direction == 1 ? low : high
+                reason := "Prior extreme frozen; first 50–61.8% pullback"
+            else
+                phase := 0
+                reason := "First pullback impulse too small"
+        else if endpointExtended
+            endpoint := direction == 1 ? high : low
+
+    if phase == 4
+        bool stopBroken = direction == 1 ? low <= tradeStop : high >= tradeStop
+        bool targetReached = direction == 1 ? high >= tradeTarget : low <= tradeTarget
+        bool pendingTooDeep = direction == 1 ? close < deep : close > deep
+        bool newExtreme = direction == 1 ? low < pullbackExtreme : high > pullbackExtreme
+        if bar_index - rejectionBar >= triggerBars or stopBroken or targetReached or newExtreme or pendingTooDeep
+            canceledOrders += 1
+            strategy.cancel("Fib")
+            strategy.cancel("Fib exit")
+            phase := 0
+            reason := pendingTooDeep ? "Pending entry canceled: closed beyond 61.8%" : "Unfilled trigger expired or pullback/target changed"
+
+    if phase == 2 or phase == 3
+        bool longSide = direction == 1
+        bool zoneTouched = longSide ? low <= midpoint and high >= deep : high >= midpoint and low <= deep
+        bool tooDeep = longSide ? close < deep : close > deep
+        bool resumed = longSide ? high >= endpoint : low <= endpoint
+        if tooDeep or resumed
+            invalidatedSetups += 1
+            phase := 0
+            reason := tooDeep ? "Closed beyond 61.8%; first pullback rejected" : "Impulse endpoint reached before entry; skip"
+        else
+            if phase == 2 and zoneTouched
+                firstTouchBar := bar_index
+                zoneVisits += 1
+                phase := 3
+                pullbackExtreme := longSide ? low : high
+            if phase == 3
+                pullbackExtreme := longSide ? math.min(pullbackExtreme, low) : math.max(pullbackExtreme, high)
+                bool rejectionEligible = zoneTouched or (allowTwoCandle and bar_index == firstTouchBar + 1)
+                bool rejection = rejectionEligible and (longSide ? close > open and close > midpoint : close < open and close < midpoint)
+                bool leftZone = longSide ? close > midpoint : close < midpoint
+                if rejection
+                    rejections += 1
+                    rejectionSignal := true
+                    trigger := longSide ? math.ceil(high / tick) * tick + tick : math.floor(low / tick) * tick - tick
+                    float stopRaw = pullbackExtreme - direction * math.max(tick, stopBufferATR * atr)
+                    tradeStop := longSide ? math.floor(stopRaw / tick) * tick : math.ceil(stopRaw / tick) * tick
+                    tradeTarget := roundPrice(endpoint)
+                    entryLimit := protectEntryPrice ? rewardPriceBoundary(tradeStop, tradeTarget, atr, longSide) : trigger
+                    float sizingPrice = protectEntryPrice ? entryLimit : trigger
+                    float risk = modeledUnitRisk(sizingPrice, tradeStop, atr)
+                    float reward = modeledNetReward(sizingPrice, tradeTarget)
+                    plannedNetR := risk > 0 ? reward / risk : na
+                    plannedQty := riskQuantity(sizingPrice, tradeStop, atr, math.max(trigger, sizingPrice))
+                    bool geometryOK = longSide ? tradeStop < trigger and trigger < tradeTarget : tradeTarget < trigger and trigger < tradeStop
+                    bool capGeometry = longSide ? trigger <= entryLimit and entryLimit < tradeTarget : tradeTarget < entryLimit and entryLimit <= trigger
+                    bool payoffOK = risk > 0 and reward > 0 and reward + (protectEntryPrice ? syminfo.pointvalue * 0.00000001 : 0.0) >= minimumNetR * risk
+                    if geometryOK and capGeometry and payoffOK and plannedQty > 0
+                        strategy.entry("Fib", longSide ? strategy.long : strategy.short, qty=plannedQty, stop=trigger, limit=protectEntryPrice ? entryLimit : na, comment=longSide ? "First Fib pullback L" : "First Fib pullback S")
+                        strategy.exit("Fib exit", "Fib", stop=tradeStop, limit=tradeTarget, comment_profit="Impulse extreme TP", comment_loss="Pullback SL")
+                        submittedOrders += 1
+                        submittedSignal := true
+                        submittedClosedCount := strategy.closedtrades
+                        fillObserved := false
+                        rejectionBar := bar_index
+                        phase := 4
+                        reason := protectEntryPrice ? "Stop-limit submitted; capped price and fixed bracket" : "Stop entry placed beyond rejection candle; bracket frozen"
+                    else
+                        phase := 0
+                        if not geometryOK or not capGeometry
+                            geometrySkips += 1
+                        else if not payoffOK
+                            payoffSkips += 1
+                        else
+                            quantitySkips += 1
+                        reason := not geometryOK or not capGeometry ? "Rejection skipped: trigger/cap outside valid bracket" : not payoffOK ? "Rejection skipped: net R below " + str.tostring(minimumNetR) : "Rejection skipped: quantity below minimum"
+                    if showReasons
+                        string decision = submittedSignal ? (protectEntryPrice ? "STOP-LIMIT ORDER" : "ORDER") : not geometryOK or not capGeometry ? "SKIP: entry/cap" : not payoffOK ? "SKIP: net R" : "SKIP: quantity"
+                        label.new(bar_index, longSide ? low : high, decision + (protectEntryPrice ? "\nCap modeled R " : "\nTrigger modeled R ") + str.tostring(plannedNetR, "0.00") + " / min " + str.tostring(minimumNetR, "0.00"), style=longSide ? label.style_label_up : label.style_label_down, color=submittedSignal ? color.new(color.green, 20) : color.new(color.red, 20), textcolor=color.white, size=size.small)
+                else if leftZone or bar_index - firstTouchBar >= (allowTwoCandle ? 1 : 0)
+                    phase := 0
+                    invalidatedSetups += 1
+                    reason := "First pullback failed bounded rejection confirmation; skip"
+
+    if highEvent
+        swingHigh := ph
+        swingHighBar := bar_index - pivotBars
+    if lowEvent
+        swingLow := pl
+        swingLowBar := bar_index - pivotBars
+
+if strategy.position_size != 0 and not na(tradeStop) and not na(tradeTarget)
+    strategy.exit("Fib exit", "Fib", stop=tradeStop, limit=tradeTarget, comment_profit="Impulse extreme TP", comment_loss="Pullback SL")
+
+bool visible = phase >= 2 or strategy.position_size != 0
+plot(htfEMA, "Prior closed HTF EMA", color=color.orange)
+midPlot = plot(visible ? midpoint : na, "50%", color=color.yellow, style=plot.style_linebr)
+deepPlot = plot(visible ? deep : na, "61.8%", color=color.yellow, style=plot.style_linebr)
+fill(midPlot, deepPlot, color=color.new(color.yellow, 88), title="First pullback zone")
+plot(phase == 4 ? trigger : na, "Rejection break entry", color=color.blue, style=plot.style_linebr)
+plot(phase == 4 and protectEntryPrice ? entryLimit : na, "Adverse entry price cap", color=color.aqua, style=plot.style_linebr)
+plot(phase == 4 or strategy.position_size != 0 ? tradeStop : na, "Fixed pullback stop", color=color.red, style=plot.style_linebr)
+plot(visible ? endpoint : na, "Impulse-extreme target", color=color.lime, style=plot.style_linebr)
+plotshape(showSignals and breakoutSignal, title="Confirmed breakout", style=shape.diamond, location=location.abovebar, color=color.orange, size=size.tiny, text="BOS")
+plotshape(showSignals and rejectionSignal, title="Rejection evaluated", style=shape.circle, location=location.belowbar, color=color.yellow, size=size.tiny, text="REJ")
+plotshape(showSignals and submittedSignal and direction == 1, title="Buy-stop submitted (not fill)", style=shape.triangleup, location=location.belowbar, color=color.lime, size=size.small, text="ORDER")
+plotshape(showSignals and submittedSignal and direction == -1, title="Sell-stop submitted (not fill)", style=shape.triangledown, location=location.abovebar, color=color.red, size=size.small, text="ORDER")
+plotshape(showSignals and qualityRejectedSignal, title="Breakout quality rejected (not order)", style=shape.xcross, location=location.abovebar, color=color.gray, size=size.tiny, text="FILTER")
+var table panel = table.new(position.top_right, 2, 14, bgcolor=color.new(color.black, 15))
+if barstate.islast and showPanel
+    panel.cell(0, 0, "Fib Live Pullback v1", text_color=color.white)
+    panel.cell(1, 0, not inDates ? "Outside test dates" : reason, text_color=color.yellow)
+    panel.cell(0, 1, protectEntryPrice ? "Cap net R / qty" : "Trigger net R / qty", text_color=color.white)
+    panel.cell(1, 1, str.tostring(plannedNetR, "0.00") + " / " + str.tostring(plannedQty), text_color=color.white)
+    panel.cell(0, 2, "Risk / HTF", text_color=color.white)
+    panel.cell(1, 2, str.tostring(riskPercent) + "% / " + trendTF, text_color=color.white)
+    panel.cell(0, 3, "Chart closed trades", text_color=color.white)
+    panel.cell(1, 3, str.tostring(strategy.closedtrades), text_color=color.white)
+    panel.cell(0, 4, "Breakouts / impulses / zone visits", text_color=color.white)
+    panel.cell(1, 4, str.tostring(breakouts) + " / " + str.tostring(impulses) + " / " + str.tostring(zoneVisits), text_color=color.white)
+    panel.cell(0, 5, "Rejections / orders / fills", text_color=color.white)
+    panel.cell(1, 5, str.tostring(rejections) + " / " + str.tostring(submittedOrders) + " / " + str.tostring(filledOrders), text_color=color.white)
+    panel.cell(0, 6, "Skipped geometry / net R / qty", text_color=color.white)
+    panel.cell(1, 6, str.tostring(geometrySkips) + " / " + str.tostring(payoffSkips) + " / " + str.tostring(quantitySkips), text_color=color.white)
+    panel.cell(0, 7, "Ambiguous / invalid / canceled", text_color=color.white)
+    panel.cell(1, 7, str.tostring(missedPullbacks) + " / " + str.tostring(invalidatedSetups) + " / " + str.tostring(canceledOrders), text_color=color.white)
+    panel.cell(0, 8, "Phase / active side", text_color=color.white)
+    panel.cell(1, 8, str.tostring(phase) + " / " + (phase == 0 ? "none" : direction == 1 ? "long" : "short"), text_color=color.white)
+    panel.cell(0, 9, "Chart net / PF", text_color=color.white)
+    panel.cell(1, 9, str.tostring(strategy.netprofit, "0.00") + " / " + (strategy.grossloss > 0 ? str.tostring(strategy.grossprofit / strategy.grossloss, "0.00") : "n/a"), text_color=color.white)
+    panel.cell(0, 10, "Modeled fee + reserve / side", text_color=color.white)
+    panel.cell(1, 10, str.tostring(feePercent + executionReservePercent, "0.000") + "%; match Properties; funding excluded", text_color=color.white)
+    panel.cell(0, 11, "Test window / loaded start UTC", text_color=color.white)
+    panel.cell(1, 11, (useDates ? str.format_time(firstDate, "yyyy-MM-dd", "UTC") + " to " + str.format_time(lastDate, "yyyy-MM-dd", "UTC") : "All loaded bars") + " | " + str.format_time(firstLoaded, "yyyy-MM-dd", "UTC"), text_color=color.white)
+    panel.cell(0, 12, "Entry mode / cap", text_color=color.white)
+    panel.cell(1, 12, (protectEntryPrice ? "Stop-limit / " : "Stop / ") + (phase == 4 ? str.tostring(entryLimit, format.mintick) : "n/a"), text_color=color.white)
+    panel.cell(0, 13, "Quality mode / rejected crosses", text_color=color.white)
+    panel.cell(1, 13, breakoutQuality + " / " + str.tostring(qualityRejected), text_color=color.white)

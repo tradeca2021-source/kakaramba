@@ -124,3 +124,8 @@ Targets are frozen at submission from the intended entry trigger, stop, fees, sl
 None of these exits added winners. The smaller targets reduced the size of profitable trades. All candidates still lost in 2025 H1/H2 and took zero trades in 2026 Q3. The original Pine exit remains unchanged; no new profitability claim or default promotion follows from this exploratory comparison. Details and trade-level cashflows are in `profit_target_audit.json` and `*_target_period*_trades.csv`. Native Pine execution and Bitunix venue parity remain unverified.
 
 Reproduce with `python research/competition/profit_target_study.py --output /tmp/fib-target-replay`.
+
+
+## Live impulse redesign
+
+See [the candidate documentation](../../../Fibonacci_Live_Impulse_Pullback.md) and `live_impulse_audit.json` for all four predeclared candidates. The separate `Fibonacci_Live_Impulse_Pullback.pine` freezes a prior closed-bar running extreme on first pullback instead of waiting for endpoint pivot confirmation. Live-50 produced 38 positions / 16 winners / +$3,932.89 versus control 23 / 11 / +$2,957.97, but lower win rate and profit factor. Several periods still lose; this is known-period exploratory evidence. The 38.2% and extended-target alternatives lost money and are not shipped as defaults. `live_impulse_stress.json` records cost sensitivity. The original Pine strategy is preserved.
