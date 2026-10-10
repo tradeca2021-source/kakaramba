@@ -1,0 +1,101 @@
+{
+  "config": {
+    "pivot": 5,
+    "impulse_atr": 2.0,
+    "setup_life": 60,
+    "atr_length": 14,
+    "stop_buffer": 0.15,
+    "minimum_net_r": 1.5,
+    "risk_percent": 0.25,
+    "exposure_percent": 95,
+    "quantity_step": 0.001,
+    "minimum_quantity": 0.001,
+    "maximum_quantity": 1,
+    "fee": 0.0006,
+    "tick": 0.1,
+    "slippage_ticks": 2,
+    "gap_atr": 0.25,
+    "initial_equity": 100000
+  },
+  "htf_seconds": 14400,
+  "htf_ema_length": 50,
+  "trigger_life": 3,
+  "two_candle_window": "touch candle and next candle only",
+  "archive_sha256": {
+    "BTCUSDT-15m-2026-01.zip": "065fc8cf21f51ad6bd043fa670ba2dbc8c6030efd5dff63d5d4a9d99e0b88d0b",
+    "BTCUSDT-15m-2026-02.zip": "983c066f0cf0171466e89d7596433f5ac717ea8c805fe5b650a83b3176cd92c1",
+    "BTCUSDT-15m-2026-03.zip": "ea25e84ddffdcc8b7ba68fb47363daee6a9ef53941f152c9ebf6d4e165d32bf8",
+    "BTCUSDT-15m-2026-04.zip": "0bc151133aa47be76f535539e25c04970bd6d0afd54e532951638dc8330fcc58",
+    "BTCUSDT-15m-2026-05.zip": "1c0a865f62ddca9890f5d7bbe901b7261a3818785594d960f5fce36ee7ce81f5",
+    "BTCUSDT-15m-2026-06.zip": "54369ae74f8122e0d3c8152807f78ec3ced435a8b0ab59c5efcea2cbad878857",
+    "BTCUSDT-15m-2026-07.zip": "10df439d8404a31fc55ed91fe0169b79db3fa3e7a8c83bc2eb704004eadea1c2",
+    "BTCUSDT-15m-2026-08.zip": "0702d68a42de591fb39929d10327f1258ce1d59b9d81158c07e412029eb36306",
+    "BTCUSDT-15m-2026-09.zip": "e879fa6903fd905201bd1f59e456773638cdf8c13848da79331cee89b0046964"
+  },
+  "candles": 26208,
+  "period": "2026-01 through 2026-09; previously inspected research data",
+  "results": {
+    "v2_single_candle": {
+      "net": 1351.8279689399642,
+      "trades": 11,
+      "profit_factor": 2.0326504758127197,
+      "counts": {
+        "breakouts": 553,
+        "missed_first": 179,
+        "impulses": 302,
+        "zone_visits": 150,
+        "rejections": 62,
+        "payoff_skips": 48,
+        "invalidated": 247,
+        "no_rejection": 65,
+        "orders": 14,
+        "fills": 11,
+        "cancellations": 3
+      },
+      "net_without_best": 581.4144525399851,
+      "win_rate": 0.45454545454545453,
+      "monthly_realized_net": {
+        "2026-01": -6.613176360002598,
+        "2026-02": 1085.319969499989,
+        "2026-03": -215.67380450000337,
+        "2026-05": 312.33643999998833,
+        "2026-06": 614.1081377200031,
+        "2026-07": -215.93350589999318,
+        "2026-09": -221.71609152000204
+      }
+    },
+    "v3_two_candle": {
+      "net": 2009.7388567199523,
+      "trades": 8,
+      "profit_factor": 4.058177148220374,
+      "counts": {
+        "breakouts": 553,
+        "missed_first": 179,
+        "impulses": 302,
+        "zone_visits": 150,
+        "no_rejection": 91,
+        "rejections": 46,
+        "payoff_skips": 35,
+        "invalidated": 237,
+        "orders": 11,
+        "fills": 8,
+        "cancellations": 3
+      },
+      "net_without_best": 1237.0255984799824,
+      "win_rate": 0.625,
+      "monthly_realized_net": {
+        "2026-01": 215.3771251599983,
+        "2026-02": 1088.6300620399888,
+        "2026-05": 312.33643999998833,
+        "2026-06": 616.3910676000032,
+        "2026-09": -222.99583808000204
+      }
+    }
+  },
+  "limitations": [
+    "Approximate Pine execution; no native TradingView parity claim.",
+    "Stop-first if stop and target touched; on entry bar entire candle is checked conservatively even if low/high preceded entry.",
+    "No funding or spread. Binance proxy, not Bitunix.",
+    "Not untouched validation; no parameter selection from this comparison."
+  ]
+}

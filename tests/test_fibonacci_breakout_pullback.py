@@ -8,8 +8,8 @@ SOURCE=(Path(__file__).resolve().parents[1]/'Fibonacci_Breakout_First_Pullback.p
 def predicate(name, **values):
     expr=re.search(r'bool '+name+r' = (.+)',SOURCE).group(1)
     prefix = ''
-    if expr.startswith('zoneTouched and ('):
-        prefix = 'zoneTouched and '
+    if expr.startswith('rejectionEligible and ('):
+        prefix = 'rejectionEligible and '
         expr = expr[len(prefix)+1:-1]
     if ' ? ' in expr:
         cond,rest=expr.split(' ? ',1)
@@ -27,11 +27,17 @@ class EntryBoundaries(unittest.TestCase):
 
     def test_rejection_requires_directional_body_and_midpoint_reclaim(self):
         for longSide in (True,False):
-            good=dict(longSide=longSide,zoneTouched=True,open=100,close=101 if longSide else 99,midpoint=100)
+            good=dict(longSide=longSide,rejectionEligible=True,open=100,close=101 if longSide else 99,midpoint=100)
             self.assertTrue(predicate('rejection',**good))
-            self.assertFalse(predicate('rejection',**(good|{'zoneTouched':False})))
+            self.assertFalse(predicate('rejection',**(good|{'rejectionEligible':False})))
             self.assertFalse(predicate('rejection',**(good|{'close':100})))
             self.assertFalse(predicate('rejection',**(good|{'open':102 if longSide else 98})))
+
+    def test_two_candle_confirmation_is_bounded(self):
+        for delay in (0,1,2):
+            self.assertEqual(predicate('rejectionEligible',zoneTouched=False,allowTwoCandle=True,bar_index=10+delay,firstTouchBar=10),delay == 1)
+            self.assertFalse(predicate('rejectionEligible',zoneTouched=False,allowTwoCandle=False,bar_index=10+delay,firstTouchBar=10))
+        self.assertTrue(predicate('rejectionEligible',zoneTouched=True,allowTwoCandle=False,bar_index=10,firstTouchBar=10))
 
     def test_close_at_deep_is_valid_beyond_is_invalid(self):
         for longSide in (True,False):

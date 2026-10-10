@@ -1,10 +1,10 @@
 //@version=6
 // Experimental hypothesis; not optimized or validated for profitability.
-strategy("Fibonacci Breakout First Pullback v2", shorttitle="Fib BOS Pullback v2", overlay=true,
+strategy("Fibonacci Breakout First Pullback v3", shorttitle="Fib BOS Pullback v3", overlay=true,
      initial_capital=100000, pyramiding=1, calc_on_every_tick=false,
      process_orders_on_close=false, use_bar_magnifier=true,
      default_qty_type=strategy.fixed, commission_type=strategy.commission.percent,
-     commission_value=0.06, slippage=2, margin_long=100, margin_short=100)
+     commission_value=0.06, slippage=2, margin_long=100, margin_short=100, max_labels_count=200)
 
 G_SETUP = "Breakout and first pullback"
 pivotBars = input.int(5, "Confirmed pivot left/right bars", minval=2, maxval=30, group=G_SETUP)
@@ -16,6 +16,8 @@ minImpulseATR = input.float(2.0, "Minimum impulse / ATR", minval=0.5, step=0.25,
 atrLength = input.int(14, "ATR length", minval=2, group=G_SETUP)
 allowLong = input.bool(true, "Long entries", group=G_SETUP)
 allowShort = input.bool(true, "Short entries", group=G_SETUP)
+allowTwoCandle = input.bool(true, "Allow next-candle midpoint reclaim", group=G_SETUP)
+showReasons = input.bool(true, "Label rejection decisions", group=G_SETUP)
 showSignals = input.bool(true, "Show breakout/rejection/order markers", group=G_SETUP)
 showPanel = input.bool(true, "Show setup diagnostics", group=G_SETUP)
 G_RISK = "Fixed exits and account risk"
@@ -78,6 +80,7 @@ var int phase = 0
 var int direction = 0
 var int breakoutBar = na
 var int rejectionBar = na
+var int firstTouchBar = na
 var float origin = na
 var float endpoint = na
 var float midpoint = na
@@ -202,12 +205,14 @@ if barstate.isconfirmed
             reason := tooDeep ? "Closed beyond 61.8%; first pullback rejected" : "Impulse endpoint reached before entry; skip"
         else
             if phase == 2 and zoneTouched
+                firstTouchBar := bar_index
                 zoneVisits += 1
                 phase := 3
                 pullbackExtreme := longSide ? low : high
             if phase == 3
                 pullbackExtreme := longSide ? math.min(pullbackExtreme, low) : math.max(pullbackExtreme, high)
-                bool rejection = zoneTouched and (longSide ? close > open and close > midpoint : close < open and close < midpoint)
+                bool rejectionEligible = zoneTouched or (allowTwoCandle and bar_index == firstTouchBar + 1)
+                bool rejection = rejectionEligible and (longSide ? close > open and close > midpoint : close < open and close < midpoint)
                 bool leftZone = longSide ? close > midpoint : close < midpoint
                 if rejection
                     rejections += 1
@@ -240,10 +245,13 @@ if barstate.isconfirmed
                         else
                             quantitySkips += 1
                         reason := not geometryOK ? "Rejection skipped: trigger outside stop/target" : risk <= 0 or reward <= 0 or reward < minimumNetR * risk ? "Rejection skipped: net R below " + str.tostring(minimumNetR) : "Rejection skipped: quantity below minimum"
-                else if leftZone
+                    if showReasons
+                        string decision = submittedSignal ? "ORDER" : not geometryOK ? "SKIP: geometry" : risk <= 0 or reward <= 0 or reward < minimumNetR * risk ? "SKIP: net R" : "SKIP: quantity"
+                        label.new(bar_index, longSide ? low : high, decision + "\nNet R " + str.tostring(plannedNetR, "0.00") + " / min " + str.tostring(minimumNetR, "0.00"), style=longSide ? label.style_label_up : label.style_label_down, color=submittedSignal ? color.new(color.green, 20) : color.new(color.red, 20), textcolor=color.white, size=size.small)
+                else if leftZone or bar_index - firstTouchBar >= (allowTwoCandle ? 1 : 0)
                     phase := 0
                     invalidatedSetups += 1
-                    reason := "First pullback bounced without a rejection; skip"
+                    reason := "First pullback failed bounded rejection confirmation; skip"
 
     if highEvent
         swingHigh := ph
@@ -269,7 +277,7 @@ plotshape(showSignals and submittedSignal and direction == 1, title="Buy-stop su
 plotshape(showSignals and submittedSignal and direction == -1, title="Sell-stop submitted (not fill)", style=shape.triangledown, location=location.abovebar, color=color.red, size=size.small, text="ORDER")
 var table panel = table.new(position.top_right, 2, 9, bgcolor=color.new(color.black, 15))
 if barstate.islast and showPanel
-    panel.cell(0, 0, "Fib BOS Pullback v2", text_color=color.white)
+    panel.cell(0, 0, "Fib BOS Pullback v3", text_color=color.white)
     panel.cell(1, 0, reason, text_color=color.yellow)
     panel.cell(0, 1, "Planned net R / qty", text_color=color.white)
     panel.cell(1, 1, str.tostring(plannedNetR, "0.00") + " / " + str.tostring(plannedQty), text_color=color.white)

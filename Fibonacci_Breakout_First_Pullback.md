@@ -30,3 +30,19 @@ Trading filters, 1.5 net R, risk sizing and target remain unchanged. The diagnos
 Optional BOS, REJ and ORDER markers show breakout confirmation, rejection evaluation and order submission. REJ may fail the payoff gate; ORDER is not a fill. TradingView's strategy trade markers identify actual fills. Yellow Fibonacci bands alone indicate a setup. If orders are zero, the stage and skip counts identify the binding rule before considering any parameter changes.
 
 Six local checks pass, including a regression where an unfilled order is canceled solely by closing beyond the deep boundary. These checks do not establish native Pine compilation or profitability.
+
+## v3: bounded two-candle reclaim and chart decisions
+
+By default, the first zone-touch candle or the immediately following candle can supply the directional close back across 50%. The following candle does not need to touch the zone again. The pullback extreme includes both candles, so the fixed stop remains outside the observed pullback. Failure to reclaim by the second candle consumes the setup. Turn off “Allow next-candle midpoint reclaim” to require confirmation on the first touch candle; this is not a restoration of v2's potentially longer waiting period.
+
+Decision labels show ORDER or the specific rejection failure and calculated net R. Toggle “Label rejection decisions” to hide them. Fees, net-R minimum, quantity caps and first-pullback discipline remain intact.
+
+A full BOS-specific approximate execution audit is available in `research/results/bos_v3_execution_audit/`. On previously inspected January–September 2026 Binance data, v2 produced 11 trades / $1,351.83 net; v3 produced 8 trades / $2,009.74 net, starting with $100,000. The bounded confirmation window removes some later entries, so this is not just a relaxation that forces more trades. Neither result constitutes new untouched validation. Eight trades cannot establish a reliable edge; v3's July–September realized result was negative and it traded only once in those months. Do not interpret the full-period profit as evidence of consistent monthly profitability.
+
+The model uses prior closed 4-hour candles and resting stop-entry orders eligible after rejection. Stops and targets are frozen. It conservatively checks the whole entry candle for stop/target touches, even if the extreme preceded entry, and omits spread/funding. Native TradingView fills may differ. Nine local checks cover entry predicates, bounded two-candle eligibility, pending invalidation, causal HTF values and next-bar stop-entry timing.
+
+```sh
+python3 -B tests/test_fibonacci_breakout_pullback.py
+python3 -B tests/test_breakout_execution.py
+python3 -B research/breakout_pullback_backtest.py
+```
