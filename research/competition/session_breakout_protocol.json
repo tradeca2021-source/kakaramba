@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "status": "Exploratory continuation after failed daily and continuous-channel designs; all historical periods were inspected before this experiment",
+  "hypothesis": "Concentrating signals around the New York cash opening range may identify directional intraday movement while avoiding continuous chop and prolonged funding exposure",
+  "budget": "One session hypothesis, exactly two entry routes: direct close breakout and first boundary-rejection retest. No time, target, trend or range parameter search in this experiment.",
+  "clock": {
+    "timezone": "America/New_York",
+    "eligible_days": "Monday-Friday by New York calendar; not an exchange holiday calendar",
+    "opening_range": "09:30 through 10:00; exactly two complete 15m bars",
+    "entry_signal_bars": "Bars opening at or after10:00 and before13:00; orders fill next open, at or before13:00",
+    "flat": "16:00 next open after the15:45 bar closes; no overnight holding",
+    "dst": "IANA timezone conversion; no fixed UTC offset"
+  },
+  "shared_rules": {
+    "chart_seconds": 900,
+    "range_filter": "Opening range width between1 and4 times ATR14 at the10:00 range close, inclusive",
+    "trend": "Previous completed4h close above EMA50 with rising EMA for long, below EMA50 with falling EMA for short",
+    "one_setup": "First trend-aligned closing range breakout consumes that day's setup, including a later payoff skip or expired retest",
+    "long_stop": "Opening range low minus0.25 frozen opening-range ATR, rounded down",
+    "short_stop": "Opening range high plus0.25 frozen opening-range ATR, rounded up",
+    "target": "Fixed3 times the signal-close-to-stop distance from signal close, rounded conservatively",
+    "payoff_gate": "At least1.5 net modeled reward/stopped risk including fees, slip and0.25ATR gap reserve",
+    "risk_percent": 0.25,
+    "exposure_percent": 95,
+    "maximum_quantity": 1,
+    "quantity_step": 0.001,
+    "minimum_quantity": 0.001,
+    "pyramiding": false
+  },
+  "candidates": [
+    {"name": "ny_or_direct", "entry": "Closed15m crossing beyond the completed opening range in4h trend direction; market next5m open"},
+    {"name": "ny_or_retest", "entry": "After the same first breakout, wait up to4 later15m bars for the first touch of the broken boundary. Require directional candle and close outside boundary, no farther than half the range width beyond it. First touch failing rejection, opposite range-stop breach, timeout or end of entry window consumes the setup. Entry market next5m open; breakout candle cannot also be its retest."}
+  ],
+  "execution": {
+    "initial_equity": 100000,
+    "fee_per_side": 0.0007,
+    "slippage_ticks": 2,
+    "tick": 0.1,
+    "funding": "Actual Binance rates applied before open exits to already carried quantity, with5m opening price as mark proxy",
+    "bracket_path": "Stop-first on ambiguous5m touches; protective stop active on entry subbar; adverse gaps slip; limit targets do not get favorable improvement",
+    "entry_gap": "Submission sizing and bracket freeze; actual-fill risk/geometry diagnostics do not retroactively undo fills",
+    "capital": "Independent continuous100k account for each multi-year comparison; no within-period resets"
+  },
+  "periods": [
+    {"name": "older", "archives": ["2020-01", "2022-12"], "evaluation": ["2021-01-01", "2023-01-01"], "baseline_net": -737.2561102442269, "minimum_positive_half_years": 3},
+    {"name": "recent", "archives": ["2023-01", "2026-09"], "evaluation": ["2024-01-01", "2026-10-01"], "baseline_net": 3955.553286673603, "minimum_positive_half_years": 4}
+  ],
+  "gates": {
+    "minimum_positions_each_period": 20,
+    "minimum_positions_total": 70,
+    "positive_net_each_period": true,
+    "net_exceeds_unchanged_baseline_each_period": true,
+    "profit_factor_each_period": 1.2,
+    "net_without_best_positive_each_period": true,
+    "maximum_5m_close_drawdown_fraction": 0.05,
+    "higher_fee_and_slippage_net_positive_each_period": true
+  },
+  "stresses": [
+    {"name": "fee_0.10_percent", "fee": 0.001, "slippage_ticks": 2},
+    {"name": "slippage_20_ticks", "fee": 0.0007, "slippage_ticks": 20}
+  ],
+  "selection": "Among candidates passing all criteria, choose largest minimum across the two periods of net divided by5m-close drawdown",
+  "publication": "Publish both routes and all stresses. Passing qualifies only for an experimental Pine prototype, not an independently verified profitable strategy. No weakened gates or retrospectively optimized session settings."
+}
