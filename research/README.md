@@ -2,7 +2,7 @@
 
 `fibonacci_backtest.py` compares the standalone `Fibonacci_Trend_Pullback.pine` rules with three predefined alternatives: swing-extreme target, 161.8% extension target, and rejection plus a close through the previous bar. It uses only the development period to select a candidate, then evaluates the baseline and selected candidate on the later validation period. If no development candidate meets the minimum sample (20 trades), positive net return and 1.1 profit factor, it reports no selection.
 
-**No historical profitability results have been produced yet.** The cloud environment currently blocks the market-data domains. Synthetic regression tests verify execution behavior; they do not validate a trading edge. The existing Pine strategy is unchanged.
+**Historical comparison completed:** both the baseline and development-selected 161.8% target lost money on July–September 2026 validation. No Pine revision was promoted. See [recorded results](results/2026-01_to_2026-09/README.md). Synthetic regression tests verify execution behavior; they do not establish a trading edge.
 
 ## Run with real candles
 
