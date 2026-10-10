@@ -95,6 +95,15 @@ class ReplayTests(unittest.TestCase):
         self.assertEqual(trades,[])
         self.assertEqual(result['counts']['ambiguous_endpoint'],1)
 
+    def test_tunable_reward_gate_uses_rules_without_changing_risk(self):
+        bars,lower,prepared=self.fixture()
+        low,low_trades,_,_=m.replay(bars,lower,[],m.Rules(live_endpoint=True,minimum_net_r=1.25),0,len(bars),prepared=prepared)
+        high,high_trades,_,_=m.replay(bars,lower,[],m.Rules(live_endpoint=True,minimum_net_r=3),0,len(bars),prepared=prepared)
+        self.assertEqual(len(low_trades),1)
+        self.assertEqual(high_trades,[])
+        self.assertGreater(high['counts']['payoff_skips'],0)
+        self.assertLessEqual(low_trades[0]['quantity'],1)
+
     def test_signed_funding_accounted_once_and_before_exit(self):
         bars,lower,prepared=self.fixture()
         results=[]

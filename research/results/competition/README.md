@@ -129,3 +129,8 @@ Reproduce with `python research/competition/profit_target_study.py --output /tmp
 ## Live impulse redesign
 
 See [the candidate documentation](../../../Fibonacci_Live_Impulse_Pullback.md) and `live_impulse_audit.json` for all four predeclared candidates. The separate `Fibonacci_Live_Impulse_Pullback.pine` freezes a prior closed-bar running extreme on first pullback instead of waiting for endpoint pivot confirmation. Live-50 produced 38 positions / 16 winners / +$3,932.89 versus control 23 / 11 / +$2,957.97, but lower win rate and profit factor. Several periods still lose; this is known-period exploratory evidence. The 38.2% and extended-target alternatives lost money and are not shipped as defaults. `live_impulse_stress.json` records cost sensitivity. The original Pine strategy is preserved.
+
+
+## Settings tuning
+
+[TUNING.md](TUNING.md) records nine predeclared configurations, chronological development selection and confirmation. Three-bar pivots won the 2024 comparison but failed 2025 and 2026 checks. Keep the live strategy defaults (five-bar pivots, 4h EMA50, minimum net R1.5, no quality filter). The separate Pivot3 Research Pine file is a rejected research candidate, not an upgrade.

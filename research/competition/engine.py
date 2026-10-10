@@ -19,6 +19,8 @@ class Rules:
     target_net_r:float=0.0
     split_exit:bool=False
     live_endpoint:bool=False
+    trend_length:int=50
+    minimum_net_r:float=1.5
 
 
 def net_r_target(entry,stop,atr,d,multiple,cfg):
@@ -72,9 +74,9 @@ def breakout_quality(bar,atr,level,origin_bar,index,d,mode):
 def replay(bars,lower,rates,rules,start,end,fee=.0007,slippage_ticks=2,prepared=None):
     if rules.entry not in ('stop','stop_limit','market','limit_mid','limit_cost') or not 0<=start<end<=len(bars):raise ValueError('Invalid rules/period')
     if rules.target_net_r and rules.target_net_r<1.5:raise ValueError('Target must preserve minimum net reward')
-    cfg=replace(f.Config(),pivot=rules.pivot,fee=fee,slippage_ticks=slippage_ticks,minimum_net_r=1.5,setup_life=60)
+    cfg=replace(f.Config(),pivot=rules.pivot,fee=fee,slippage_ticks=slippage_ticks,minimum_net_r=rules.minimum_net_r,setup_life=60)
     if prepared is None:
-        _,_,atrs,events=f.features(bars,cfg);trends=closed_htf_trends(bars)
+        _,_,atrs,events=f.features(bars,cfg);trends=closed_htf_trends(bars,length=rules.trend_length)
     else:atrs,events,trends=prepared
     funding=dict(rates)
     balance=cfg.initial_equity;peak=balance;drawdown=0;subpeak=balance;subdrawdown=0
@@ -215,7 +217,7 @@ def replay(bars,lower,rates,rules,start,end,fee=.0007,slippage_ticks=2,prepared=
                         geometry=stop<trigger<target if d==1 else target<trigger<stop
                         if rules.entry=='stop_limit':geometry=geometry and (trigger<=cap<target if d==1 else target<cap<=trigger)
                         if rules.entry in ('limit_mid','limit_cost'):geometry=geometry and (deep<=trigger<=mid if d==1 else mid<=trigger<=deep)
-                        if geometry and reward>0 and (reward>=1.5*risk or (rules.entry=='stop_limit' and reward+1e-8>=1.5*risk)) and qty>0 and i<end-1:
+                        if geometry and reward>0 and (reward>=cfg.minimum_net_r*risk or (rules.entry=='stop_limit' and reward+1e-8>=cfg.minimum_net_r*risk)) and qty>0 and i<end-1:
                             pending=dict(trigger=trigger,stop=stop,target=target,qty=qty,mode=rules.entry,cap=cap,activated=False)
                             if rules.split_exit:
                                 first_qty=math.floor(qty/2/cfg.quantity_step)*cfg.quantity_step
@@ -226,7 +228,7 @@ def replay(bars,lower,rates,rules,start,end,fee=.0007,slippage_ticks=2,prepared=
                                 else:count('unsplittable_quantity')
                             rejection=i;phase=4;count('orders')
                         else:
-                            count('geometry_skips' if not geometry else 'payoff_skips' if reward<1.5*risk or reward<=0 else 'quantity_skips');phase=0
+                            count('geometry_skips' if not geometry else 'payoff_skips' if reward<cfg.minimum_net_r*risk or reward<=0 else 'quantity_skips');phase=0
                     elif left or i-touch>=1:phase=0;count('no_rejection')
         if ev:
             if ev[0]==1:sh=(ev[1],ev[2])
