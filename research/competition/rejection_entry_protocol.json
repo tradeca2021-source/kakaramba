@@ -1,0 +1,9 @@
+{
+ "status":"Known-period exploratory redesign; no independent validation",
+ "hypothesis":"Confirming above an entire rejection wick can be late. Compare one-tick confirmation beyond the rejection close; separately compare the rejection candle extreme stop with the full two-candle pullback extreme stop.",
+ "candidates":["wick trigger / full pullback stop control","close trigger / full pullback stop","wick trigger / rejection candle stop","close trigger / rejection candle stop"],
+ "causality":"After a closed directional midpoint rejection, submit resting stop one tick beyond chosen trigger. Never same-bar entry. Rejection stop uses current closed candle low/high plus existing0.15ATR buffer, without updating afterward. First touch and immediately next candle remain the only rejection window.",
+ "unchanged":"Live endpoint, pivot5, prior closed4h EMA50, 50-61.8 zone, swing target, 1.5 netR, 0.25% risk,95% cap,max1BTC,0.07% per side fee,reserve and two tick slippage, actual funding; five-minute stop-first execution",
+ "evaluation":"Same seven previously inspected independent account periods2024H1/H2,2025H1/H2,2026Q1/Q2/Q3; compare all modes, no grid or retuning",
+ "qualification":"Optional experimental candidate only if aggregate net>control, >=4 profitable periods, net excluding largest winner>0 and worst period5m closing drawdown<=2x control. Fee0.10% and slippage20tick sensitivity for qualifiers. Preserve original baseline until fresh validation. Publish failed candidates and period concentration."
+}
