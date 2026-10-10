@@ -40,3 +40,5 @@ Higher-cost checks on 2025–2026: at 0.10% per-side fees, baseline/pivot3 net w
 `python research/competition/tuning_study.py development --output /tmp/fib-tuning`
 
 Then freeze/review the generated selection before `python research/competition/tuning_study.py confirmation --output /tmp/fib-tuning`. Reports include all candidate development statistics, period-level confirmation, cost sensitivity, archive hashes and data discrepancies. Trade exports are `*_tuning_*_trades.csv`. Selection is deterministic; no later-period reselection.
+
+The rejected Pivot3 Pine file has been archived at `research/rejected/Fibonacci_Live_Impulse_Pullback_Pivot3_Research.pine`; the active baseline remains in the repository root.

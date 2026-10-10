@@ -59,3 +59,8 @@ One-tick confirmation beyond the rejection close was compared with confirmation 
 | Close / rejection candle |82|28.0%|1,849.22|1.153|2,008.88|
 
 The narrower rejection stop increases aggregate net by$225.62 and winners from16 to18, but only3 periods are positive versus4 for the control, profit factor falls and worst period drawdown rises25.4%. It fails the predeclared consistency requirement and is not promoted. No candidate qualified, so the conditional cost-sensitivity stage was not run. The earlier trigger variants perform worse. Do not describe the narrow stop as a proven better strategy based on the total alone. Protocol and all period statistics/trades are in `research/competition/rejection_entry_protocol.json` and `research/results/competition/rejection_entry_audit.json`. Reproduce using `python research/competition/rejection_entry_study.py --output /tmp/fib-rejection-audit`.
+
+
+## Structural follow-up and archived research file
+
+[STRUCTURAL_RESEARCH.md](research/results/competition/STRUCTURAL_RESEARCH.md) reports17 additional alternatives: exhaustion guards,5m agreement,failed-break reversals,retests,4h setup/15m execution and one-account dual-clock arbitration. None qualified; baseline trading logic remains unchanged. The rejected Pivot3 Pine artifact is now at `research/rejected/Fibonacci_Live_Impulse_Pullback_Pivot3_Research.pine`. Its visible REJECTED label distinguishes it from this active file.

@@ -26,6 +26,6 @@ class ProfileTests(unittest.TestCase):
     def test_baseline_chart_contract_and_rejected_artifact_are_visible(self):
         self.assertIn('if useBaseline and timeframe.in_seconds() != 900',SOURCE)
         self.assertIn('BASELINE BTC 15m',SOURCE)
-        rejected=(ROOT/'Fibonacci_Live_Impulse_Pullback_Pivot3_Research.pine').read_text()
+        rejected=(ROOT/'research/rejected/Fibonacci_Live_Impulse_Pullback_Pivot3_Research.pine').read_text()
         self.assertIn('shorttitle="REJECTED Fib Pivot3"',rejected)
         self.assertIn('REJECTED TUNING CANDIDATE',rejected)

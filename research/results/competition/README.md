@@ -144,3 +144,8 @@ See [the candidate documentation](../../../Fibonacci_Live_Impulse_Pullback.md) a
 ## Rejection timing redesign and baseline profile
 
 `rejection_entry_audit.json` records four predeclared trigger/stop combinations. The rejection-candle stop modestly improves aggregate net but fails the minimum four positive-period requirement; no change is promoted. The active Pine v3 adds an explicit baseline/custom profile to prevent stale settings from silently changing the measured configuration. The rejected Pivot3 artifact is visibly labeled. See [the repository entry point](../../../README.md).
+
+
+## Structural redesign research
+
+[STRUCTURAL_RESEARCH.md](STRUCTURAL_RESEARCH.md) reports17 further alternatives across six predeclared comparisons (the dual-clock combination is explicitly informed by preceding results). None qualifies. Failed designs are isolated in `experimental_engine.py`; baseline engine and Pine trading rules stay unchanged. The rejected Pivot3 Pine file is archived to reduce selection mistakes.

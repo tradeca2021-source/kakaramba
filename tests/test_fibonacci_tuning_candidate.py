@@ -7,7 +7,7 @@ import test_fibonacci_live_impulse as live
 import test_fibonacci_breakout_pullback as base
 
 ROOT=Path(__file__).resolve().parents[1]
-SOURCE=(ROOT/'Fibonacci_Live_Impulse_Pullback_Pivot3_Research.pine').read_text()
+SOURCE=(ROOT/'research/rejected/Fibonacci_Live_Impulse_Pullback_Pivot3_Research.pine').read_text()
 
 class TunedPineBoundaries(live.LivePineBoundaries):
     def setUp(self):
