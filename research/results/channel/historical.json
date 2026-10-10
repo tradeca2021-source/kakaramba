@@ -1,0 +1,726 @@
+{
+  "frozen": {
+    "selected": {
+      "name": "channel_4h_20_10",
+      "decision_chart_seconds": 900,
+      "signal_seconds": 14400,
+      "entry_channel_bars": 20,
+      "exit_channel_bars": 10,
+      "atr_bars": 14,
+      "initial_stop_atr": 2.0,
+      "entry": "market on next five-minute open after a completed four-hour close beyond the preceding twenty-bar channel",
+      "exit": "initial protective stop tightened only toward the latest completed ten-bar channel boundary, one tick outside",
+      "target": "none",
+      "both_directions": true,
+      "pyramiding": false,
+      "minimum_net_r_gate": "not applicable without a fixed target; positive realized net expectancy is required"
+    },
+    "sources_sha256": {
+      "research/breakout_pullback_backtest.py": "95e4514071b26df1092618e01c5b8c6f401acacc8aedb840a6795dfca8f55328",
+      "research/competition/channel_engine.py": "17d7ffa4a547e240759b19d228d5728e3f55e099caf42a6344f6727e2ab4b32a",
+      "research/competition/channel_protocol.json": "d3a8d3a10de0c435b3dbf431df1dff9b3a532631193de81ccc8f852e38bff06e",
+      "research/competition/channel_study.py": "ddfbe2a23985a97f3b3db86ce029b05efd5d45a9b0ec04220d67a0ad80f0b6ea",
+      "research/competition/data.py": "bb678361f9e0e1782747a5db7fe070ea3ce6a3161ae54ed69787acc22b0a5810",
+      "research/competition/engine.py": "176c6ebcdde42ad04ec17a31794de1f3139cd7825a4834fa42418ef5941c8378",
+      "research/competition/regime_engine.py": "2c22a8bc72be3ffb2ddf7d60773cad5efb6e404e015c7cc696e3bb9b8c18c943",
+      "research/competition/regime_protocol.json": "95ab8df40f47a900d291d98d7422d7e05f5cce1400c43d3976f6072636e21d24",
+      "research/competition/regime_study.py": "05de3d3d757d90f6e19bc7723753bbae583a256f0788ffa7a348f186ebf90f35",
+      "research/competition/study.py": "5440e666d15412113306c29760271aa92ecdf5156947c6a9604ac49d49992d39",
+      "research/fibonacci_backtest.py": "3acd794fca04a233b9261baa5ae0548e22b8aec7231161fb05f65361998b275d"
+    },
+    "development_sha256": "0863db9914ea88f4b3462d9cbaf2098a5a2c340d7502367e5057ab1282c9fd05",
+    "reserved_data_preexistence_audit": [],
+    "historical_status": "ready; not yet accessed"
+  },
+  "archives_sha256": {
+    "BTCUSDT-15m-2020-01.zip": "604e91a9db89202e87f10b610cf11d805a2a7915e28a07c53fc7d3921e384480",
+    "BTCUSDT-5m-2020-01.zip": "101e303a2f2c8be7b2fdba8af5a794ab17f19f6ba7a68e5af8efbcbc0ebd983a",
+    "BTCUSDT-fundingRate-2020-01.zip": "7f81b2f3694d13779e7e896b69d60cd61e9444d7b9f9e90df761935e1c1b76e2",
+    "BTCUSDT-15m-2020-02.zip": "a89e0dfaf3bf187d4c86c0e96c2052110682f5980c370ece041184b4615b86d6",
+    "BTCUSDT-5m-2020-02.zip": "43b9fe53e4354bdcb900c49d07f31cfcc5c758fbf63b2aa544f455a1cd0b944c",
+    "BTCUSDT-fundingRate-2020-02.zip": "6599466d108d120c64a078824326c063ed2d4335b3292e52c5e572f79166533a",
+    "BTCUSDT-15m-2020-03.zip": "da4596277f7e914e04497d36a733722b42a6c84b5710734e4076d50c0a6675b0",
+    "BTCUSDT-5m-2020-03.zip": "99dc47a65cd2eb29e7006ef9004a6359a3f8791299c2ba23318b78e76c286c5a",
+    "BTCUSDT-fundingRate-2020-03.zip": "eee845fde6336e29d25889563cba3d2cff2d4d640e51fb1f82ae9b28cedaee77",
+    "BTCUSDT-15m-2020-04.zip": "ebfe6813862b72c33b9defbc32317b89c0b59e03ec7d8b1a6cf4ff161716c100",
+    "BTCUSDT-5m-2020-04.zip": "382fd1a511f54b86d4638ba2541ceff76f9e96d7e6f25b1b8badbd23ed66458c",
+    "BTCUSDT-fundingRate-2020-04.zip": "d009ce034d08c3dcf3e7f874b0f8b0ec76ba507bc6bb4e007e541df537bafbce",
+    "BTCUSDT-15m-2020-05.zip": "8ef7d076102b7d7d5f0bbd6b0ac6b36d24c6194a4c51aa239ac68e614c1824b6",
+    "BTCUSDT-5m-2020-05.zip": "ff949185457826051fb06b2a865a40c8dbfe604d935b404f8482824223e9441e",
+    "BTCUSDT-fundingRate-2020-05.zip": "3f2b56dd6b9a42457009bb367d0adadd3cf7e2216cd325172d0089e3883125a8",
+    "BTCUSDT-15m-2020-06.zip": "5674187f592088659d55aaabc8d684ba8b504e5bc7f9863b2a79ad91d46d21c3",
+    "BTCUSDT-5m-2020-06.zip": "67e2dea8a50b47b559a5295581c7039c7813cf09e155308037ca5c16efaa9350",
+    "BTCUSDT-fundingRate-2020-06.zip": "30b3470ff98576578973d75e3c157a5cbf1778b11e4c26b4b4ff70a3cbb348ec",
+    "BTCUSDT-15m-2020-07.zip": "82c2528648b7202e329e4eb42f59fa2972ee4f59ea4720139160a4e683535193",
+    "BTCUSDT-5m-2020-07.zip": "c7e72576d5e3ad0ee5c2d837dd63bcaa6aa0461799bae4d2f6ca6b0e78d6f08f",
+    "BTCUSDT-fundingRate-2020-07.zip": "18dae7b11075fc0fba79ad47df46683415cba5d027caa69c66bc2a5c9d9b459a",
+    "BTCUSDT-15m-2020-08.zip": "c3b8d9ff137e32f20b2793c4f7f7eed8bfd45648674f051cb51ce9e4ab366044",
+    "BTCUSDT-5m-2020-08.zip": "028476815685deabd0ff6d659ab604ac4e116a572d7c9acfbe74508da2441470",
+    "BTCUSDT-fundingRate-2020-08.zip": "e6f6d1749f674c85d4766e0eb36af6ea40d91a0674234d30df80eb9876b094e3",
+    "BTCUSDT-15m-2020-09.zip": "b23fd2d1b8d09f8d2b10308539bbc1023b29452f2ff5365fce5bb08b7888072a",
+    "BTCUSDT-5m-2020-09.zip": "f7a9c4e7f24e91d9dd7cbaf8f1e58f45d5fe4d1c623895e746ceb7c4c78d9918",
+    "BTCUSDT-fundingRate-2020-09.zip": "7ae9a3b6afb2dc06e46080582908ec8c27063b707a14c7f1e679dc991ff48032",
+    "BTCUSDT-15m-2020-10.zip": "723f3a5297b718ac1ea766933c12042f422ceb43f3dbfb1430e0ea5f55fa1e39",
+    "BTCUSDT-5m-2020-10.zip": "547b5a7e9703dbd7ff6f1eb7c97a86b852fa8e42287557cb2c0e3fd675875d34",
+    "BTCUSDT-fundingRate-2020-10.zip": "4c55b191c101f39c7fb193a6529665dd9e83302ca21876521e4c93b3902e9fb1",
+    "BTCUSDT-15m-2020-11.zip": "9442ac3d7c5aba02bfacfe0a35ce05756263e4f462a5a694941f27dfcd76f15d",
+    "BTCUSDT-5m-2020-11.zip": "e39d8fe1138aeb7053aa83e442b38c78d5ef87f929597ab5aa5d7009b12a4216",
+    "BTCUSDT-fundingRate-2020-11.zip": "676356a2d075caa51b4f8ada026e9430dc320ffd23d2343b13b7aa25324ed6d1",
+    "BTCUSDT-15m-2020-12.zip": "c824e54aec2b63ace61d29166fcf12ac15729021b13bd1b5355f3825ecb50523",
+    "BTCUSDT-5m-2020-12.zip": "d53eeacb3597e303b6fdef51e14ad5a86fb776d2bb823f6c1bb2c02ee168445b",
+    "BTCUSDT-fundingRate-2020-12.zip": "d7390f90edf54cc4ad9bbe78e2f6b291ae06ad9539f591a2d0fce445873bbd63",
+    "BTCUSDT-15m-2021-01.zip": "3aa4530f2afd42d8cae441d2634e81a6d733a49fd33970c705afee325e4aee2c",
+    "BTCUSDT-5m-2021-01.zip": "121bc9248a2be75f5a3e0bb53ec00ae3a0fbd23cede41d6998073818438d5eb4",
+    "BTCUSDT-fundingRate-2021-01.zip": "cff916dc4b638ec3de97828e8911cd91cf7d7a3d0836ec0175869c374e66823d",
+    "BTCUSDT-15m-2021-02.zip": "f0c941a7ecf452a3448e4a8951948518dd47e51ad7158629d5efcf410431939f",
+    "BTCUSDT-5m-2021-02.zip": "ddbde3144a64213c84aa79e67ae034f9811e78b36e59c1090780e37529097c14",
+    "BTCUSDT-fundingRate-2021-02.zip": "819a7b107443686adb313fc5fc223302a29f3981e1d1bd9828ad0ade65a8a8af",
+    "BTCUSDT-15m-2021-03.zip": "d1c4cfa8137848dc3373753f8d0437eddf8db43b0e835efbc4a6da3af6935286",
+    "BTCUSDT-5m-2021-03.zip": "1e0fd641ec408939e73f4c534de2c2319087071fd9d2cc90c1b97a9d0ebd9b33",
+    "BTCUSDT-fundingRate-2021-03.zip": "2125fd300848938c7b992b8f7b7b5007d5b277a4ff1ebda7da083b40242729da",
+    "BTCUSDT-15m-2021-04.zip": "124fab2a0fe7525a5e7b2a1dbb2b776ce12e6003770dd930a10bbd56db4cdc79",
+    "BTCUSDT-5m-2021-04.zip": "da129801ed2f00ba8221b12671705bef80beba69db396c3151f645a0732c6e5e",
+    "BTCUSDT-fundingRate-2021-04.zip": "9cd888e3b0a1954813d0062c2e60426fdc8e34a7f258f6838371ec67f535b028",
+    "BTCUSDT-15m-2021-05.zip": "f7ef372e125f87339f45fffaa329ea386d9e8be74998577fd75f807a90abae16",
+    "BTCUSDT-5m-2021-05.zip": "428263c2f50edb06a169cba58b6d9a39ab739ca23d97bbad00fd1080e04a0a09",
+    "BTCUSDT-fundingRate-2021-05.zip": "ed934afb9cf84df6ecae742e755147333a84244836a66b51523abc66dd5f63af",
+    "BTCUSDT-15m-2021-06.zip": "9853eae293ad9c5b4a1395fe6d5e6257bfd2ff27433c4ef00b0169b54853b7a2",
+    "BTCUSDT-5m-2021-06.zip": "7efaefaa65732c36e21f346cb7e15a75cea427c99f927fed9556ea637829f231",
+    "BTCUSDT-fundingRate-2021-06.zip": "7b8d9bfb8816636b800764dafb2aa2307d19166c695bfa245adbf7d01d61f766",
+    "BTCUSDT-15m-2021-07.zip": "86ef554b5c3c392cff96180db24268d9273905f3e8c2ed4d5e63904b0d798096",
+    "BTCUSDT-5m-2021-07.zip": "327d4f4df85f6f04e0ca2b46ccaf1d2481f47a91d34f79e98c978d21abe9c4ac",
+    "BTCUSDT-fundingRate-2021-07.zip": "8ab3df641d3bcf40527491f8e26d046ad2b662d1950ead9555ad32975571b7fe",
+    "BTCUSDT-15m-2021-08.zip": "f6e0c79d84839f34de1c41993624b76b1c738101cf39622d31c926300681fc5a",
+    "BTCUSDT-5m-2021-08.zip": "fc1a03e5be460ddb7af70cc7dd48a5d5ede5ddbe51ccac5f7959ffd67eb8a68a",
+    "BTCUSDT-fundingRate-2021-08.zip": "7eb681cc45b94176f4b9192a62c3a1925d79031ba001cea2d8dec6ff6e5b9c35",
+    "BTCUSDT-15m-2021-09.zip": "5c74e804831937235287f424a0c34eddf525b3a366249037a34288c69b2cc6ed",
+    "BTCUSDT-5m-2021-09.zip": "fa29041cdda0decb7ab16ff3c98709459bbcb999761897ef4417d96dfcd23295",
+    "BTCUSDT-fundingRate-2021-09.zip": "03f25a7c25eef18d5f5b5b7bb0b664cab7a210b409f37e95a54e141808a0752d",
+    "BTCUSDT-15m-2021-10.zip": "6fbc1ced80b2d5b722114394ce145bfe4fbc40ad233b2ec0316d3bd45b8abcaa",
+    "BTCUSDT-5m-2021-10.zip": "f21933019b6d1a328843ec09f6b4f2e646e006965300851d1b94f451e2d3cd18",
+    "BTCUSDT-fundingRate-2021-10.zip": "f25820d6add687addbca3ef43bee58f70853a6da53832a0c1bc22d00dc8ec64a",
+    "BTCUSDT-15m-2021-11.zip": "8c3170955683fc914da107d67d8ebde0cda6f3a6250e9b4b5f6ceb94f5593712",
+    "BTCUSDT-5m-2021-11.zip": "d41d8bafe40585dc42fe0c05232b0cfc32edbc2b670daa8bef6410453991b1dd",
+    "BTCUSDT-fundingRate-2021-11.zip": "e2e6b2d7218607e7e4a38137d50f553c2cfb901275c19edf567024c1cc6de85f",
+    "BTCUSDT-15m-2021-12.zip": "a216bab60744f399e55561df822644029178827b352d1878fd6116082f70273d",
+    "BTCUSDT-5m-2021-12.zip": "fdde03f0cd8b608b82319e08b3e4d1e21810aebbf84a2cc10a913ed811ec105b",
+    "BTCUSDT-fundingRate-2021-12.zip": "bf3ce484faf41d7dccfd38c5cc3d8de34d8297df30ab10784e874cc10fd1b310",
+    "BTCUSDT-15m-2022-01.zip": "46e0bc4607df992e4de6a6e76e2bf60b3a19db2b11f7b07d4a4bac4e26c6c35d",
+    "BTCUSDT-5m-2022-01.zip": "b2ff8cd047d5ca6177a26cb1c2942e35550f0ebbfcb872921feb49dd570d02ee",
+    "BTCUSDT-fundingRate-2022-01.zip": "22ee19079b620f5c6d820e7d7f8bafa7fde866d89bd664863b8bd527749c12cb",
+    "BTCUSDT-15m-2022-02.zip": "7b615ec48c6bc9f4a723e08d9990136554406640055c2fd084e0c0b63d405d74",
+    "BTCUSDT-5m-2022-02.zip": "ec30e9e7f6591ec291223aaaf3b477f09524ac0bdd6b299da513fb489463bdb7",
+    "BTCUSDT-fundingRate-2022-02.zip": "fa95088258a905c79ab79e8984d2f6f66933ec2e814dbab4ef9da89b01ab484a",
+    "BTCUSDT-15m-2022-03.zip": "2ddcc24fbcf2661020a218f2251b1cb3af03bf32633efed028c0d0921468cafe",
+    "BTCUSDT-5m-2022-03.zip": "63a72d0c0fcbeeb4e790cc9ef0e78eecfc44246ceb1f23fd19ed16860e5e6830",
+    "BTCUSDT-fundingRate-2022-03.zip": "4cf0883bc07f4ed4cdd3b0d8c0d166b4d15d21e666ab752f9f44401af4d6172f",
+    "BTCUSDT-15m-2022-04.zip": "911e220f50a2a1798d35b31fce321cc4e61932a0a370c9e6837c27ff4dd8f0a8",
+    "BTCUSDT-5m-2022-04.zip": "346ca3f3996b08b4e92e206cce36abbcb0b168f9654150664c61a6d957d6c086",
+    "BTCUSDT-fundingRate-2022-04.zip": "57e2776cc68b3169fc9f8632dad67278f470cd453407a8ebe6c87963c8a31357",
+    "BTCUSDT-15m-2022-05.zip": "31a46b1ac257f1690e6b16c606b2fde22aebf2d605047943d885bf28fe813389",
+    "BTCUSDT-5m-2022-05.zip": "ec60078c916ea98658765941bd2ab795fd27f594f1dae6e121d5e6ae59b6b1ee",
+    "BTCUSDT-fundingRate-2022-05.zip": "bced8a5013d09742b96682e6fd01ad4456213515a03d7586ec2b1f2689af5255",
+    "BTCUSDT-15m-2022-06.zip": "7115895dc1e8425ee5ecedb18258e293decfc7769213362d928c42a29d8b6127",
+    "BTCUSDT-5m-2022-06.zip": "9481735add90721ba8ab745ef95807cf16d2a9dad736998a4f5cfc41d82da657",
+    "BTCUSDT-fundingRate-2022-06.zip": "0cd0708f8903829eb46f98cf60f4b2516c986e1ccddf6620a5912b48e16baf93",
+    "BTCUSDT-15m-2022-07.zip": "6cd98667f9b7a127a413bd061103800f2707921a9a231e18f47d71816ef86ac8",
+    "BTCUSDT-5m-2022-07.zip": "8b4ab117b3abb19f9a23decf76fd090c7e25c7875ab3a951b03fa761847fe416",
+    "BTCUSDT-fundingRate-2022-07.zip": "29d58cce0cd45f74c6a112039835c6d9ee5a7e60e7c38c2503beb7930453a4fe",
+    "BTCUSDT-15m-2022-08.zip": "517e241a31c2062c50ca9861eb832fa9b3505b0ae67350135d5a74d812228eab",
+    "BTCUSDT-5m-2022-08.zip": "9ef0dc1f953cb61abfd1584245e9a99afa44d1b9fbabba73de647239870e51cb",
+    "BTCUSDT-fundingRate-2022-08.zip": "6f4f0c6c84c05694b4b4a5c085776730fd4059723eecd98ee6ffeb3fde4da811",
+    "BTCUSDT-15m-2022-09.zip": "776bd8021ee4b7dd8dd6530bd8b0d4f4a3287df2a72810f5dcb26e35714c8903",
+    "BTCUSDT-5m-2022-09.zip": "a9c069838ca77434a529dcb4bc6653e92e27b8dc85232a1c89fb647e03a22ec9",
+    "BTCUSDT-fundingRate-2022-09.zip": "d62cd4e13009de37add446dc4f63ead4c56dcc4955a1e60f6726bcadc5a68fa9",
+    "BTCUSDT-15m-2022-10.zip": "bff25dbfad92e9c551ab77b6411e29462dbde298636144041a775330a126cd1b",
+    "BTCUSDT-5m-2022-10.zip": "7fa18fa46d73ae9d5ebab357fffe96a507176322166cd2476fd889be495e99bf",
+    "BTCUSDT-fundingRate-2022-10.zip": "ad9efed10d4ca1567b865d7a158790977cec1b925395634217069df6696c8bc9",
+    "BTCUSDT-15m-2022-11.zip": "7f74daa2a5f1631e5b60d0dd035dfb60c0d8e5f0105820484fde8b8914d07986",
+    "BTCUSDT-5m-2022-11.zip": "a5c3ad428d15aec6f91580f061c66928a6af5925f7bd0e80d404787da936c43a",
+    "BTCUSDT-fundingRate-2022-11.zip": "8febe5bec1a029e993bbf27490761f8c47c32849bf7dd13441b2b2f6ec1ffb51",
+    "BTCUSDT-15m-2022-12.zip": "acf8b92a5cea478f7c32ab863b977836f629d4ff3373d20bb2b15673b57b87ae",
+    "BTCUSDT-5m-2022-12.zip": "a633f5abbfdeb0ac0a3d183d81c06401d1a6541a3da666a73ca54ecdfcfd7294",
+    "BTCUSDT-fundingRate-2022-12.zip": "4218c78331bcc4dbeb5768fa112242a880971c1f2cfd1d3f32aaa26ca34069af"
+  },
+  "quality": {
+    "canonical_5m_aggregation": true,
+    "discrepancies": []
+  },
+  "results": [
+    {
+      "name": "historical_baseline",
+      "summary": {
+        "trades": 31,
+        "net": -737.2561102442269,
+        "profit_factor": 0.8323449682790963,
+        "gross_wins": 3660.2027830357943,
+        "gross_losses": 4397.458893280027,
+        "win_rate": 0.25806451612903225,
+        "max_drawdown_close": 1698.3925605636468,
+        "max_drawdown_5m_close": 1702.8180378636462,
+        "net_without_best": -1382.641798184235,
+        "fees": 989.1703843700001,
+        "funding": -22.4714258742843,
+        "monthly_realized_net": {
+          "2021-01": 95.59269380243799,
+          "2021-02": 547.3904868000017,
+          "2021-04": -403.727892939998,
+          "2021-05": -413.0456243299976,
+          "2021-06": -205.9475592083641,
+          "2021-07": 244.16940669235532,
+          "2021-09": -454.7024376276803,
+          "2021-11": -213.48409947999764,
+          "2021-12": -207.39489243999438,
+          "2022-01": 408.07580000000405,
+          "2022-02": 401.14137476000104,
+          "2022-03": 376.23789462999883,
+          "2022-05": -380.5942699999978,
+          "2022-07": 100.4693100000029,
+          "2022-08": -392.2065888480022,
+          "2022-09": -239.2297120550022
+        },
+        "counts": {
+          "breakouts": 1258,
+          "impulses": 1003,
+          "zone_visits": 901,
+          "no_rejection": 579,
+          "rejections": 257,
+          "payoff_skips": 221,
+          "invalidated": 377,
+          "orders": 36,
+          "fills": 31,
+          "ambiguous_endpoint": 41,
+          "cancellations": 5,
+          "small_impulse": 3
+        }
+      },
+      "half_years": [
+        {
+          "start": "2021-01-01T00:00:00+00:00",
+          "end": "2021-07-01T00:00:00+00:00",
+          "partial_half_year": false,
+          "opening_equity": 100000,
+          "closing_equity": 99620.26210412406,
+          "net": -379.7378958759364
+        },
+        {
+          "start": "2021-07-01T00:00:00+00:00",
+          "end": "2022-01-01T00:00:00+00:00",
+          "partial_half_year": false,
+          "opening_equity": 99620.26210412406,
+          "closing_equity": 98988.85008126877,
+          "net": -631.4120228552929
+        },
+        {
+          "start": "2022-01-01T00:00:00+00:00",
+          "end": "2022-07-01T00:00:00+00:00",
+          "partial_half_year": false,
+          "opening_equity": 98988.85008126877,
+          "closing_equity": 99793.7108806588,
+          "net": 804.8607993900223
+        },
+        {
+          "start": "2022-07-01T00:00:00+00:00",
+          "end": "2023-01-01T00:00:00+00:00",
+          "partial_half_year": false,
+          "opening_equity": 99793.7108806588,
+          "closing_equity": 99262.74388975577,
+          "net": -530.9669909030199
+        }
+      ],
+      "branch_summaries": {
+        "baseline": {
+          "trades": 31,
+          "wins": 8,
+          "net": -737.2561102442324,
+          "fees": 989.1703843700002,
+          "funding": -22.471425874284296
+        }
+      },
+      "uncertainty": {
+        "method": "circular seven-day blocks of daily log account returns",
+        "seed": 20261010,
+        "replicates": 2000,
+        "days": 730,
+        "period_return_percent_interval_95": [
+          -3.324184753127557,
+          2.1651677649536882
+        ],
+        "caveat": "Exploratory uncertainty only; reused data, multiple comparisons and regime dependence remain."
+      }
+    },
+    {
+      "name": "historical_selected",
+      "summary": {
+        "trades": 147,
+        "net": -2583.899458005253,
+        "profit_factor": 0.8282686246684524,
+        "gross_wins": 12462.270486285097,
+        "gross_losses": 15046.169944290257,
+        "win_rate": 0.3469387755102041,
+        "max_drawdown_close": 3487.8251536701137,
+        "max_drawdown_5m_close": 3494.84603367011,
+        "max_drawdown_fraction": 0.03462543428181008,
+        "max_drawdown_5m_fraction": 0.03469271609040606,
+        "net_without_best": -3643.7720086416302,
+        "fees": 1064.560987476,
+        "funding": -598.1555105291889,
+        "counts": {
+          "breakouts": 147,
+          "orders": 147,
+          "fills": 147,
+          "channel_stop_tightened": 661,
+          "fill_over_modeled_risk": 9
+        }
+      },
+      "half_years": [
+        {
+          "start": "2021-01-01T00:00:00+00:00",
+          "end": "2021-07-01T00:00:00+00:00",
+          "partial_half_year": false,
+          "opening_equity": 100000,
+          "closing_equity": 98323.93371476654,
+          "net": -1676.0662852334644
+        },
+        {
+          "start": "2021-07-01T00:00:00+00:00",
+          "end": "2022-01-01T00:00:00+00:00",
+          "partial_half_year": false,
+          "opening_equity": 98323.93371476654,
+          "closing_equity": 97639.96113172274,
+          "net": -683.9725830437965
+        },
+        {
+          "start": "2022-01-01T00:00:00+00:00",
+          "end": "2022-07-01T00:00:00+00:00",
+          "partial_half_year": false,
+          "opening_equity": 97639.96113172274,
+          "closing_equity": 98335.3799560989,
+          "net": 695.41882437616
+        },
+        {
+          "start": "2022-07-01T00:00:00+00:00",
+          "end": "2023-01-01T00:00:00+00:00",
+          "partial_half_year": false,
+          "opening_equity": 98335.3799560989,
+          "closing_equity": 97416.10054199475,
+          "net": -919.2794141041522
+        }
+      ],
+      "branch_summaries": {
+        "channel": {
+          "trades": 147,
+          "wins": 51,
+          "net": -2583.8994580051613,
+          "fees": 1064.5609874759996,
+          "funding": -598.1555105291891
+        }
+      },
+      "uncertainty": {
+        "method": "circular seven-day blocks of daily log account returns",
+        "seed": 20261010,
+        "replicates": 2000,
+        "days": 730,
+        "period_return_percent_interval_95": [
+          -8.372564831395303,
+          3.772409489898871
+        ],
+        "caveat": "Exploratory uncertainty only; reused data, multiple comparisons and regime dependence remain."
+      }
+    }
+  ],
+  "stresses": [
+    {
+      "name": "historical_baseline_fee_0.10_percent",
+      "summary": {
+        "trades": 24,
+        "net": -788.5333153615065,
+        "profit_factor": 0.7740986007285315,
+        "gross_wins": 2702.0750558326636,
+        "gross_losses": 3490.6083711941155,
+        "win_rate": 0.25,
+        "max_drawdown_close": 1418.4504052507546,
+        "max_drawdown_5m_close": 1418.4504052507546,
+        "net_without_best": -1390.6584571614544,
+        "fees": 993.5164996000001,
+        "funding": -21.3732157614947,
+        "monthly_realized_net": {
+          "2021-01": 30.715793489254622,
+          "2021-02": 509.4804048000017,
+          "2021-04": -203.40760189999884,
+          "2021-05": -416.7933176999977,
+          "2021-06": -208.35801701899578,
+          "2021-07": 411.59821124341664,
+          "2021-09": -240.8373069201483,
+          "2021-11": -216.0527976999977,
+          "2021-12": -211.1204615999947,
+          "2022-01": 375.03284000000383,
+          "2022-05": -214.39169999999564,
+          "2022-07": 61.03227000000291,
+          "2022-08": -202.01820000000072,
+          "2022-09": -263.4134320550022
+        },
+        "counts": {
+          "breakouts": 1259,
+          "impulses": 1004,
+          "zone_visits": 902,
+          "no_rejection": 579,
+          "rejections": 258,
+          "payoff_skips": 230,
+          "invalidated": 377,
+          "orders": 28,
+          "fills": 24,
+          "ambiguous_endpoint": 41,
+          "cancellations": 4,
+          "small_impulse": 3
+        }
+      },
+      "half_years": [
+        {
+          "start": "2021-01-01T00:00:00+00:00",
+          "end": "2021-07-01T00:00:00+00:00",
+          "partial_half_year": false,
+          "opening_equity": 100000,
+          "closing_equity": 99711.63726167024,
+          "net": -288.3627383297571
+        },
+        {
+          "start": "2021-07-01T00:00:00+00:00",
+          "end": "2022-01-01T00:00:00+00:00",
+          "partial_half_year": false,
+          "opening_equity": 99711.63726167024,
+          "closing_equity": 99455.22490669349,
+          "net": -256.4123549767537
+        },
+        {
+          "start": "2022-01-01T00:00:00+00:00",
+          "end": "2022-07-01T00:00:00+00:00",
+          "partial_half_year": false,
+          "opening_equity": 99455.22490669349,
+          "closing_equity": 99615.86604669351,
+          "net": 160.64114000002155
+        },
+        {
+          "start": "2022-07-01T00:00:00+00:00",
+          "end": "2023-01-01T00:00:00+00:00",
+          "partial_half_year": false,
+          "opening_equity": 99615.86604669351,
+          "closing_equity": 99211.4666846385,
+          "net": -404.39936205501726
+        }
+      ],
+      "branch_summaries": {
+        "baseline": {
+          "trades": 24,
+          "wins": 6,
+          "net": -788.533315361452,
+          "fees": 993.5164996,
+          "funding": -21.3732157614947
+        }
+      },
+      "uncertainty": {
+        "method": "circular seven-day blocks of daily log account returns",
+        "seed": 20261010,
+        "replicates": 2000,
+        "days": 730,
+        "period_return_percent_interval_95": [
+          -2.757069824127991,
+          1.5820140707986776
+        ],
+        "caveat": "Exploratory uncertainty only; reused data, multiple comparisons and regime dependence remain."
+      },
+      "design": "baseline",
+      "stress": {
+        "name": "fee_0.10_percent",
+        "fee": 0.001,
+        "slippage_ticks": 2
+      }
+    },
+    {
+      "name": "historical_selected_fee_0.10_percent",
+      "summary": {
+        "trades": 147,
+        "net": -3010.4668112623913,
+        "profit_factor": 0.8009740131626638,
+        "gross_wins": 12115.53185404273,
+        "gross_losses": 15125.99866530536,
+        "win_rate": 0.3469387755102041,
+        "max_drawdown_close": 3800.739610650082,
+        "max_drawdown_5m_close": 3824.4891106500727,
+        "max_drawdown_fraction": 0.03773599816544141,
+        "max_drawdown_5m_fraction": 0.03796918538398744,
+        "net_without_best": -4049.748929632753,
+        "fees": 1495.46172855,
+        "funding": -592.0050327126565,
+        "counts": {
+          "breakouts": 147,
+          "orders": 147,
+          "fills": 147,
+          "channel_stop_tightened": 661,
+          "fill_over_modeled_risk": 9
+        }
+      },
+      "half_years": [
+        {
+          "start": "2021-01-01T00:00:00+00:00",
+          "end": "2021-07-01T00:00:00+00:00",
+          "partial_half_year": false,
+          "opening_equity": 100000,
+          "closing_equity": 98248.45877556711,
+          "net": -1751.5412244328909
+        },
+        {
+          "start": "2021-07-01T00:00:00+00:00",
+          "end": "2022-01-01T00:00:00+00:00",
+          "partial_half_year": false,
+          "opening_equity": 98248.45877556711,
+          "closing_equity": 97454.52663926476,
+          "net": -793.9321363023482
+        },
+        {
+          "start": "2022-01-01T00:00:00+00:00",
+          "end": "2022-07-01T00:00:00+00:00",
+          "partial_half_year": false,
+          "opening_equity": 97454.52663926476,
+          "closing_equity": 98033.60348816171,
+          "net": 579.0768488969479
+        },
+        {
+          "start": "2022-07-01T00:00:00+00:00",
+          "end": "2023-01-01T00:00:00+00:00",
+          "partial_half_year": false,
+          "opening_equity": 98033.60348816171,
+          "closing_equity": 96989.53318873761,
+          "net": -1044.0702994241
+        }
+      ],
+      "branch_summaries": {
+        "channel": {
+          "trades": 147,
+          "wins": 51,
+          "net": -3010.4668112626323,
+          "fees": 1495.4617285499996,
+          "funding": -592.0050327126565
+        }
+      },
+      "uncertainty": {
+        "method": "circular seven-day blocks of daily log account returns",
+        "seed": 20261010,
+        "replicates": 2000,
+        "days": 730,
+        "period_return_percent_interval_95": [
+          -8.716472050412817,
+          3.2870569167344423
+        ],
+        "caveat": "Exploratory uncertainty only; reused data, multiple comparisons and regime dependence remain."
+      },
+      "design": "selected",
+      "stress": {
+        "name": "fee_0.10_percent",
+        "fee": 0.001,
+        "slippage_ticks": 2
+      }
+    },
+    {
+      "name": "historical_baseline_slippage_20_ticks",
+      "summary": {
+        "trades": 29,
+        "net": -968.4892158664879,
+        "profit_factor": 0.7706495161043855,
+        "gross_wins": 3254.2584296421833,
+        "gross_losses": 4222.747645508662,
+        "win_rate": 0.2413793103448276,
+        "max_drawdown_close": 1648.716480198913,
+        "max_drawdown_5m_close": 1652.0240751189122,
+        "net_without_best": -1607.229594196479,
+        "fees": 905.01569396,
+        "funding": -22.779121906481,
+        "monthly_realized_net": {
+          "2021-01": 87.29374566242126,
+          "2021-02": 541.5376176000001,
+          "2021-04": -404.11454343000344,
+          "2021-05": -413.54102259000183,
+          "2021-06": -206.24358849487976,
+          "2021-07": 445.1984139897594,
+          "2021-09": -455.67378220078274,
+          "2021-11": -213.92376890000003,
+          "2021-12": -208.10334983999815,
+          "2022-01": 404.8660212200024,
+          "2022-02": 396.37756201999906,
+          "2022-05": -387.79427000000214,
+          "2022-07": 91.46805000000657,
+          "2022-08": -399.4065888479993,
+          "2022-09": -246.4297120549993
+        },
+        "counts": {
+          "breakouts": 1259,
+          "impulses": 1004,
+          "zone_visits": 902,
+          "no_rejection": 579,
+          "rejections": 258,
+          "payoff_skips": 224,
+          "invalidated": 377,
+          "orders": 34,
+          "fills": 29,
+          "ambiguous_endpoint": 41,
+          "cancellations": 5,
+          "small_impulse": 3
+        }
+      },
+      "half_years": [
+        {
+          "start": "2021-01-01T00:00:00+00:00",
+          "end": "2021-07-01T00:00:00+00:00",
+          "partial_half_year": false,
+          "opening_equity": 100000,
+          "closing_equity": 99604.9322087475,
+          "net": -395.06779125249886
+        },
+        {
+          "start": "2021-07-01T00:00:00+00:00",
+          "end": "2022-01-01T00:00:00+00:00",
+          "partial_half_year": false,
+          "opening_equity": 99604.9322087475,
+          "closing_equity": 99172.42972179648,
+          "net": -432.50248695102346
+        },
+        {
+          "start": "2022-01-01T00:00:00+00:00",
+          "end": "2022-07-01T00:00:00+00:00",
+          "partial_half_year": false,
+          "opening_equity": 99172.42972179648,
+          "closing_equity": 99585.87903503649,
+          "net": 413.44931324000936
+        },
+        {
+          "start": "2022-07-01T00:00:00+00:00",
+          "end": "2023-01-01T00:00:00+00:00",
+          "partial_half_year": false,
+          "opening_equity": 99585.87903503649,
+          "closing_equity": 99031.51078413351,
+          "net": -554.368250902975
+        }
+      ],
+      "branch_summaries": {
+        "baseline": {
+          "trades": 29,
+          "wins": 7,
+          "net": -968.489215866478,
+          "fees": 905.0156939600001,
+          "funding": -22.779121906480995
+        }
+      },
+      "uncertainty": {
+        "method": "circular seven-day blocks of daily log account returns",
+        "seed": 20261010,
+        "replicates": 2000,
+        "days": 730,
+        "period_return_percent_interval_95": [
+          -3.3916722496407683,
+          1.873894469896003
+        ],
+        "caveat": "Exploratory uncertainty only; reused data, multiple comparisons and regime dependence remain."
+      },
+      "design": "baseline",
+      "stress": {
+        "name": "slippage_20_ticks",
+        "fee": 0.0007,
+        "slippage_ticks": 20
+      }
+    },
+    {
+      "name": "historical_selected_slippage_20_ticks",
+      "summary": {
+        "trades": 147,
+        "net": -2659.68169797922,
+        "profit_factor": 0.8233993388693088,
+        "gross_wins": 12400.747186887587,
+        "gross_losses": 15060.428884866828,
+        "win_rate": 0.3469387755102041,
+        "max_drawdown_close": 3496.115121552066,
+        "max_drawdown_5m_close": 3503.0898115520686,
+        "max_drawdown_fraction": 0.03470948200220746,
+        "max_drawdown_5m_fraction": 0.034776318746343696,
+        "net_without_best": -3712.9627084435942,
+        "fees": 1060.606045163,
+        "funding": -597.229222816235,
+        "counts": {
+          "breakouts": 147,
+          "orders": 147,
+          "fills": 147,
+          "channel_stop_tightened": 661,
+          "fill_over_modeled_risk": 36
+        }
+      },
+      "half_years": [
+        {
+          "start": "2021-01-01T00:00:00+00:00",
+          "end": "2021-07-01T00:00:00+00:00",
+          "partial_half_year": false,
+          "opening_equity": 100000,
+          "closing_equity": 98311.47308581871,
+          "net": -1688.5269141812896
+        },
+        {
+          "start": "2021-07-01T00:00:00+00:00",
+          "end": "2022-01-01T00:00:00+00:00",
+          "partial_half_year": false,
+          "opening_equity": 98311.47308581871,
+          "closing_equity": 97618.5336843309,
+          "net": -692.9394014878053
+        },
+        {
+          "start": "2022-01-01T00:00:00+00:00",
+          "end": "2022-07-01T00:00:00+00:00",
+          "partial_half_year": false,
+          "opening_equity": 97618.5336843309,
+          "closing_equity": 98298.80199876329,
+          "net": 680.2683144323819
+        },
+        {
+          "start": "2022-07-01T00:00:00+00:00",
+          "end": "2023-01-01T00:00:00+00:00",
+          "partial_half_year": false,
+          "opening_equity": 98298.80199876329,
+          "closing_equity": 97340.31830202078,
+          "net": -958.4836967425072
+        }
+      ],
+      "branch_summaries": {
+        "channel": {
+          "trades": 147,
+          "wins": 51,
+          "net": -2659.681697979241,
+          "fees": 1060.6060451629992,
+          "funding": -597.2292228162353
+        }
+      },
+      "uncertainty": {
+        "method": "circular seven-day blocks of daily log account returns",
+        "seed": 20261010,
+        "replicates": 2000,
+        "days": 730,
+        "period_return_percent_interval_95": [
+          -8.430623748475737,
+          3.698942180971692
+        ],
+        "caveat": "Exploratory uncertainty only; reused data, multiple comparisons and regime dependence remain."
+      },
+      "design": "selected",
+      "stress": {
+        "name": "slippage_20_ticks",
+        "fee": 0.0007,
+        "slippage_ticks": 20
+      }
+    }
+  ],
+  "qualification_failures": [
+    "nonpositive_net",
+    "fewer_than_three_positive_half_years",
+    "profit_factor_below_1.2",
+    "nonpositive_net_without_best",
+    "nonpositive_cost_stress"
+  ],
+  "qualifies_for_pine": false,
+  "caveat": "Older-history test after freeze; not prospective evidence. Native verification outstanding."
+}

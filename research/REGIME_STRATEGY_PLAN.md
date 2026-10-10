@@ -2,6 +2,8 @@
 
 Status: a research plan, not an implemented or profitable strategy. The existing Pine baseline stays unchanged. Freeze this plan and the machine-readable protocol before replaying new candidates; do not silently retune failed candidates.
 
+Execution update: all five designs were implemented and failed the frozen development gates. That experiment stopped without retuning; see [results](results/regime/README.md). A separately predeclared, single channel design then qualified in development and failed its source-frozen historical test; see [channel results](results/channel/README.md). No new Pine design was promoted. The [data ledger](DATA_ACCESS_LEDGER.md) records that the older history is now inspected.
+
 ## What we need to improve
 
 The current baseline has 38 completed positions and 16 winners across seven previously inspected, separately funded periods. Several periods lose and one has no fills. Its summed period profit is not a continuous portfolio return. Seventeen recent structural alternatives failed to beat it under their declared criteria.

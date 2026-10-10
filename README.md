@@ -1,5 +1,7 @@
 # Fibonacci strategy: start here
 
+There is currently **no strategy in this repository verified profitable across the reserved historical test and native TradingView execution**. The new channel design improved development profit but failed historical validation; the existing Fibonacci baseline also lost in that older test.
+
 The active experimental baseline is **[Fibonacci_Live_Impulse_Pullback.pine](Fibonacci_Live_Impulse_Pullback.pine)** (v3). Other Pine files are earlier designs or research artifacts. The Pivot3 Research candidate failed its chronological confirmation, is visibly marked REJECTED, and is archived in `research/rejected/`.
 
 1. Load the active script on **standard BTCUSDT 15-minute candles**.
@@ -15,3 +17,5 @@ The strongest current known-period result is38 completed positions /16 winners /
 See [strategy rules and limitations](Fibonacci_Live_Impulse_Pullback.md), [tuning results](research/results/competition/TUNING.md) and [enhancement comparisons](research/results/competition/ENHANCEMENTS.md). Full research protocols, trade-level outputs and execution tests are included in the repository.
 
 Seventeen additional structural alternatives are recorded in [STRUCTURAL_RESEARCH.md](research/results/competition/STRUCTURAL_RESEARCH.md). None passed the declared qualification conditions, so no unproven trading default was promoted.
+
+The next five [regime designs](research/results/regime/README.md) also failed. A separately predeclared [four-hour channel follower](research/results/channel/README.md) made +$7,649.64 on 195 positions versus the baseline's +$3,955.55 on 38 positions over one continuous 2024–September 2026 account history. After source freeze, its reserved 2021–2022 test lost $2,583.90; the baseline lost $737.26. The channel failed both higher-cost tests and is research-only Python, not a new Pine recommendation. All code, trade logs, funding, daily equity and failures are published. [Data access history](research/DATA_ACCESS_LEDGER.md) marks these periods as inspected for future research.
