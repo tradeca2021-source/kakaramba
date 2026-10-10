@@ -1,0 +1,7 @@
+{
+  "status": "Exploratory comparison on previously inspected periods, not fresh validation",
+  "candidates": ["swing control", "fixed 1.5 modeled net R", "fixed 2.0 modeled net R capped at swing"],
+  "execution": "Targets fixed at order submission using trigger, original stop, fees, slippage reserve and ATR gap risk. Fixed targets never extend beyond swing. Original entry gate and sizing retained. Stop and risk unchanged. No breakeven or trailing adjustments.",
+  "periods": "Same seven independent account periods 2024 H1/H2, 2025 H1/H2, 2026 Q1/Q2/Q3",
+  "policy": "Report all candidates, net profit, full trade win rate and drawdown. No tuning or default promotion on these known periods. Split exit deferred until the simpler target comparison is assessed."
+}
