@@ -2,7 +2,7 @@
 // REJECTED tuning candidate: selected on 2024, failed 2025/2026 confirmation.
 // Research comparison only. Recommended baseline retains pivotBars=5.
 // Freeze a causal running extreme at the first pullback; skip ambiguous candles.
-strategy("Fibonacci Live Impulse Pivot3 Research", shorttitle="Fib Pivot3 Research", overlay=true,
+strategy("REJECTED Fibonacci Pivot3 Research", shorttitle="REJECTED Fib Pivot3", overlay=true,
      initial_capital=100000, pyramiding=1, calc_on_every_tick=false,
      process_orders_on_close=false, use_bar_magnifier=true,
      default_qty_type=strategy.fixed, commission_type=strategy.commission.percent,
@@ -344,7 +344,7 @@ plotshape(showSignals and submittedSignal and direction == -1, title="Sell-stop 
 plotshape(showSignals and qualityRejectedSignal, title="Breakout quality rejected (not order)", style=shape.xcross, location=location.abovebar, color=color.gray, size=size.tiny, text="FILTER")
 var table panel = table.new(position.top_right, 2, 14, bgcolor=color.new(color.black, 15))
 if barstate.islast and showPanel
-    panel.cell(0, 0, "Fib Pivot3 Research", text_color=color.white)
+    panel.cell(0, 0, "REJECTED Fib Pivot3", text_color=color.white)
     panel.cell(1, 0, not inDates ? "Outside test dates" : reason, text_color=color.yellow)
     panel.cell(0, 1, protectEntryPrice ? "Cap net R / qty" : "Trigger net R / qty", text_color=color.white)
     panel.cell(1, 1, str.tostring(plannedNetR, "0.00") + " / " + str.tostring(plannedQty), text_color=color.white)
@@ -372,3 +372,8 @@ if barstate.islast and showPanel
     panel.cell(1, 12, (protectEntryPrice ? "Stop-limit / " : "Stop / ") + (phase == 4 ? str.tostring(entryLimit, format.mintick) : "n/a"), text_color=color.white)
     panel.cell(0, 13, "Quality mode / rejected crosses", text_color=color.white)
     panel.cell(1, 13, breakoutQuality + " / " + str.tostring(qualityRejected), text_color=color.white)
+
+// Remains a reproducible research artifact; warn even when its normal panel is hidden.
+var table researchWarning = table.new(position.top_center, 1, 1, bgcolor=color.new(color.red, 10))
+if barstate.islast
+    researchWarning.cell(0, 0, "REJECTED TUNING CANDIDATE\nUse Fibonacci_Live_Impulse_Pullback.pine for the baseline comparison", text_color=color.white)

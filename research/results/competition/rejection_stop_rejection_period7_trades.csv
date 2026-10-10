@@ -1,0 +1,2 @@
+entry_time,exit_time,direction,entry,exit,quantity,stop,target,gross,fees,funding,net,exit_reason
+1788220800,1788225900,1,78560.1,78395.90000000001,0.78,78396.1,79228.5,-128.07599999999775,85.69797600000001,0.0,-213.77397599999776,stop

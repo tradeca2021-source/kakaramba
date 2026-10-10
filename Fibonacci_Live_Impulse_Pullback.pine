@@ -1,40 +1,68 @@
 //@version=6
 // Experimental live impulse redesign: favorable known-period research, no fresh validation.
 // Freeze a causal running extreme at the first pullback; skip ambiguous candles.
-strategy("Fibonacci Live Impulse Pullback v2", shorttitle="Fib Live Pullback v2", overlay=true,
+strategy("Fibonacci Live Impulse Baseline v3", shorttitle="Fib Baseline15m v3", overlay=true,
      initial_capital=100000, pyramiding=1, calc_on_every_tick=false,
      process_orders_on_close=false, use_bar_magnifier=true,
      default_qty_type=strategy.fixed, commission_type=strategy.commission.percent,
      commission_value=0.07, slippage=2, margin_long=100, margin_short=100, max_labels_count=200)
 
-G_SETUP = "Breakout and first pullback"
-pivotBars = input.int(5, "Confirmed pivot left/right bars", minval=2, maxval=30, group=G_SETUP)
-trendTF = input.timeframe("240", "Higher trend timeframe", group=G_SETUP)
-trendLength = input.int(50, "Higher timeframe EMA", minval=2, group=G_SETUP)
-setupBars = input.int(60, "Maximum bars after breakout", minval=5, group=G_SETUP)
-triggerBars = input.int(3, "Entry trigger life (bars)", minval=1, group=G_SETUP)
-breakoutQuality = input.string("None", "Breakout quality (experimental)", options=["None", "Displacement", "Fresh origin", "Both"], group=G_SETUP)
-minImpulseATR = input.float(2.0, "Minimum impulse / ATR", minval=0.5, step=0.25, group=G_SETUP)
-atrLength = input.int(14, "ATR length", minval=2, group=G_SETUP)
-allowLong = input.bool(true, "Long entries", group=G_SETUP)
-allowShort = input.bool(true, "Short entries", group=G_SETUP)
-allowTwoCandle = input.bool(true, "Allow next-candle midpoint reclaim", group=G_SETUP)
-showReasons = input.bool(true, "Label rejection decisions", group=G_SETUP)
+G_PROFILE = "Settings profile"
+settingsProfile = input.string("Baseline BTC 15m (experimental)", "Profile", options=["Baseline BTC 15m (experimental)", "Custom (unverified)"], group=G_PROFILE)
+showProfileStatus = input.bool(true, "Show effective profile banner", group=G_PROFILE)
+bool useBaseline = settingsProfile == "Baseline BTC 15m (experimental)"
+G_SETUP = "Custom setup (used only in Custom profile)"
+customPivotBars = input.int(5, "Confirmed pivot left/right bars", minval=2, maxval=30, group=G_SETUP)
+pivotBars = useBaseline ? 5 : customPivotBars
+customTrendTF = input.timeframe("240", "Higher trend timeframe", group=G_SETUP)
+trendTF = useBaseline ? "240" : customTrendTF
+customTrendLength = input.int(50, "Higher timeframe EMA", minval=2, group=G_SETUP)
+trendLength = useBaseline ? 50 : customTrendLength
+customSetupBars = input.int(60, "Maximum bars after breakout", minval=5, group=G_SETUP)
+setupBars = useBaseline ? 60 : customSetupBars
+customTriggerBars = input.int(3, "Entry trigger life (bars)", minval=1, group=G_SETUP)
+triggerBars = useBaseline ? 3 : customTriggerBars
+customBreakoutQuality = input.string("None", "Breakout quality (experimental)", options=["None", "Displacement", "Fresh origin", "Both"], group=G_SETUP)
+breakoutQuality = useBaseline ? "None" : customBreakoutQuality
+customMinImpulseATR = input.float(2.0, "Minimum impulse / ATR", minval=0.5, step=0.25, group=G_SETUP)
+minImpulseATR = useBaseline ? 2.0 : customMinImpulseATR
+customAtrLength = input.int(14, "ATR length", minval=2, group=G_SETUP)
+atrLength = useBaseline ? 14 : customAtrLength
+customAllowLong = input.bool(true, "Long entries", group=G_SETUP)
+allowLong = useBaseline ? true : customAllowLong
+customAllowShort = input.bool(true, "Short entries", group=G_SETUP)
+allowShort = useBaseline ? true : customAllowShort
+customAllowTwoCandle = input.bool(true, "Allow next-candle midpoint reclaim", group=G_SETUP)
+allowTwoCandle = useBaseline ? true : customAllowTwoCandle
+showReasons = input.bool(false, "Label every rejection decision", group=G_SETUP)
+showFillWarnings = input.bool(true, "Label actual-fill limit warnings", group=G_SETUP)
 showSignals = input.bool(true, "Show breakout/rejection/order markers", group=G_SETUP)
 showPanel = input.bool(true, "Show setup diagnostics", group=G_SETUP)
-G_RISK = "Fixed exits and account risk"
-stopBufferATR = input.float(0.15, "Pullback stop buffer / ATR", minval=0, step=0.05, group=G_RISK)
-protectEntryPrice = input.bool(false, "Cap adverse entry price with stop-limit", group=G_RISK)
-minimumNetR = input.float(1.5, "Minimum net reward / stopped risk", minval=0.1, step=0.1, group=G_RISK)
-riskPercent = input.float(0.25, "Equity risk per entry (%)", minval=0.01, maxval=2, step=0.01, group=G_RISK)
-exposurePercent = input.float(95, "Maximum notional / equity (%)", minval=1, maxval=100, group=G_RISK)
-quantityStep = input.float(0.001, "Quantity step (BTC defaults)", minval=0.000001, group=G_RISK)
-minimumQuantity = input.float(0.001, "Minimum quantity", minval=0.000001, group=G_RISK)
-maximumQuantity = input.float(1, "Maximum quantity", minval=0.000001, group=G_RISK)
-feePercent = input.float(0.06, "Exchange fee per side (%)", minval=0, maxval=5, step=0.01, group=G_RISK)
-executionReservePercent = input.float(0.01, "Additional execution reserve per side (%)", minval=0, maxval=1, step=0.01, group=G_RISK)
-slippageTicks = input.int(2, "Modeled slippage per side (ticks)", minval=0, group=G_RISK)
-gapAllowanceATR = input.float(0.25, "Stop-gap sizing allowance / ATR", minval=0, step=0.05, group=G_RISK)
+G_RISK = "Custom risk (used only in Custom profile)"
+customStopBufferATR = input.float(0.15, "Pullback stop buffer / ATR", minval=0, step=0.05, group=G_RISK)
+stopBufferATR = useBaseline ? 0.15 : customStopBufferATR
+customProtectEntryPrice = input.bool(false, "Cap adverse entry price with stop-limit", group=G_RISK)
+protectEntryPrice = useBaseline ? false : customProtectEntryPrice
+customMinimumNetR = input.float(1.5, "Minimum net reward / stopped risk", minval=0.1, step=0.1, group=G_RISK)
+minimumNetR = useBaseline ? 1.5 : customMinimumNetR
+customRiskPercent = input.float(0.25, "Equity risk per entry (%)", minval=0.01, maxval=2, step=0.01, group=G_RISK)
+riskPercent = useBaseline ? 0.25 : customRiskPercent
+customExposurePercent = input.float(95, "Maximum notional / equity (%)", minval=1, maxval=100, group=G_RISK)
+exposurePercent = useBaseline ? 95 : customExposurePercent
+customQuantityStep = input.float(0.001, "Quantity step (BTC defaults)", minval=0.000001, group=G_RISK)
+quantityStep = useBaseline ? 0.001 : customQuantityStep
+customMinimumQuantity = input.float(0.001, "Minimum quantity", minval=0.000001, group=G_RISK)
+minimumQuantity = useBaseline ? 0.001 : customMinimumQuantity
+customMaximumQuantity = input.float(1, "Maximum quantity", minval=0.000001, group=G_RISK)
+maximumQuantity = useBaseline ? 1 : customMaximumQuantity
+customFeePercent = input.float(0.06, "Exchange fee per side (%)", minval=0, maxval=5, step=0.01, group=G_RISK)
+feePercent = useBaseline ? 0.06 : customFeePercent
+customExecutionReservePercent = input.float(0.01, "Additional execution reserve per side (%)", minval=0, maxval=1, step=0.01, group=G_RISK)
+executionReservePercent = useBaseline ? 0.01 : customExecutionReservePercent
+customSlippageTicks = input.int(2, "Modeled slippage per side (ticks)", minval=0, group=G_RISK)
+slippageTicks = useBaseline ? 2 : customSlippageTicks
+customGapAllowanceATR = input.float(0.25, "Stop-gap sizing allowance / ATR", minval=0, step=0.05, group=G_RISK)
+gapAllowanceATR = useBaseline ? 0.25 : customGapAllowanceATR
 
 G_DATES = "Competition/test dates"
 useDates = input.bool(false, "Restrict entry and exit dates", group=G_DATES)
@@ -44,6 +72,8 @@ bool inDates = not useDates or (time >= firstDate and time_close < lastDate)
 if useDates and firstDate >= lastDate
     runtime.error("Test start must precede test end")
 
+if useBaseline and timeframe.in_seconds() != 900
+    runtime.error("Baseline profile requires a 15-minute chart. Use Custom for other charts; their profitability is unverified.")
 if timeframe.in_seconds(trendTF) <= timeframe.in_seconds()
     runtime.error("Choose a trend timeframe higher than the chart timeframe")
 // Prior CLOSED HTF values only. lookahead_on is safe with these [1]/[2] offsets.
@@ -155,7 +185,7 @@ if not fillObserved and (strategy.position_size != 0 or strategy.closedtrades > 
     lastFillGapTicks := direction * (actualEntry - trigger) / tick
     bool fillWarning = not fillGeometryOK or (not na(lastFillNetR) and lastFillNetR < minimumNetR) or (not na(lastFillRiskPercent) and lastFillRiskPercent > riskPercent + 0.00000001)
     lastFillStatus := not fillGeometryOK ? "Fill outside planned bracket" : fillWarning ? "Fill exceeds planned risk/reward limits" : "Fill within modeled limits"
-    if showReasons and fillWarning
+    if showFillWarnings and fillWarning
         label.new(bar_index, actualEntry, lastFillStatus + "\nFill R " + str.tostring(lastFillNetR, "0.00") + " / risk " + str.tostring(lastFillRiskPercent, "0.000") + "%", style=label.style_label_left, color=color.orange, textcolor=color.black, size=size.small)
 
 if strategy.closedtrades > observedClosed
@@ -362,9 +392,9 @@ plotshape(showSignals and rejectionSignal, title="Rejection evaluated", style=sh
 plotshape(showSignals and submittedSignal and direction == 1, title="Buy-stop submitted (not fill)", style=shape.triangleup, location=location.belowbar, color=color.lime, size=size.small, text="ORDER")
 plotshape(showSignals and submittedSignal and direction == -1, title="Sell-stop submitted (not fill)", style=shape.triangledown, location=location.abovebar, color=color.red, size=size.small, text="ORDER")
 plotshape(showSignals and qualityRejectedSignal, title="Breakout quality rejected (not order)", style=shape.xcross, location=location.abovebar, color=color.gray, size=size.tiny, text="FILTER")
-var table panel = table.new(position.top_right, 2, 18, bgcolor=color.new(color.black, 15))
+var table panel = table.new(position.top_right, 2, 19, bgcolor=color.new(color.black, 15))
 if barstate.islast and showPanel
-    panel.cell(0, 0, "Fib Live Pullback v2", text_color=color.white)
+    panel.cell(0, 0, "Fib Baseline15m v3", text_color=color.white)
     panel.cell(1, 0, not inDates ? "Outside test dates" : reason, text_color=color.yellow)
     panel.cell(0, 1, protectEntryPrice ? "Cap net R / qty" : "Trigger net R / qty", text_color=color.white)
     panel.cell(1, 1, str.tostring(plannedNetR, "0.00") + " / " + str.tostring(plannedQty), text_color=color.white)
@@ -400,3 +430,9 @@ if barstate.islast and showPanel
     panel.cell(1, 16, str.tostring(lastFillRiskPercent, "0.000") + "% / " + str.tostring(riskPercent, "0.000") + "%", text_color=color.white)
     panel.cell(0, 17, "Last fill check (funding excluded)", text_color=color.white)
     panel.cell(1, 17, lastFillStatus, text_color=lastFillStatus == "Fill within modeled limits" ? color.lime : color.orange)
+    panel.cell(0, 18, "Profile / effective setup", text_color=color.white)
+    panel.cell(1, 18, (useBaseline ? "BASELINE, experimental" : "CUSTOM, unverified") + " | pivot " + str.tostring(pivotBars) + " / HTF " + trendTF + " / impulse " + str.tostring(minImpulseATR) + " ATR / " + breakoutQuality, text_color=useBaseline ? color.white : color.orange)
+
+var table profileStatus = table.new(position.top_center, 1, 1, bgcolor=color.new(color.black, 15))
+if barstate.islast and showProfileStatus
+    profileStatus.cell(0, 0, (useBaseline ? "BASELINE BTC 15m — EXPERIMENTAL" : "CUSTOM — UNVERIFIED") + "\nPivot " + str.tostring(pivotBars) + " | trend " + trendTF + "m EMA" + str.tostring(trendLength) + " | impulse " + str.tostring(minImpulseATR) + " ATR | filter " + breakoutQuality, text_color=useBaseline ? color.white : color.orange)

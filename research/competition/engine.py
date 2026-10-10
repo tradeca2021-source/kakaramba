@@ -23,6 +23,8 @@ class Rules:
     minimum_net_r:float=1.5
     protect_at_r:float=0.0
     signal_seconds:int=900
+    close_trigger:bool=False
+    rejection_stop:bool=False
 
 
 def net_r_target(entry,stop,atr,d,multiple,cfg):
@@ -206,7 +208,10 @@ def replay(bars,lower,rates,rules,start,end,fee=.0007,slippage_ticks=2,prepared=
                     if reject:
                         count('rejections')
                         trigger=(math.ceil(b.high/cfg.tick)*cfg.tick+cfg.tick if d==1 else math.floor(b.low/cfg.tick)*cfg.tick-cfg.tick) if rules.entry in ('stop','stop_limit') else f.round_price(b.close,cfg.tick)
-                        stop_raw=extreme-d*max(cfg.tick,.15*a)
+                        if rules.close_trigger:
+                            trigger=math.ceil(b.close/cfg.tick)*cfg.tick+cfg.tick if d==1 else math.floor(b.close/cfg.tick)*cfg.tick-cfg.tick
+                        stop_anchor=(b.low if d==1 else b.high) if rules.rejection_stop else extreme
+                        stop_raw=stop_anchor-d*max(cfg.tick,.15*a)
                         stop=(math.floor(stop_raw/cfg.tick) if d==1 else math.ceil(stop_raw/cfg.tick))*cfg.tick
                         target=f.round_price(origin+d*abs(endpoint-origin)*rules.extension,cfg.tick)
                         if rules.target_net_r:

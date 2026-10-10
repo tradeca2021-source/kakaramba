@@ -139,3 +139,8 @@ See [the candidate documentation](../../../Fibonacci_Live_Impulse_Pullback.md) a
 ## Entry, stop protection and chart configuration follow-ups
 
 [ENHANCEMENTS.md](ENHANCEMENTS.md) records all predeclared comparisons and their failed qualification results. Fifteen-minute rejection-break stop entries with fixed brackets remain the strongest observed version. Pine v2 adds actual-fill risk/reward diagnostics; no new trading mode or profitability claim is promoted.
+
+
+## Rejection timing redesign and baseline profile
+
+`rejection_entry_audit.json` records four predeclared trigger/stop combinations. The rejection-candle stop modestly improves aggregate net but fails the minimum four positive-period requirement; no change is promoted. The active Pine v3 adds an explicit baseline/custom profile to prevent stale settings from silently changing the measured configuration. The rejected Pivot3 artifact is visibly labeled. See [the repository entry point](../../../README.md).

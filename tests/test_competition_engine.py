@@ -144,6 +144,28 @@ class ReplayTests(unittest.TestCase):
         self.assertEqual(trades[0]['exit_time'],19800)
         self.assertEqual(curve[-1]['time'],21600)
 
+    def test_close_trigger_does_not_require_a_rejection_wick_break(self):
+        bars,lower,prepared=self.fixture()
+        bars[9]=m.f.Candle(8100,99,103,98,101)
+        _,control,_,_=m.replay(bars,lower,[],m.Rules(live_endpoint=True),0,len(bars),prepared=prepared)
+        _,earlier,_,_=m.replay(bars,lower,[],m.Rules(live_endpoint=True,close_trigger=True),0,len(bars),prepared=prepared)
+        self.assertEqual(control,[])
+        self.assertEqual(len(earlier),1)
+        self.assertGreaterEqual(earlier[0]['entry_time'],9000)
+
+    def test_rejection_stop_is_frozen_from_second_candle_not_future_prices(self):
+        bars,lower,prepared=self.fixture()
+        bars[9]=m.f.Candle(8100,101,102,98,99)
+        bars[10]=m.f.Candle(9000,99,102,99,101)
+        stops=[]
+        for tight in (False,True):
+            _,trades,_,_=m.replay(bars,lower,[],m.Rules(live_endpoint=True,close_trigger=True,rejection_stop=tight),0,len(bars),prepared=prepared)
+            self.assertEqual(len(trades),1)
+            self.assertGreaterEqual(trades[0]['entry_time'],9900)
+            stops.append(trades[0]['stop'])
+        self.assertAlmostEqual(stops[0],97.8)
+        self.assertAlmostEqual(stops[1],98.8)
+
     def test_signed_funding_accounted_once_and_before_exit(self):
         bars,lower,prepared=self.fixture()
         results=[]

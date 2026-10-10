@@ -1,4 +1,4 @@
-# Fibonacci Live Impulse Pullback v2
+# Fibonacci Live Impulse Baseline v3
 
 Experimental redesign of the confirmed-endpoint strategy. Load `Fibonacci_Live_Impulse_Pullback.pine` on standard BTCUSDT 15-minute candles, with its default closed 4-hour trend filter. Keep the original strategy for comparison. The new script has not been compiled or backtested natively in TradingView here.
 
@@ -37,3 +37,25 @@ Entry and exit rules retain the v1 defaults. The panel now records the last actu
 Orange labels flag fills outside the bracket, below the intended reward floor or above the requested risk budget. These are observations after execution; they do not undo a fill, alter orders or guarantee realized losses. Funding is excluded, slippage is an assumed reserve, and price gaps can exceed modeled risk. A gap past the target is classified as invalid geometry instead of treating its absolute distance as positive reward.
 
 The latest predeclared entry, protective-stop and timeframe comparisons are documented in [ENHANCEMENTS.md](research/results/competition/ENHANCEMENTS.md). None passed the criteria for adding a new trading mode. Retain the 15m chart, pivot5, prior closed4h EMA50, minimum netR1.5, fixed stop and swing target. The experimental strategy still needs unused-period and native TradingView verification.
+
+
+## v3 baseline profile and research labels
+
+Select **Baseline BTC 15m (experimental)** for the configuration measured in the control studies. The preset fixes pivot5, previous closed4h EMA50, 2ATR impulse minimum, 14ATR lookback, filterNone, first two-candle midpoint rejection, existing fixed stops/targets, minnetR1.5, 0.25% risk,95% exposure,max1BTC and the cost assumptions. Stale Custom input values cannot change these effective settings in baseline mode. It requires a15m chart. To change parameters, explicitly select **Custom (unverified)**. Its banner and panel identify the effective parameters rather than displaying only input metadata. Dates and presentation controls stay independent; native Properties are also separate from the model inputs.
+
+The supplied screenshot used `Fib Pivot3 Research` with ribbon values pivot3, trend60m, filterBoth and minimpulse0.5ATR. This differs from both the baseline and the frozen three-bar research candidate's other defaults. The screenshot's one losing completed trade does not establish long-run expectancy or reproduce the baseline study. The research script now displays REJECTED in its short title and an on-chart warning even with its normal diagnostics hidden.
+
+Decision labels default off; actual-fill warnings remain on. The [repository entry point](README.md) identifies the active file and how to compare it. Native Pine compilation and unused-period verification remain outstanding.
+
+## Rejection timing redesign comparison
+
+One-tick confirmation beyond the rejection close was compared with confirmation beyond its full wick, and a current rejection-candle stop was compared with the whole two-candle pullback extreme. Orders remain eligible only after rejection close; stops/targets freeze at submission. All use the original costs, sizing and live endpoint. Same previously inspected periods:
+
+| Trigger / stop | Trades | Win rate | Net USDT | PF | Worst period5m closing drawdown |
+|---|---:|---:|---:|---:|---:|
+| Wick / full pullback control |38|42.1%|3,932.89|1.831|803.24|
+| Close / full pullback |77|28.6%|1,732.16|1.152|2,007.12|
+| Wick / rejection candle |44|40.9%|4,158.51|1.745|1,006.92|
+| Close / rejection candle |82|28.0%|1,849.22|1.153|2,008.88|
+
+The narrower rejection stop increases aggregate net by$225.62 and winners from16 to18, but only3 periods are positive versus4 for the control, profit factor falls and worst period drawdown rises25.4%. It fails the predeclared consistency requirement and is not promoted. No candidate qualified, so the conditional cost-sensitivity stage was not run. The earlier trigger variants perform worse. Do not describe the narrow stop as a proven better strategy based on the total alone. Protocol and all period statistics/trades are in `research/competition/rejection_entry_protocol.json` and `research/results/competition/rejection_entry_audit.json`. Reproduce using `python research/competition/rejection_entry_study.py --output /tmp/fib-rejection-audit`.

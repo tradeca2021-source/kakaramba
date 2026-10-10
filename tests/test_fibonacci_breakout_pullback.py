@@ -94,7 +94,7 @@ class EntryBoundaries(unittest.TestCase):
                 reward=abs(target-cap)-.4-(cap+target)*.0007
                 self.assertGreaterEqual(reward+1e-8,1.5*risk)
                 self.assertTrue(predicate('capGeometry',longSide=is_long,trigger=entry,entryLimit=cap,tradeTarget=target))
-        self.assertIn('protectEntryPrice = input.bool(false,',SOURCE)
+        self.assertRegex(SOURCE,r'(?:protectEntryPrice|customProtectEntryPrice) = input.bool\(false,')
         self.assertIn('limit=protectEntryPrice ? entryLimit : na',SOURCE)
         self.assertIn('riskQuantity(sizingPrice, tradeStop, atr, math.max(trigger, sizingPrice))',SOURCE)
 
@@ -119,7 +119,7 @@ class EntryBoundaries(unittest.TestCase):
                     expected=mode=='None' or (mode=='Displacement' and displacement) or (mode=='Fresh origin' and fresh) or (mode=='Both' and displacement and fresh)
                     self.assertEqual(predicate('longQualityOK',breakoutQuality=mode,longDisplacement=displacement,longFresh=fresh),expected)
                     self.assertEqual(predicate('shortQualityOK',breakoutQuality=mode,shortDisplacement=displacement,shortFresh=fresh),expected)
-        self.assertIn('breakoutQuality = input.string("None",',SOURCE)
+        self.assertRegex(SOURCE,r'(?:breakoutQuality|customBreakoutQuality) = input.string\("None",')
 
     def test_closed_htf_and_delayed_endpoint_contract(self):
         self.assertIn('[close[1], ta.ema(close, trendLength)[1], ta.ema(close, trendLength)[2]]',SOURCE)
