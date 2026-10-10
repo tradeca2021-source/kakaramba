@@ -1,0 +1,8 @@
+{
+ "purpose": "Execution audit of a rejection-trigger stop-limit order; known periods, not fresh validation",
+ "rules": "Preserve v4 BOS, HTF trend, first pullback, confirmed rejection, stop and target. Derive worst acceptable entry price from minimum 1.5 modeled net R. Size at that adverse price; notional sizing uses the greater of trigger and cap.",
+ "activation": "Trigger must break after rejection closes. The limit component becomes active only then. A gap past the cap can remain unfilled and later fill on a retrace. Never treat a pre-activation touch as a fill.",
+ "intrabar": "Replay on 5m subbars. A gap-trigger at subbar open permits a later touch within that subbar. A trigger crossed inside a subbar with an eligible cap fills at the trigger conservatively. Active limits get no favorable gap improvement. Stop-first entry-subbar ambiguity remains.",
+ "periods": "Same seven known independent-account periods used by the limit follow-up; no new parameter tuning or promotion claim",
+ "costs": "0.07% fee/reserve per side, 2 modeled slippage ticks per side in eligibility, actual funding, unchanged 0.25% risk and 95% exposure limit"
+}
