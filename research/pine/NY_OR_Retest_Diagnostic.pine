@@ -1,0 +1,215 @@
+//@version=6
+// Native comparison artifact. Failed replacement criteria; active baseline unchanged.
+// Python reference: session_breakout_engine.py mode='retest'. Funding excluded here.
+strategy("RESEARCH NY OR Retest Diagnostic v1", shorttitle="NY OR Diagnostic", overlay=true,
+     initial_capital=100000, pyramiding=0, calc_on_every_tick=false, calc_on_order_fills=false,
+     process_orders_on_close=false, use_bar_magnifier=true,
+     default_qty_type=strategy.fixed, commission_type=strategy.commission.percent,
+     commission_value=0.07, slippage=2, margin_long=100, margin_short=100,
+     max_labels_count=100)
+
+string CLOCK = "America/New_York"
+float MODEL_FEE = 0.0007
+float RISK_FRACTION = 0.0025
+float LOT_STEP = 0.001
+float EXPOSURE_FRACTION = 0.95
+float MAX_BTC = 1.0
+int SLIP_TICKS = 2
+
+bool showStatus = input.bool(true, "Show research status", group="Display")
+bool showWarnings = input.bool(true, "Show actual-fill warnings", group="Display")
+bool showSignals = input.bool(true, "Show breakout and rejection", group="Display")
+bool useDates = input.bool(false, "Restrict entry dates", group="Comparison dates")
+int firstDate = input.time(timestamp("2024-01-01 00:00 +0000"), "Start inclusive", group="Comparison dates")
+int lastDate = input.time(timestamp("2026-10-01 00:00 +0000"), "End exclusive", group="Comparison dates")
+if timeframe.in_seconds() != 900
+    runtime.error("Use a 15-minute chart for this fixed research strategy.")
+if not chart.is_standard
+    runtime.error("Use standard price candles for the execution comparison.")
+if syminfo.basecurrency != "BTC" or syminfo.currency != "USDT"
+    runtime.error("This sizing profile requires BTC quoted in USDT.")
+if useDates and firstDate >= lastDate
+    runtime.error("Comparison start must precede end.")
+
+floorTick(float price) =>
+    math.floor(price / syminfo.mintick + 1e-9) * syminfo.mintick
+ceilTick(float price) =>
+    math.ceil(price / syminfo.mintick - 1e-9) * syminfo.mintick
+unitRisk(float entry, float stop, float atr) =>
+    math.abs(entry - stop) + 2 * SLIP_TICKS * syminfo.mintick + 0.25 * atr + (entry + stop) * MODEL_FEE
+netReward(float entry, float target) =>
+    math.abs(target - entry) - 2 * SLIP_TICKS * syminfo.mintick - (entry + target) * MODEL_FEE
+
+// All security expressions are offset. Current four-hour prices never supply trend.
+[trendClose, trendEMA, priorEMA, trendIndex] = request.security(syminfo.tickerid, "240",
+     [close[1], ta.ema(close, 50)[1], ta.ema(close, 50)[2], bar_index[1]],
+     lookahead=barmerge.lookahead_on)
+bool upTrend = trendIndex >= 49 and trendClose > trendEMA and trendEMA > priorEMA
+bool downTrend = trendIndex >= 49 and trendClose < trendEMA and trendEMA < priorEMA
+float atr = ta.atr(14)
+int minuteNY = hour(time, CLOCK) * 60 + minute(time, CLOCK)
+int dateNY = year(time, CLOCK) * 10000 + month(time, CLOCK) * 100 + dayofmonth(time, CLOCK)
+int weekdayNY = dayofweek(time, CLOCK)
+bool weekday = weekdayNY >= dayofweek.monday and weekdayNY <= dayofweek.friday
+bool dateEligible = not useDates or (time >= firstDate and time_close < lastDate)
+
+var int sessionDate = na
+var int rangeBars = 0
+var int firstRangeTime = na
+var float rangeHigh = na
+var float rangeLow = na
+var float rangeATR = na
+var bool rangeReady = false
+var bool rangeValid = false
+var bool usedToday = false
+var int armedDirection = 0
+var int breakoutBar = na
+var float activeStop = na
+var float activeTarget = na
+var float submissionATR = na
+var float submissionEquity = na
+var int submittedBar = na
+var bool fillObserved = false
+var int seenClosedTrades = 0
+var float lastFillRisk = na
+var float lastFillR = na
+var string lastDecision = "Waiting for opening range"
+
+bool breakoutMark = false
+bool rejectionMark = false
+
+if barstate.isconfirmed
+    // Read actual entry even if both entry and exit happened between chart closes.
+    bool closedNew = strategy.closedtrades > seenClosedTrades
+    bool filled = not na(submittedBar) and not fillObserved and (strategy.position_size != 0 or closedNew)
+    if filled
+        float actualEntry = strategy.position_size != 0 ? strategy.position_avg_price : strategy.closedtrades.entry_price(strategy.closedtrades - 1)
+        float actualQty = strategy.position_size != 0 ? math.abs(strategy.position_size) : math.abs(strategy.closedtrades.size(strategy.closedtrades - 1))
+        bool geometry = not na(activeStop) and not na(activeTarget) and (actualEntry > activeStop and actualEntry < activeTarget or actualEntry < activeStop and actualEntry > activeTarget)
+        float stoppedRisk = unitRisk(actualEntry, activeStop, submissionATR)
+        lastFillRisk := 100 * stoppedRisk * actualQty / submissionEquity
+        lastFillR := geometry ? netReward(actualEntry, activeTarget) / stoppedRisk : na
+        bool warning = not geometry or lastFillRisk > 0.25 + 1e-8 or lastFillR < 1.5
+        if showWarnings and warning
+            label.new(bar_index, high, "Actual-fill warning\nRisk " + str.tostring(lastFillRisk, "#.###") + "% / net R " + str.tostring(lastFillR, "#.##"), color=color.orange, textcolor=color.black, style=label.style_label_down)
+        fillObserved := true
+    seenClosedTrades := strategy.closedtrades
+    if not na(submittedBar) and bar_index > submittedBar and strategy.position_size == 0
+        activeStop := na
+        activeTarget := na
+        submittedBar := na
+        fillObserved := false
+
+    if na(sessionDate) or dateNY != sessionDate
+        sessionDate := dateNY
+        rangeBars := 0
+        firstRangeTime := na
+        rangeHigh := na
+        rangeLow := na
+        rangeATR := na
+        rangeReady := false
+        rangeValid := false
+        usedToday := false
+        armedDirection := 0
+        breakoutBar := na
+        lastDecision := "Waiting for opening range"
+
+    if minuteNY == 570
+        rangeBars := 1
+        firstRangeTime := time
+        rangeHigh := high
+        rangeLow := low
+    if minuteNY == 585 and rangeBars == 1 and time - firstRangeTime == 900000
+        rangeBars := 2
+        rangeHigh := math.max(rangeHigh, high)
+        rangeLow := math.min(rangeLow, low)
+        rangeATR := atr
+        rangeReady := not na(atr)
+        rangeValid := rangeReady and rangeHigh - rangeLow >= atr and rangeHigh - rangeLow <= 4 * atr
+        lastDecision := rangeValid ? "Waiting for first aligned breakout" : "Opening range rejected"
+
+    // Native broker fills precede this calculation; this submits the 16:00 exit.
+    if strategy.position_size != 0 and minuteNY == 945
+        strategy.close_all(comment="NY 16:00")
+
+    bool flat = strategy.position_size == 0 and na(submittedBar)
+    bool eligible = dateEligible and weekday and minuteNY >= 600 and minuteNY < 780 and rangeReady and rangeValid and flat
+    if armedDirection != 0
+        int d = armedDirection
+        bool trendAgrees = d == 1 ? upTrend : downTrend
+        float originalStop = d == 1 ? rangeLow - 0.25 * rangeATR : rangeHigh + 0.25 * rangeATR
+        bool breached = d == 1 ? low <= originalStop : high >= originalStop
+        if not eligible or not trendAgrees or bar_index - breakoutBar > 4 or breached
+            armedDirection := 0
+            lastDecision := "Retest expired or invalidated"
+        else if bar_index > breakoutBar
+            float boundary = d == 1 ? rangeHigh : rangeLow
+            bool touched = d == 1 ? low <= boundary : high >= boundary
+            if touched
+                bool rejection = d * (close - open) > 0 and d * (close - boundary) > 0 and d * (close - boundary) <= 0.5 * (rangeHigh - rangeLow)
+                if rejection
+                    rejectionMark := true
+                    float stop = d == 1 ? floorTick(rangeLow - 0.25 * rangeATR) : ceilTick(rangeHigh + 0.25 * rangeATR)
+                    float distance = d * (close - stop)
+                    float target = d == 1 ? floorTick(close + 3 * distance) : ceilTick(close - 3 * distance)
+                    bool geometry = d == 1 ? 0 < stop and stop < close and close < target : 0 < target and target < close and close < stop
+                    float risk = unitRisk(close, stop, rangeATR)
+                    float reward = netReward(close, target)
+                    float equity = math.max(0, strategy.equity)
+                    float rawQty = math.min(MAX_BTC, math.min(equity * RISK_FRACTION / risk, equity * EXPOSURE_FRACTION / close))
+                    float qty = math.floor(rawQty / LOT_STEP) * LOT_STEP
+                    if geometry and reward >= 1.5 * risk and qty >= LOT_STEP
+                        activeStop := stop
+                        activeTarget := target
+                        submissionATR := rangeATR
+                        submissionEquity := equity
+                        submittedBar := bar_index
+                        fillObserved := false
+                        string entryAudit = "First OR rejection " + (d == 1 ? "L" : "S") + " | Planned Entry " + str.tostring(close, format.mintick) + " | Stop " + str.tostring(stop, format.mintick) + " | Target " + str.tostring(target, format.mintick) + " | NetRR " + str.tostring(reward / risk, "0.0000") + " | EstRiskPct " + str.tostring(100 * risk * qty / equity, "0.0000") + " | FrozenATR " + str.tostring(rangeATR, "0.0000")
+                        if d == 1
+                            strategy.entry("NY Long", strategy.long, qty=qty, comment=entryAudit)
+                            strategy.exit("L bracket", from_entry="NY Long", stop=stop, limit=target)
+                        else
+                            strategy.entry("NY Short", strategy.short, qty=qty, comment=entryAudit)
+                            strategy.exit("S bracket", from_entry="NY Short", stop=stop, limit=target)
+                        lastDecision := "Market order submitted for next tick"
+                    else
+                        lastDecision := "Geometry, net payoff or quantity rejected"
+                else
+                    lastDecision := "First touch failed rejection"
+                armedDirection := 0
+
+    if eligible and not usedToday and armedDirection == 0
+        bool longBreak = upTrend and close > rangeHigh and close[1] <= rangeHigh
+        bool shortBreak = downTrend and close < rangeLow and close[1] >= rangeLow
+        if longBreak or shortBreak
+            usedToday := true
+            armedDirection := longBreak ? 1 : -1
+            breakoutBar := bar_index
+            breakoutMark := true
+            lastDecision := "Waiting for first boundary retest"
+
+    // Preserve protective orders while pending or filled, including cash-close tick.
+    if not na(activeStop) and not na(activeTarget)
+        strategy.exit("L bracket", from_entry="NY Long", stop=activeStop, limit=activeTarget)
+        strategy.exit("S bracket", from_entry="NY Short", stop=activeStop, limit=activeTarget)
+    if useDates and time_close >= lastDate
+        strategy.cancel_all()
+        strategy.close_all(comment="Comparison end", immediately=true)
+        armedDirection := 0
+
+plot(rangeReady ? rangeHigh : na, "Opening range high", color=color.aqua, style=plot.style_linebr)
+plot(rangeReady ? rangeLow : na, "Opening range low", color=color.aqua, style=plot.style_linebr)
+plot(trendEMA, "Prior closed 4h EMA50", color=color.orange)
+plot(activeStop, "Frozen stop", color=color.red, style=plot.style_linebr)
+plot(activeTarget, "Frozen 3R target", color=color.lime, style=plot.style_linebr)
+plotshape(showSignals and breakoutMark, "Breakout", shape.diamond, location.abovebar, color=color.orange, size=size.tiny)
+plotshape(showSignals and rejectionMark, "Rejection", shape.circle, location.belowbar, color=color.yellow, size=size.tiny)
+var table status = table.new(position.top_right, 1, 6)
+if barstate.islast and showStatus
+    table.cell(status, 0, 0, "RESEARCH — replacement gate failed", text_color=color.orange)
+    table.cell(status, 0, 1, "BTC 15m / NY first OR retest", text_color=color.white)
+    table.cell(status, 0, 2, "0.25% risk / 3R target / flat 16:00 NY", text_color=color.white)
+    table.cell(status, 0, 3, lastDecision, text_color=color.white)
+    table.cell(status, 0, 4, "Funding excluded; native parity unverified", text_color=color.orange)
+    table.cell(status, 0, 5, "Last observed fill: risk " + str.tostring(lastFillRisk, "#.###") + "% / net R " + str.tostring(lastFillR, "#.##"), text_color=color.white)

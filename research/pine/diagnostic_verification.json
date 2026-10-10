@@ -1,0 +1,16 @@
+{
+  "file": "research/pine/NY_OR_Retest_Diagnostic.pine",
+  "sha256": "d8c9bf37cee00da02059d20f7cb38b4991007b99e9e41b01848507af89ced47f",
+  "parser": {
+    "name": "pynescript",
+    "version": "0.3.0",
+    "antlr4_python3_runtime": "4.13.2",
+    "click": "8.5.0",
+    "exit_code": 0,
+    "ast_sha256": "8c8ed2f1eed5a21e902a930ea33e731f4ae97014874c6de37cdf45d104b571a7"
+  },
+  "trading_rules_preserved_by_exact_normalized_source_comparison": true,
+  "native_tradingview_compilation": false,
+  "native_execution_parity": false,
+  "bitunix_performance_verified": false
+}
