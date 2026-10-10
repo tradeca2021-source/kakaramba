@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "status": "Predeclared independent experiment after the five regime candidates failed; no channel outcomes inspected",
+  "hypothesis": "A simple trend follower with a wider price scale and no fixed target can retain large moves after costs; Fibonacci is not mandatory",
+  "budget": "One fixed design, no parameter search or fallback configurations",
+  "design": {"name": "channel_4h_20_10", "decision_chart_seconds": 900, "signal_seconds": 14400, "entry_channel_bars": 20, "exit_channel_bars": 10, "atr_bars": 14, "initial_stop_atr": 2.0, "entry": "market on next five-minute open after a completed four-hour close beyond the preceding twenty-bar channel", "exit": "initial protective stop tightened only toward the latest completed ten-bar channel boundary, one tick outside", "target": "none", "both_directions": true, "pyramiding": false, "minimum_net_r_gate": "not applicable without a fixed target; positive realized net expectancy is required"},
+  "execution": {"initial_equity": 100000, "risk_percent": 0.25, "exposure_percent": 95, "maximum_quantity": 1, "quantity_step": 0.001, "tick": 0.1, "fee_per_side": 0.0007, "slippage_ticks": 2, "gap_allowance_atr": 0.25, "funding": "actual rates with five-minute opening price notional proxy", "entry_stop_ambiguity": "stop-first; no credit for a favorable move before entry"},
+  "development": ["2024-01-01", "2026-10-01"],
+  "development_archives": ["2023-01", "2026-09"],
+  "baseline": {"name": "baseline_v3", "live_endpoint": true},
+  "development_gate": {"minimum_trades": 100, "net_exceeds_baseline": true, "minimum_positive_half_year_blocks": 4, "net_without_best_positive": true, "maximum_drawdown_fraction": 0.05},
+  "historical_test": ["2021-01-01", "2023-01-01"],
+  "historical_archives": ["2020-01", "2022-12"],
+  "historical_policy": "Reserved older history only after development qualification and source freeze; not future evaluation; audit prior access and archive availability",
+  "historical_gate": {"minimum_trades": 50, "net_positive": true, "minimum_positive_half_year_blocks": 3, "minimum_profit_factor": 1.20, "net_without_best_positive": true, "maximum_drawdown_fraction": 0.05, "both_cost_stresses_positive": true},
+  "stresses": [{"name": "fee_0.10_percent", "fee": 0.001, "slippage_ticks": 2}, {"name": "slippage_20_ticks", "fee": 0.0007, "slippage_ticks": 20}],
+  "uncertainty": {"method": "circular contiguous seven-day blocks of daily account returns", "replicates": 2000, "seed": 20261010},
+  "publication": "Publish all outcomes. A failed design is not promoted. A historically qualified design may proceed to Pine; native compilation and prospective evaluation remain separate gates."
+}
