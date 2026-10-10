@@ -1,0 +1,214 @@
+{
+  "access_date_utc": "2026-10-10",
+  "verified_pinned_sources": [
+    {
+      "name": "bitunix_public_source",
+      "pinned_url": "https://raw.githubusercontent.com/BitunixOfficial/open-api/0be792c3a98a2706d22e5d1a9742f448f11f3347/Demo/Python/open_api_http_future_public.py",
+      "status": "verified",
+      "sha256": "79a7aa9190e51da7c5b1500faa703473bef369ebd711117863a0940c5a219078"
+    },
+    {
+      "name": "pbo_source",
+      "pinned_url": "https://raw.githubusercontent.com/esvhd/pypbo/4d723f06498267a2a6280cb9d7d5649348e961d1/pypbo/pbo.py",
+      "status": "verified",
+      "sha256": "7ae8efcdd5de6aeef157acf5e5e80685a95988fc2a8556751c412da3ebd1bf1a"
+    },
+    {
+      "name": "pine_strategy_mirror_text",
+      "pinned_url": "https://raw.githubusercontent.com/trustdan/pine-script-docs-scraped/1c7f0e7e2692bbc563e83b71e079556e4d3d154f/concepts/strategies.md",
+      "status": "verified",
+      "sha256": "c74138c9ef19e1a6f9da23fe71cb13100dde32f757584eecc5e1244776c7155c"
+    },
+    {
+      "name": "momentum_notebook",
+      "pinned_url": "https://raw.githubusercontent.com/anthonyng2/Time-Series-Momentum/6f58263b98a9bb6f1779823be34c8f03255762fc/TSMOM/TS%20MOM.ipynb",
+      "status": "verified",
+      "sha256": "d2e72a96257a330a4187f9a43cd72fa88d88340876c08016a6ea624d0aeb5481"
+    }
+  ],
+  "source_classification": {
+    "bitunix_public_source": "official vendor example; full official documentation remains blocked",
+    "pbo_source": "independent implementation, original academic papers not read",
+    "pine_strategy_mirror_text": "third-party mirror of TradingView documentation; current primary page not verified",
+    "momentum_notebook": "independent monthly diversified-futures replication; no intraday BTC evidence"
+  },
+  "blocked_primary_attempts": [
+    {
+      "name": "bitunix_docs",
+      "url": "https://openapidoc.bitunix.com/",
+      "status": "failed",
+      "error": "<urlopen error Tunnel connection failed: 403 Forbidden>"
+    },
+    {
+      "name": "tradingview_strategies",
+      "url": "https://www.tradingview.com/pine-script-docs/concepts/strategies/",
+      "status": "failed",
+      "error": "<urlopen error Tunnel connection failed: 403 Forbidden>"
+    },
+    {
+      "name": "crypto_risks_returns",
+      "url": "https://www.nber.org/papers/w24877",
+      "status": "failed",
+      "error": "<urlopen error Tunnel connection failed: 403 Forbidden>"
+    },
+    {
+      "name": "crypto_factors",
+      "url": "https://www.nber.org/papers/w25882",
+      "status": "failed",
+      "error": "<urlopen error Tunnel connection failed: 403 Forbidden>"
+    },
+    {
+      "name": "time_series_momentum",
+      "url": "https://www.aqr.com/Insights/Research/Journal-Article/Time-Series-Momentum",
+      "status": "failed",
+      "error": "<urlopen error Tunnel connection failed: 403 Forbidden>"
+    },
+    {
+      "name": "backtest_overfitting",
+      "url": "https://www.davidhbailey.com/dhbpapers/backtest-prob.pdf",
+      "status": "failed",
+      "error": "<urlopen error Tunnel connection failed: 403 Forbidden>"
+    },
+    {
+      "name": "deflated_sharpe",
+      "url": "https://www.davidhbailey.com/dhbpapers/deflated-sharpe.pdf",
+      "status": "failed",
+      "error": "<urlopen error Tunnel connection failed: 403 Forbidden>"
+    }
+  ],
+  "api_probes": [
+    {
+      "name": "bitunix_kline_15m",
+      "url": "https://fapi.bitunix.com/api/v1/futures/market/kline?symbol=BTCUSDT&interval=15m&limit=5&type=LAST_PRICE",
+      "final_url": "https://fapi.bitunix.com/api/v1/futures/market/kline?symbol=BTCUSDT&interval=15m&limit=5&type=LAST_PRICE",
+      "bytes": 735,
+      "sha256": "b72682734bc7082b114328782f79d9e263359ad40aec3e33d0434a6f7f24f498",
+      "status": "fetched",
+      "code": 0,
+      "msg": "Success"
+    },
+    {
+      "name": "bitunix_kline_15min",
+      "url": "https://fapi.bitunix.com/api/v1/futures/market/kline?symbol=BTCUSDT&interval=15min&limit=5&type=LAST_PRICE",
+      "final_url": "https://fapi.bitunix.com/api/v1/futures/market/kline?symbol=BTCUSDT&interval=15min&limit=5&type=LAST_PRICE",
+      "bytes": 735,
+      "sha256": "b72682734bc7082b114328782f79d9e263359ad40aec3e33d0434a6f7f24f498",
+      "status": "fetched",
+      "code": 0,
+      "msg": "Success"
+    },
+    {
+      "name": "bitunix_funding",
+      "url": "https://fapi.bitunix.com/api/v1/futures/market/funding_rate/batch",
+      "final_url": "https://fapi.bitunix.com/api/v1/futures/market/funding_rate/batch",
+      "bytes": 189676,
+      "sha256": "901d8b47acc52089998d94e7266cad1022ee1da1a418370376863dcdbd5fdb62",
+      "status": "fetched",
+      "code": 0,
+      "msg": "Success"
+    },
+    {
+      "name": "bitunix_depth",
+      "url": "https://fapi.bitunix.com/api/v1/futures/market/depth?symbol=BTCUSDT&limit=5",
+      "final_url": "https://fapi.bitunix.com/api/v1/futures/market/depth?symbol=BTCUSDT&limit=5",
+      "bytes": 261,
+      "sha256": "59100a6478add381b88d29ed07f4eca550f94e36a34e31bbf9a39d4c8d45f8ef",
+      "status": "fetched",
+      "code": 0,
+      "msg": "Success"
+    },
+    {
+      "name": "bitunix_history_2024",
+      "url": "https://fapi.bitunix.com/api/v1/futures/market/kline?symbol=BTCUSDT&interval=15m&limit=5&type=LAST_PRICE&startTime=1704067200000&endTime=1704153599999",
+      "status": "fetched",
+      "code": 0,
+      "msg": "Success",
+      "rows": 5,
+      "earliest": 1704149100000,
+      "latest": 1704152700000,
+      "requested_start": 1704067200000,
+      "requested_end": 1704153599999,
+      "bounds_respected": true,
+      "sha256": "88470b53ed97db9363e4df52f0603c33192d83cf4580b8abe106937b5e8e44b1",
+      "retrieved_utc": "2026-10-10T16:55:23.626263+00:00"
+    },
+    {
+      "name": "bitunix_history_2025",
+      "url": "https://fapi.bitunix.com/api/v1/futures/market/kline?symbol=BTCUSDT&interval=15m&limit=5&type=LAST_PRICE&startTime=1735689600000&endTime=1735775999999",
+      "status": "fetched",
+      "code": 0,
+      "msg": "Success",
+      "rows": 5,
+      "earliest": 1735771500000,
+      "latest": 1735775100000,
+      "requested_start": 1735689600000,
+      "requested_end": 1735775999999,
+      "bounds_respected": true,
+      "sha256": "74efe8b3aa6cae97194e594583c5900006a65ab049b84978a51625696d7abc00",
+      "retrieved_utc": "2026-10-10T16:55:23.528855+00:00"
+    },
+    {
+      "name": "bitunix_5m_closed_sample",
+      "url": "https://fapi.bitunix.com/api/v1/futures/market/kline?symbol=BTCUSDT&interval=5m&limit=6&type=LAST_PRICE&startTime=1791547200000&endTime=1791548999999",
+      "status": "fetched",
+      "code": 0,
+      "msg": "Success",
+      "rows": 6,
+      "earliest": 1791546900000,
+      "latest": 1791548700000,
+      "requested_start": 1791547200000,
+      "requested_end": 1791548999999,
+      "bounds_respected": false,
+      "sha256": "7950a4f8b779d256065d3b626eb29d3e6f9bab2b73dfd4bb91e3ae1beb7f7d4d",
+      "retrieved_utc": "2026-10-10T16:55:23.858088+00:00"
+    },
+    {
+      "name": "bitunix_missing_candle_check",
+      "url": "https://fapi.bitunix.com/api/v1/futures/market/kline?symbol=BTCUSDT&interval=5m&limit=1&type=LAST_PRICE&startTime=1791547200000&endTime=1791547499999",
+      "status": "fetched",
+      "code": 0,
+      "msg": "Success",
+      "rows": 1,
+      "requested_start": 1791547200000,
+      "requested_end": 1791547499999,
+      "sha256": "c583a6ec9ed8f1e45eb1c125efccdd9ba187442ecf2ebf13303185da198c6723"
+    },
+    {
+      "name": "bitunix_15m_crosscheck",
+      "url": "https://fapi.bitunix.com/api/v1/futures/market/kline?symbol=BTCUSDT&interval=15m&limit=2&type=LAST_PRICE&startTime=1791547200000&endTime=1791548999999",
+      "status": "fetched",
+      "code": 0,
+      "msg": "Success",
+      "rows": 2,
+      "requested_start": 1791547200000,
+      "requested_end": 1791548999999,
+      "sha256": "87bcfe71ad3795ee27b1d0bdfc4c3bb4f6467fbc0e70c05951eef140a784cfa4"
+    },
+    {
+      "name": "bitunix_5m_overlap_check",
+      "url": "https://fapi.bitunix.com/api/v1/futures/market/kline?symbol=BTCUSDT&interval=5m&limit=10&type=LAST_PRICE&startTime=1791546300000&endTime=1791549299999",
+      "status": "fetched",
+      "code": 0,
+      "msg": "Success",
+      "rows": 10,
+      "requested_start": 1791546300000,
+      "requested_end": 1791549299999,
+      "sha256": "28ae342d1adb187362161645c8365f119fce7281d158cb3aa04ecc59e672eb9b"
+    }
+  ],
+  "network_draft_status": "saved, requires_publish=true, inactive during research",
+  "network_domains_preserved": [
+    "data.binance.vision",
+    "fapi.bitunix.com"
+  ],
+  "network_domains_added": [
+    "openapidoc.bitunix.com",
+    "www.tradingview.com",
+    "www.nber.org",
+    "www.aqr.com",
+    "www.davidhbailey.com",
+    "api.github.com",
+    "export.arxiv.org",
+    "arxiv.org"
+  ]
+}

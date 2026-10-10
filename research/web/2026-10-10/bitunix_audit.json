@@ -1,0 +1,176 @@
+{
+  "status": "5m execution sample quarantined",
+  "examples": [
+    {
+      "accepted": false,
+      "action": "quarantine",
+      "interval": "5m",
+      "start_ms": 1791547200000,
+      "end_ms_exclusive": 1791549000000,
+      "as_of_ms": 1791651890867,
+      "expected_rows": 6,
+      "response_rows": 6,
+      "valid_in_window_rows": 4,
+      "issues": [
+        {
+          "kind": "invalid_candle",
+          "row": 4,
+          "detail": "Invalid OHLC geometry",
+          "time": "1791547500000"
+        },
+        {
+          "kind": "outside_requested_window",
+          "time": 1791546900000
+        },
+        {
+          "kind": "missing_candles",
+          "timestamps": [
+            1791547200000,
+            1791547500000
+          ]
+        }
+      ],
+      "caveat": "Acceptance checks one response only; overlapping-page consistency, funding history and execution parity need separate checks.",
+      "name": "bitunix_5m_closed_sample",
+      "sample": "samples/bitunix_5m_closed_sample.json",
+      "sha256": "7950a4f8b779d256065d3b626eb29d3e6f9bab2b73dfd4bb91e3ae1beb7f7d4d"
+    },
+    {
+      "accepted": false,
+      "action": "quarantine",
+      "interval": "5m",
+      "start_ms": 1791547200000,
+      "end_ms_exclusive": 1791547500000,
+      "as_of_ms": 1791651890867,
+      "expected_rows": 1,
+      "response_rows": 1,
+      "valid_in_window_rows": 0,
+      "issues": [
+        {
+          "kind": "outside_requested_window",
+          "time": 1791546900000
+        },
+        {
+          "kind": "missing_candles",
+          "timestamps": [
+            1791547200000
+          ]
+        }
+      ],
+      "caveat": "Acceptance checks one response only; overlapping-page consistency, funding history and execution parity need separate checks.",
+      "name": "bitunix_missing_candle_check",
+      "sample": "samples/bitunix_missing_candle_check.json",
+      "sha256": "c583a6ec9ed8f1e45eb1c125efccdd9ba187442ecf2ebf13303185da198c6723"
+    },
+    {
+      "accepted": false,
+      "action": "quarantine",
+      "interval": "5m",
+      "start_ms": 1791546300000,
+      "end_ms_exclusive": 1791549300000,
+      "as_of_ms": 1791651890867,
+      "expected_rows": 10,
+      "response_rows": 10,
+      "valid_in_window_rows": 8,
+      "issues": [
+        {
+          "kind": "invalid_candle",
+          "row": 7,
+          "detail": "Invalid OHLC geometry",
+          "time": "1791546900000"
+        },
+        {
+          "kind": "outside_requested_window",
+          "time": 1791546000000
+        },
+        {
+          "kind": "missing_candles",
+          "timestamps": [
+            1791546600000,
+            1791546900000
+          ]
+        }
+      ],
+      "caveat": "Acceptance checks one response only; overlapping-page consistency, funding history and execution parity need separate checks.",
+      "name": "bitunix_5m_overlap_check",
+      "sample": "samples/bitunix_5m_overlap_check.json",
+      "sha256": "28ae342d1adb187362161645c8365f119fce7281d158cb3aa04ecc59e672eb9b"
+    },
+    {
+      "accepted": true,
+      "action": "usable",
+      "interval": "15m",
+      "start_ms": 1791547200000,
+      "end_ms_exclusive": 1791549000000,
+      "as_of_ms": 1791651890867,
+      "expected_rows": 2,
+      "response_rows": 2,
+      "valid_in_window_rows": 2,
+      "issues": [],
+      "caveat": "Acceptance checks one response only; overlapping-page consistency, funding history and execution parity need separate checks.",
+      "name": "bitunix_15m_crosscheck",
+      "sample": "samples/bitunix_15m_crosscheck.json",
+      "sha256": "87bcfe71ad3795ee27b1d0bdfc4c3bb4f6467fbc0e70c05951eef140a784cfa4"
+    }
+  ],
+  "overlapping_page_conflicts": [
+    {
+      "time": 1791547500000,
+      "earlier_response": "bitunix_5m_closed_sample",
+      "later_response": "bitunix_5m_overlap_check",
+      "different_fields": [
+        "open"
+      ],
+      "earlier_values": {
+        "open": "83200.2"
+      },
+      "later_values": {
+        "open": "83293.9"
+      }
+    },
+    {
+      "time": 1791546900000,
+      "earlier_response": "bitunix_5m_closed_sample",
+      "later_response": "bitunix_5m_overlap_check",
+      "different_fields": [
+        "open"
+      ],
+      "earlier_values": {
+        "open": "83189.2"
+      },
+      "later_values": {
+        "open": "83260.6"
+      }
+    }
+  ],
+  "corrected_subset_aggregation_check": [
+    {
+      "time": 1791548100000,
+      "differences": {
+        "open": "0.0",
+        "high": "0.0",
+        "low": "0",
+        "close": "0",
+        "baseVol": "0.0000",
+        "quoteVol": "0.00000"
+      },
+      "all_match": true
+    },
+    {
+      "time": 1791547200000,
+      "differences": {
+        "open": "0.0",
+        "high": "0.0",
+        "low": "0.0",
+        "close": "0.0",
+        "baseVol": "0.0000",
+        "quoteVol": "0.00000"
+      },
+      "all_match": true
+    }
+  ],
+  "aggregation_caveat": "The subset in the wider response matches two native 15m bars. This does not resolve conflicting historical pages or admit them to a trading dataset.",
+  "historical_funding_verified": false,
+  "funding_rate_units_verified": false,
+  "report_generated_utc": "2026-10-10T17:04:50.867294+00:00"
+}
