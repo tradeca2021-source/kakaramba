@@ -1,0 +1,23 @@
+{
+  "protocol_sha256": "f00658e50f22f70c1776a2bd46676d1d993a2bfcd7d07a40f71a9a9632eca739",
+  "development_sha256": "8c1e9a35298e4ebb1962fb285f53a962642c086e523b5be22bebc72a4e978381",
+  "selected": {
+    "name": "reclaim_market",
+    "pivot": 5,
+    "retracement": 0.5,
+    "entry": "market",
+    "extension": 1.0
+  },
+  "baseline": {
+    "name": "baseline_v3",
+    "pivot": 5,
+    "retracement": 0.5,
+    "entry": "stop",
+    "extension": 1.0
+  },
+  "holdout": [
+    "2025-07-01",
+    "2026-01-01"
+  ],
+  "policy": "No eligible candidate means no promotion. Baseline holdout may still be recorded as a diagnostic."
+}

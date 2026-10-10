@@ -1,0 +1,1180 @@
+{
+  "protocol_sha256": "f00658e50f22f70c1776a2bd46676d1d993a2bfcd7d07a40f71a9a9632eca739",
+  "archives": {
+    "BTCUSDT-15m-2023-01.zip": "7d9c643f940a65eaae7f8618a5f997ada493076a5f91b02bdd77b559d2ab2514",
+    "BTCUSDT-5m-2023-01.zip": "583e2d1f1779434d0876ac5c84a55dd5c9e8700f21420762fe50483fab839dd0",
+    "BTCUSDT-fundingRate-2023-01.zip": "05e3df32f28d0d50f4c5a280adee9368b4a66fc68c6ddca1b3277087ac0d19f5",
+    "BTCUSDT-15m-2023-02.zip": "3d2bf498800e0526d9e7503d8f20f7dbd4fd1908e90570053a7ec5803b31118e",
+    "BTCUSDT-5m-2023-02.zip": "23afe68a8d8fb826b86a174fdefdb42aa750504221092c9456ad770935feeed2",
+    "BTCUSDT-fundingRate-2023-02.zip": "5227accd9aaa59f71f5e682abffb58be5f99573ed208ab968b1704c81ac11345",
+    "BTCUSDT-15m-2023-03.zip": "843bdaf3f134e74e6f0efecf46dbd92952c61b9d57c6ce8b556392d81526ec48",
+    "BTCUSDT-5m-2023-03.zip": "2ea92cf315951301af005c4cd14ade06d7bd2dba546eb088f43773c52c85eaee",
+    "BTCUSDT-fundingRate-2023-03.zip": "ab022adff9b853d2f33cf80154e77c770f57c3392f0bbc36564b2e2cdbd0e872",
+    "BTCUSDT-15m-2023-04.zip": "4a9416010259d5219c25ba8d29eac0928ecf6876fc4d6cc751228110e97f5138",
+    "BTCUSDT-5m-2023-04.zip": "9fc287898ccd0c82506dd82e57faf1d0d9ae6102555af21364a36dea1b42d817",
+    "BTCUSDT-fundingRate-2023-04.zip": "2931039d26818edc65d4faefba84945fd1ba52989dd58fb127dc3cd7a12c7fbf",
+    "BTCUSDT-15m-2023-05.zip": "f584af353ef1a3bef7f45aa17d8826c622d04a2a817fe0c6289e37b933959b54",
+    "BTCUSDT-5m-2023-05.zip": "def79dfc73dc7031f961a7cdd83eb9f815a0775502829201e793876b61065eeb",
+    "BTCUSDT-fundingRate-2023-05.zip": "5d026fece46df86293054c8c56c2c8de575d30161b82979b11831831217a246e",
+    "BTCUSDT-15m-2023-06.zip": "8fb734f8a60a161b2f17b5458ed3659017a61d2a5dd24d2d810243ce1f621032",
+    "BTCUSDT-5m-2023-06.zip": "daa3032bf548140b54baeb8515c1801e46af1cf3d8a9546d66e0e9c4e3adcbe7",
+    "BTCUSDT-fundingRate-2023-06.zip": "3ffdde6f1dc9c3c065d77ae43f3ba64d19d4cb76512d4bc1d541933d4fb2e6f7",
+    "BTCUSDT-15m-2023-07.zip": "c8df4ff96d804f2f57e51049bf94c11bf8bfa2f9333c0af29ab8f2504471966d",
+    "BTCUSDT-5m-2023-07.zip": "0054f032805e0e903cb2c73212a5d271dc2c1cd6fba4a74729587b8ad08c27fb",
+    "BTCUSDT-fundingRate-2023-07.zip": "0304baed9fd407293a8a8040b30a1b68bd344803b630d33530375b421733a930",
+    "BTCUSDT-15m-2023-08.zip": "8ba91ecc5bf5573c3840a2f22f4b0b6d307fc659a9e11df3c3a6e7bcf332150f",
+    "BTCUSDT-5m-2023-08.zip": "92635591e3c813ff17a3d3c55dbef62e7379f6f17a54b0bcbe64f909f0fc052b",
+    "BTCUSDT-fundingRate-2023-08.zip": "516a8f50631c6ede6a9642f6d1590b6a22c33ba09935501d2ace8dc1396501fd",
+    "BTCUSDT-15m-2023-09.zip": "f1f628bb4b1976ba632150bf999fde302ddcfc8899ff369a5119bdd5dba1e0d5",
+    "BTCUSDT-5m-2023-09.zip": "7f44a35a1dc7f23c82a35c9afcaa8c64bf533734c913ab7c5f85eb0e5fbc76e1",
+    "BTCUSDT-fundingRate-2023-09.zip": "3fd9df6fd1eef33cf5fe625c27012359bc6d64a68c109305d7b44a0354f533c2",
+    "BTCUSDT-15m-2023-10.zip": "bf3f1b7d22b67155373cbc0334ec44c34c8861bf2127ccd432698d95aa31ead6",
+    "BTCUSDT-5m-2023-10.zip": "41fd943f5349a7417b17684c3d0fd1c13df779fea921a00742f3f4af3986f8ba",
+    "BTCUSDT-fundingRate-2023-10.zip": "03105cc140150bffca834bcccbddc6cfee245e079d2df1759653243bd6e92448",
+    "BTCUSDT-15m-2023-11.zip": "e70b84bec57cc0a76f9066cf5277b8c2ea3f4f4f03771f478a350160fa81b564",
+    "BTCUSDT-5m-2023-11.zip": "c386879e037bdac37634b2cfd43d0e00033bcf9eef5d8a42284927314d727cfb",
+    "BTCUSDT-fundingRate-2023-11.zip": "8015d2997f8d5e757ff3707ee87800ca30a74da0129daa747b64117f07bcc186",
+    "BTCUSDT-15m-2023-12.zip": "f6b191e620d269d229dee0c5b9abfb6e9610bd0a8e6718d2a96e0e820a013bb0",
+    "BTCUSDT-5m-2023-12.zip": "2c6f4d22a095de8df65e7661231eaeb8344345674e65c478ba1efa2f1e0fb5c5",
+    "BTCUSDT-fundingRate-2023-12.zip": "8f02fdd2a2da261bbf13ab301c74bdb57fae005f19d5088e9ece5f8824c1a2a7",
+    "BTCUSDT-15m-2024-01.zip": "76953983fcd4cc35ac181c4a1c69d28cbb4ef8b983021aac84a111ea4e82ef69",
+    "BTCUSDT-5m-2024-01.zip": "b04981f250c65b97b7fc1b4b699401c0f54b46e98c2f2e30bb14a387a45e9a82",
+    "BTCUSDT-fundingRate-2024-01.zip": "3e0d30870672aa8f0f937881056e3cfd55913ae5c780cd50b33f2763aa0ba58e",
+    "BTCUSDT-15m-2024-02.zip": "f6a9399826f593aa23746d920e595e9705addd1154d4ec53fcf7a2564755e67b",
+    "BTCUSDT-5m-2024-02.zip": "1f55bd1995df1173ca96d430b485b721554aca5eaa4d7c644ab4afd695990c2f",
+    "BTCUSDT-fundingRate-2024-02.zip": "daf1e4901e3d6436d82ad60f90d007eb5300be8047cfef121007203a7212cde6",
+    "BTCUSDT-15m-2024-03.zip": "0f7dbdf7859f36d41c1444065409b2c9c4d66f5b3008647436fbc1b7a0d9f080",
+    "BTCUSDT-5m-2024-03.zip": "e58017be4762e3b93511dc5ca255c1ddf7c1c4ccbbbb1c313b174e033e2b891e",
+    "BTCUSDT-fundingRate-2024-03.zip": "711dcaf2a341aedfd06447b4117b540f60adb0784c5e64a313c718e4cf092bc3",
+    "BTCUSDT-15m-2024-04.zip": "e1e52aa89d7004e4b93af4cfa5d8f03826881604bf2a990fd2f6979ed754c7ff",
+    "BTCUSDT-5m-2024-04.zip": "ea177b76e07782ae13e2a26f4a262296e89b3ffd549947c3d6d8bd0c07e3fc2b",
+    "BTCUSDT-fundingRate-2024-04.zip": "6d220b8e2815362a11d294d35dbca28568370d8295351937eceec10f2b359b85",
+    "BTCUSDT-15m-2024-05.zip": "180775c3969d5e1a4f80dab6d62639945db50ed26b7fb240e66cc384d572295b",
+    "BTCUSDT-5m-2024-05.zip": "219ce6bc8e85a9fa9088eda56a92f5c56361751dd8301dff5ed9fc1232b5c1a2",
+    "BTCUSDT-fundingRate-2024-05.zip": "aef8c5fdce1493fd570b5829a72f2f17c7e459483390f25544d16c2a30be592e",
+    "BTCUSDT-15m-2024-06.zip": "ff353ea993bd5db2ac704c7ab30b0f706216208da92089875daed06177b7a805",
+    "BTCUSDT-5m-2024-06.zip": "f49fdf9f3add26ba70f301cac7d9d3b2e0211eeaaf99f32fa1c92730deae6e8d",
+    "BTCUSDT-fundingRate-2024-06.zip": "43fc4473820d1fb4fe340d1b1951a87555f6841aa352e684fa95d6adffce04c6",
+    "BTCUSDT-15m-2024-07.zip": "13cdc84f34becfaaaa9736896a0a0c92fa64bb20e84492569a1c1bb401634095",
+    "BTCUSDT-5m-2024-07.zip": "657f79d55b809ca18f242e950c916bbbe93c3d09697f0e330ba26b5a6a75a4e6",
+    "BTCUSDT-fundingRate-2024-07.zip": "acab0593c1452660ce74a6c239fb215c1192b0a9c6e8c1689e6495de40a0174b",
+    "BTCUSDT-15m-2024-08.zip": "7db2001bc9958a0f42748ab56319a067be0610eb3f69ae7360251f9c54b933e1",
+    "BTCUSDT-5m-2024-08.zip": "5804758756c980445eb6bbba96f10bd98bb7da471b6041bc31337cb0c7236a16",
+    "BTCUSDT-fundingRate-2024-08.zip": "7003d29a43dd5f9357f838da8766834954939e22c1d80af682d9f33984f67b71",
+    "BTCUSDT-15m-2024-09.zip": "ccc54f637eb90c3dd2bb190b3bfa40340c3812917726d203b5a9c94b8d27c727",
+    "BTCUSDT-5m-2024-09.zip": "15ffdcf3d23f9fb6743c54d9d783cdc20373aaf8f60fd949a85653e7bee29170",
+    "BTCUSDT-fundingRate-2024-09.zip": "6ef23b02392b481ef9c3855434bf3644289fb6e228b4f7d9a0dfc6d3cdff1116",
+    "BTCUSDT-15m-2024-10.zip": "64c3283e3e1020fb99916e908ec129c7ed2829319889db87319f3b48c72f6217",
+    "BTCUSDT-5m-2024-10.zip": "024d574aec22d830443dfe557c12137d24423c18b228e2c10045851cd056434d",
+    "BTCUSDT-fundingRate-2024-10.zip": "26db65ac8020d80ece35df79c254c5f7e24427529bcceeb2972748c4fe2d2707",
+    "BTCUSDT-15m-2024-11.zip": "e54cdf3523373e2011ca133f12ee18ed54cf0e5a1a59426a9746fd2c39313a54",
+    "BTCUSDT-5m-2024-11.zip": "bf2ff598c07f5f78a4265c376b3a8f3277e39b42d66bf79610b8b3199a34fa45",
+    "BTCUSDT-fundingRate-2024-11.zip": "e1b19cccfe2cdcba48b022790789b7b01edd86c075f39bc152e44c267d43bd51",
+    "BTCUSDT-15m-2024-12.zip": "717d3e617fdc6f5c486c16d2f2c0e3e0929fd9158f75827bc603c003ad709544",
+    "BTCUSDT-5m-2024-12.zip": "261ced4d4a389f680ae730c53ba82b42f97f656b630352713e2d7fd738f57b8c",
+    "BTCUSDT-fundingRate-2024-12.zip": "069409f525ebf6370ee1c7defe475167de4b97284c5ac8e68768652968cd3dc9",
+    "BTCUSDT-15m-2025-01.zip": "0867b0b8e22069621de45df42cc49a8df1b8217cf777529b1df6d43253927588",
+    "BTCUSDT-5m-2025-01.zip": "0c99422d64fa3cc58564cf77969fc5a96d6f44783c79ecfcf94b103753bf7570",
+    "BTCUSDT-fundingRate-2025-01.zip": "df725010d55458866eb5a47e9ee708c6796c9d7e77b14c38342cea11f381815e",
+    "BTCUSDT-15m-2025-02.zip": "44280cf80923ec6ee42e28e4606723b2f36909eab5c334ee5aee132ff989f12b",
+    "BTCUSDT-5m-2025-02.zip": "fdd6fb92b75bae5c02dd583b5be44ca6673d1807ce4b0c08160d3c5cf7677a46",
+    "BTCUSDT-fundingRate-2025-02.zip": "e918b90fb33df3a3317feea13807a892047f1ec86eeac100bdb7b3dd83285d46",
+    "BTCUSDT-15m-2025-03.zip": "aea345f1561a16710812658f2d435f0e02de5fc25d7ba8ad821526d67b2ab229",
+    "BTCUSDT-5m-2025-03.zip": "46f83773b9cec38a09be429727a5a300ccca6d11c8e8ca5fa9545fad6eda131f",
+    "BTCUSDT-fundingRate-2025-03.zip": "a3b95cfb315641fbfddc61eb32adf2a2588afb7a3973a61f464aca007ad43e3f",
+    "BTCUSDT-15m-2025-04.zip": "6a5166823a9e80e25f520a8e7e26f34550c975e26bd1c5bb95a20d530b89bfa5",
+    "BTCUSDT-5m-2025-04.zip": "9eda69fd858e9ced7e72cfbb75bffe34458763c37c8ee73910e572b4baba21ed",
+    "BTCUSDT-fundingRate-2025-04.zip": "01dbb7bd0135f98bd63bdde6b943cde1accc1770cabf92f68a1ec0653ced3888",
+    "BTCUSDT-15m-2025-05.zip": "303a174c2d15248fe00342ac2b01bec41bb4e11c4a5d26d480e2a382808bc020",
+    "BTCUSDT-5m-2025-05.zip": "073da284f178e72777abbfbcf79faa99fcf77bd69c4a678938abbf6cd7d14f5b",
+    "BTCUSDT-fundingRate-2025-05.zip": "e7355e2775b88009c984db1783bb8ed6b5f24ede2b52bb764151b5722d6a5e42",
+    "BTCUSDT-15m-2025-06.zip": "4c980922647b630dbf146cb80934776930f8b4a9b419967710ecb8ce398e036d",
+    "BTCUSDT-5m-2025-06.zip": "da39c04e24a90c87406b9030e1aaf376655ad59d4bc0496f38e4162a9babf514",
+    "BTCUSDT-fundingRate-2025-06.zip": "a1f4a40953740fa83ee9ad97776ff8325d1958654a67f1325614071a983819d4"
+  },
+  "candles": 87552,
+  "funding_events": 2736,
+  "quality": {
+    "canonical_5m_aggregation": true,
+    "discrepancies": [
+      {
+        "time": 1699633800,
+        "official_15m": [
+          37447.6,
+          37474.0,
+          37310.3,
+          37388.0
+        ],
+        "aggregated_5m": [
+          37118.4,
+          37118.4,
+          37118.4,
+          37118.4
+        ]
+      },
+      {
+        "time": 1730149200,
+        "official_15m": [
+          69650.0,
+          69656.2,
+          69640.7,
+          69650.0
+        ],
+        "aggregated_5m": [
+          69566.1,
+          69656.2,
+          69566.1,
+          69650.0
+        ]
+      },
+      {
+        "time": 1738114200,
+        "official_15m": [
+          101627.4,
+          101700.0,
+          101422.2,
+          101675.0
+        ],
+        "aggregated_5m": [
+          101770.1,
+          101770.1,
+          101422.2,
+          101675.0
+        ]
+      }
+    ]
+  },
+  "candidates": [
+    {
+      "rules": {
+        "name": "baseline_v3",
+        "pivot": 5,
+        "retracement": 0.5,
+        "entry": "stop",
+        "extension": 1.0
+      },
+      "folds": [
+        {
+          "start": "2024-01-01",
+          "end": "2024-07-01",
+          "summary": {
+            "trades": 1,
+            "net": 405.27181465001195,
+            "profit_factor": null,
+            "gross_wins": 405.27181465000655,
+            "gross_losses": 0,
+            "win_rate": 1.0,
+            "max_drawdown_close": 179.0894999999873,
+            "max_drawdown_5m_close": 179.0894999999873,
+            "net_without_best": 0.0,
+            "fees": 51.27150700000001,
+            "funding": 3.67332165,
+            "monthly_realized_net": {
+              "2024-01": 405.27181465000655
+            },
+            "counts": {
+              "breakouts": 393,
+              "invalidated": 168,
+              "impulses": 200,
+              "zone_visits": 87,
+              "no_rejection": 56,
+              "missed_first": 149,
+              "rejections": 19,
+              "payoff_skips": 17,
+              "orders": 2,
+              "fills": 1,
+              "cancellations": 1
+            }
+          }
+        },
+        {
+          "start": "2024-07-01",
+          "end": "2025-01-01",
+          "summary": {
+            "trades": 12,
+            "net": 1603.4857904131932,
+            "profit_factor": 2.2340673207129864,
+            "gross_wins": 2902.836128518641,
+            "gross_losses": 1299.3503381053986,
+            "win_rate": 0.5,
+            "max_drawdown_close": 822.3019529054,
+            "max_drawdown_5m_close": 822.3019529054,
+            "net_without_best": 889.72043174013,
+            "fees": 670.6595207900001,
+            "funding": -22.21818879677,
+            "monthly_realized_net": {
+              "2024-07": 343.7748760400118,
+              "2024-08": 1105.219133460634,
+              "2024-09": 477.0253067799987,
+              "2024-10": -55.735301732002625,
+              "2024-11": -33.36631908000149,
+              "2024-12": -233.4319050553981
+            },
+            "counts": {
+              "breakouts": 368,
+              "impulses": 210,
+              "zone_visits": 107,
+              "no_rejection": 62,
+              "invalidated": 153,
+              "missed_first": 114,
+              "rejections": 39,
+              "orders": 14,
+              "fills": 12,
+              "payoff_skips": 25,
+              "cancellations": 2
+            }
+          }
+        },
+        {
+          "start": "2025-01-01",
+          "end": "2025-07-01",
+          "summary": {
+            "trades": 2,
+            "net": -420.0164550315676,
+            "profit_factor": 0.0,
+            "gross_wins": 0,
+            "gross_losses": 420.01645503157283,
+            "win_rate": 0.0,
+            "max_drawdown_close": 578.3381724315695,
+            "max_drawdown_5m_close": 578.3381724315695,
+            "net_without_best": -214.20357083157285,
+            "fees": 94.17306927,
+            "funding": -1.58948576157,
+            "monthly_realized_net": {
+              "2025-03": -420.01645503157283
+            },
+            "counts": {
+              "breakouts": 370,
+              "missed_first": 118,
+              "impulses": 208,
+              "invalidated": 164,
+              "zone_visits": 94,
+              "no_rejection": 50,
+              "rejections": 39,
+              "orders": 7,
+              "cancellations": 5,
+              "payoff_skips": 32,
+              "fills": 2
+            }
+          }
+        }
+      ],
+      "aggregate": {
+        "trades": 15,
+        "net": 1588.7411500316762,
+        "profit_factor": 1.9240268896510617,
+        "net_without_best": 874.9757913585637,
+        "profitable_folds": 2,
+        "sum_fold_drawdown": 1579.7296253369568,
+        "score": 1.0057044728098945
+      },
+      "eligible": false
+    },
+    {
+      "rules": {
+        "name": "faster_confirmation",
+        "pivot": 3,
+        "retracement": 0.5,
+        "entry": "stop",
+        "extension": 1.0
+      },
+      "folds": [
+        {
+          "start": "2024-01-01",
+          "end": "2024-07-01",
+          "summary": {
+            "trades": 0,
+            "net": 0,
+            "profit_factor": null,
+            "gross_wins": 0,
+            "gross_losses": 0,
+            "win_rate": null,
+            "max_drawdown_close": 0,
+            "max_drawdown_5m_close": 0,
+            "net_without_best": 0,
+            "fees": 0,
+            "funding": 0,
+            "monthly_realized_net": {},
+            "counts": {
+              "breakouts": 563,
+              "invalidated": 223,
+              "impulses": 321,
+              "zone_visits": 167,
+              "no_rejection": 96,
+              "rejections": 55,
+              "payoff_skips": 54,
+              "missed_first": 186,
+              "orders": 1,
+              "cancellations": 1,
+              "small_impulse": 2
+            }
+          }
+        },
+        {
+          "start": "2024-07-01",
+          "end": "2025-01-01",
+          "summary": {
+            "trades": 8,
+            "net": 1871.9734751181095,
+            "profit_factor": 3.87066445882686,
+            "gross_wins": 2524.0780669180917,
+            "gross_losses": 652.1045918000088,
+            "win_rate": 0.625,
+            "max_drawdown_close": 652.1045918000164,
+            "max_drawdown_5m_close": 652.1045918000164,
+            "net_without_best": 1156.4457328433086,
+            "fees": 364.6751171,
+            "funding": 1.4635922180819998,
+            "monthly_realized_net": {
+              "2024-07": 529.806446040006,
+              "2024-08": 1108.340731558086,
+              "2024-09": 422.111632680003,
+              "2024-10": -218.32675249999917,
+              "2024-11": -433.77783930000965,
+              "2024-12": 463.8192566399967
+            },
+            "counts": {
+              "breakouts": 544,
+              "impulses": 314,
+              "invalidated": 257,
+              "zone_visits": 146,
+              "no_rejection": 77,
+              "missed_first": 156,
+              "rejections": 54,
+              "orders": 11,
+              "fills": 8,
+              "cancellations": 3,
+              "payoff_skips": 43
+            }
+          }
+        },
+        {
+          "start": "2025-01-01",
+          "end": "2025-07-01",
+          "summary": {
+            "trades": 1,
+            "net": -205.81288420000055,
+            "profit_factor": 0.0,
+            "gross_wins": 0,
+            "gross_losses": 205.81288419999998,
+            "win_rate": 0.0,
+            "max_drawdown_close": 364.1346016000025,
+            "max_drawdown_5m_close": 364.1346016000025,
+            "net_without_best": 0.0,
+            "fees": 35.6428842,
+            "funding": 0.0,
+            "monthly_realized_net": {
+              "2025-03": -205.81288419999998
+            },
+            "counts": {
+              "breakouts": 535,
+              "missed_first": 166,
+              "invalidated": 238,
+              "impulses": 309,
+              "zone_visits": 147,
+              "no_rejection": 81,
+              "rejections": 50,
+              "orders": 3,
+              "cancellations": 2,
+              "payoff_skips": 47,
+              "small_impulse": 1,
+              "fills": 1
+            }
+          }
+        }
+      ],
+      "aggregate": {
+        "trades": 9,
+        "net": 1666.1605909180828,
+        "profit_factor": 2.9420989052309103,
+        "net_without_best": 950.6328486433084,
+        "profitable_folds": 1,
+        "sum_fold_drawdown": 1016.2391934000188,
+        "score": 1.6395358511450735
+      },
+      "eligible": false
+    },
+    {
+      "rules": {
+        "name": "shallower_pullback",
+        "pivot": 5,
+        "retracement": 0.382,
+        "entry": "stop",
+        "extension": 1.0
+      },
+      "folds": [
+        {
+          "start": "2024-01-01",
+          "end": "2024-07-01",
+          "summary": {
+            "trades": 2,
+            "net": 1092.0321439099935,
+            "profit_factor": null,
+            "gross_wins": 1092.0321439100028,
+            "gross_losses": 0,
+            "win_rate": 1.0,
+            "max_drawdown_close": 278.83349999999336,
+            "max_drawdown_5m_close": 281.8133999999991,
+            "net_without_best": 540.67193972,
+            "fees": 79.38358183000001,
+            "funding": 9.061225740000001,
+            "monthly_realized_net": {
+              "2024-01": 540.67193972,
+              "2024-05": 551.3602041900028
+            },
+            "counts": {
+              "breakouts": 409,
+              "invalidated": 102,
+              "impulses": 120,
+              "missed_first": 248,
+              "zone_visits": 61,
+              "no_rejection": 45,
+              "rejections": 13,
+              "payoff_skips": 10,
+              "orders": 3,
+              "fills": 2,
+              "cancellations": 1
+            }
+          }
+        },
+        {
+          "start": "2024-07-01",
+          "end": "2025-01-01",
+          "summary": {
+            "trades": 4,
+            "net": 849.0401374577632,
+            "profit_factor": 3.0059188984520784,
+            "gross_wins": 1272.307567717768,
+            "gross_losses": 423.26743025999565,
+            "win_rate": 0.5,
+            "max_drawdown_close": 985.3207770800072,
+            "max_drawdown_5m_close": 986.0447770800092,
+            "net_without_best": 154.30759245776756,
+            "fees": 200.1849185,
+            "funding": -3.48094404224,
+            "monthly_realized_net": {
+              "2024-08": 271.4651147400093,
+              "2024-10": 577.5750227177632
+            },
+            "counts": {
+              "breakouts": 395,
+              "impulses": 135,
+              "zone_visits": 76,
+              "no_rejection": 46,
+              "missed_first": 214,
+              "invalidated": 106,
+              "rejections": 29,
+              "payoff_skips": 24,
+              "orders": 5,
+              "cancellations": 1,
+              "fills": 4
+            }
+          }
+        },
+        {
+          "start": "2025-01-01",
+          "end": "2025-07-01",
+          "summary": {
+            "trades": 1,
+            "net": -195.09171023999806,
+            "profit_factor": 0.0,
+            "gross_wins": 0,
+            "gross_losses": 195.09171023999903,
+            "win_rate": 0.0,
+            "max_drawdown_close": 269.88485663999745,
+            "max_drawdown_5m_close": 269.88485663999745,
+            "net_without_best": 0.0,
+            "fees": 37.94451024,
+            "funding": 0.0,
+            "monthly_realized_net": {
+              "2025-02": -195.09171023999903
+            },
+            "counts": {
+              "breakouts": 395,
+              "missed_first": 216,
+              "invalidated": 112,
+              "impulses": 131,
+              "zone_visits": 67,
+              "no_rejection": 50,
+              "rejections": 17,
+              "payoff_skips": 16,
+              "orders": 1,
+              "fills": 1
+            }
+          }
+        }
+      ],
+      "aggregate": {
+        "trades": 7,
+        "net": 1745.9805711277763,
+        "profit_factor": 3.8235704088016003,
+        "net_without_best": 1051.2480261277715,
+        "profitable_folds": 2,
+        "sum_fold_drawdown": 1534.039133719998,
+        "score": 1.1381590813096318
+      },
+      "eligible": false
+    },
+    {
+      "rules": {
+        "name": "reclaim_market",
+        "pivot": 5,
+        "retracement": 0.5,
+        "entry": "market",
+        "extension": 1.0
+      },
+      "folds": [
+        {
+          "start": "2024-01-01",
+          "end": "2024-07-01",
+          "summary": {
+            "trades": 3,
+            "net": 61.27077114292479,
+            "profit_factor": 1.1457979265347547,
+            "gross_wins": 481.51523277000433,
+            "gross_losses": 420.2444616270641,
+            "win_rate": 0.3333333333333333,
+            "max_drawdown_close": 423.4841516270826,
+            "max_drawdown_5m_close": 423.4841516270826,
+            "net_without_best": -420.2444616270641,
+            "fees": 173.48837555,
+            "funding": 0.6022466929259993,
+            "monthly_realized_net": {
+              "2024-01": 481.51523277000433,
+              "2024-02": -420.2444616270641
+            },
+            "counts": {
+              "breakouts": 393,
+              "invalidated": 168,
+              "impulses": 200,
+              "zone_visits": 87,
+              "no_rejection": 56,
+              "missed_first": 149,
+              "rejections": 19,
+              "payoff_skips": 16,
+              "orders": 3,
+              "fills": 3
+            }
+          }
+        },
+        {
+          "start": "2024-07-01",
+          "end": "2025-01-01",
+          "summary": {
+            "trades": 18,
+            "net": 3578.4730368888995,
+            "profit_factor": 2.873090278127294,
+            "gross_wins": 5488.937833314356,
+            "gross_losses": 1910.4647964254345,
+            "win_rate": 0.5,
+            "max_drawdown_close": 913.3745606057782,
+            "max_drawdown_5m_close": 953.1006606057781,
+            "net_without_best": 2499.9905844615255,
+            "fees": 1146.4010069400001,
+            "funding": -24.696356171124002,
+            "monthly_realized_net": {
+              "2024-07": 194.91661177872172,
+              "2024-08": 1485.5615032354463,
+              "2024-09": 1346.4534452469038,
+              "2024-10": -164.32304549799036,
+              "2024-11": 367.3377113742365,
+              "2024-12": 348.52681075160325
+            },
+            "counts": {
+              "breakouts": 366,
+              "impulses": 209,
+              "zone_visits": 107,
+              "no_rejection": 62,
+              "invalidated": 152,
+              "missed_first": 113,
+              "rejections": 39,
+              "orders": 18,
+              "fills": 18,
+              "payoff_skips": 21
+            }
+          }
+        },
+        {
+          "start": "2025-01-01",
+          "end": "2025-07-01",
+          "summary": {
+            "trades": 12,
+            "net": -1167.8930289412237,
+            "profit_factor": 0.4280183514919112,
+            "gross_wins": 873.9435089747228,
+            "gross_losses": 2041.8365379159188,
+            "win_rate": 0.16666666666666666,
+            "max_drawdown_close": 1874.6390445959405,
+            "max_drawdown_5m_close": 1914.467844595929,
+            "net_without_best": -1647.7781575811932,
+            "fees": 913.03234204,
+            "funding": 3.5061130987739997,
+            "monthly_realized_net": {
+              "2025-01": -817.9772880799746,
+              "2025-02": -184.70067014160227,
+              "2025-03": -623.5081398543466,
+              "2025-04": -206.47422459999532,
+              "2025-05": 479.8851286399971,
+              "2025-06": 184.8821650947257
+            },
+            "counts": {
+              "breakouts": 370,
+              "missed_first": 118,
+              "impulses": 207,
+              "invalidated": 164,
+              "zone_visits": 93,
+              "no_rejection": 49,
+              "rejections": 39,
+              "orders": 12,
+              "fills": 12,
+              "payoff_skips": 27
+            }
+          }
+        }
+      ],
+      "aggregate": {
+        "trades": 33,
+        "net": 2471.8507790906656,
+        "profit_factor": 1.5653115814978464,
+        "net_without_best": 1393.3683266632702,
+        "profitable_folds": 2,
+        "sum_fold_drawdown": 3211.4977568288014,
+        "score": 0.7696878423267213
+      },
+      "eligible": true
+    },
+    {
+      "rules": {
+        "name": "extension_target",
+        "pivot": 5,
+        "retracement": 0.5,
+        "entry": "stop",
+        "extension": 1.272
+      },
+      "folds": [
+        {
+          "start": "2024-01-01",
+          "end": "2024-07-01",
+          "summary": {
+            "trades": 6,
+            "net": -285.31860974682786,
+            "profit_factor": 0.7021690881181654,
+            "gross_wins": 672.6699615000012,
+            "gross_losses": 957.9885712468165,
+            "win_rate": 0.16666666666666666,
+            "max_drawdown_close": 864.8014312468295,
+            "max_drawdown_5m_close": 864.8014312468295,
+            "net_without_best": -957.9885712468165,
+            "fees": 358.98215213000003,
+            "funding": 5.91204238317,
+            "monthly_realized_net": {
+              "2024-01": 579.4828215000056,
+              "2024-02": -217.50953087999858,
+              "2024-04": -433.1381070868311,
+              "2024-06": -214.15379327999116
+            },
+            "counts": {
+              "breakouts": 392,
+              "invalidated": 167,
+              "impulses": 200,
+              "zone_visits": 87,
+              "no_rejection": 56,
+              "missed_first": 149,
+              "rejections": 19,
+              "payoff_skips": 11,
+              "orders": 8,
+              "fills": 6,
+              "cancellations": 2
+            }
+          }
+        },
+        {
+          "start": "2024-07-01",
+          "end": "2025-01-01",
+          "summary": {
+            "trades": 23,
+            "net": 680.3716565243085,
+            "profit_factor": 1.1984918724257347,
+            "gross_wins": 4108.077024051886,
+            "gross_losses": 3427.705367527593,
+            "win_rate": 0.30434782608695654,
+            "max_drawdown_close": 1910.9398293286067,
+            "max_drawdown_5m_close": 1941.5920293286035,
+            "net_without_best": -108.44190508570921,
+            "fees": 1198.76277948,
+            "funding": -12.938163995737998,
+            "monthly_realized_net": {
+              "2024-07": -1040.6776096634617,
+              "2024-08": 753.1471147090226,
+              "2024-09": 568.0301725200071,
+              "2024-10": 220.83129746599542,
+              "2024-11": -687.6276627886281,
+              "2024-12": 866.6683442813576
+            },
+            "counts": {
+              "breakouts": 358,
+              "impulses": 207,
+              "zone_visits": 106,
+              "no_rejection": 63,
+              "invalidated": 148,
+              "missed_first": 110,
+              "rejections": 37,
+              "orders": 26,
+              "fills": 23,
+              "payoff_skips": 11,
+              "cancellations": 3
+            }
+          }
+        },
+        {
+          "start": "2025-01-01",
+          "end": "2025-07-01",
+          "summary": {
+            "trades": 17,
+            "net": -1570.8132064202073,
+            "profit_factor": 0.46180214794187174,
+            "gross_wins": 1347.8405942466857,
+            "gross_losses": 2918.653800666908,
+            "win_rate": 0.17647058823529413,
+            "max_drawdown_close": 2144.95608265145,
+            "max_drawdown_5m_close": 2193.4942252114415,
+            "net_without_best": -2063.0584839514427,
+            "fees": 1115.76407278,
+            "funding": 8.582266359796,
+            "monthly_realized_net": {
+              "2025-01": -212.97537806999532,
+              "2025-02": -619.576383587737,
+              "2025-03": -842.1620835585463,
+              "2025-04": 228.6404352384796,
+              "2025-05": -420.0968695000017,
+              "2025-06": 295.35707305757825
+            },
+            "counts": {
+              "breakouts": 365,
+              "missed_first": 118,
+              "impulses": 203,
+              "invalidated": 162,
+              "zone_visits": 91,
+              "no_rejection": 48,
+              "rejections": 38,
+              "orders": 25,
+              "cancellations": 8,
+              "payoff_skips": 13,
+              "fills": 17
+            }
+          }
+        }
+      ],
+      "aggregate": {
+        "trades": 46,
+        "net": -1175.7601596427444,
+        "profit_factor": 0.8390328333775804,
+        "net_without_best": -1964.573721252747,
+        "profitable_folds": 1,
+        "sum_fold_drawdown": 4920.697343226886,
+        "score": -0.2389417754500029
+      },
+      "eligible": false
+    },
+    {
+      "rules": {
+        "name": "faster_market",
+        "pivot": 3,
+        "retracement": 0.5,
+        "entry": "market",
+        "extension": 1.0
+      },
+      "folds": [
+        {
+          "start": "2024-01-01",
+          "end": "2024-07-01",
+          "summary": {
+            "trades": 5,
+            "net": -711.48891,
+            "profit_factor": 0.0,
+            "gross_wins": 0,
+            "gross_losses": 711.488909999981,
+            "win_rate": 0.0,
+            "max_drawdown_close": 711.48891,
+            "max_drawdown_5m_close": 752.2219199999963,
+            "net_without_best": -600.8601999999927,
+            "fees": 328.18891,
+            "funding": 0.0,
+            "monthly_realized_net": {
+              "2024-01": -529.8343999999781,
+              "2024-05": -181.65451000000292
+            },
+            "counts": {
+              "breakouts": 563,
+              "invalidated": 223,
+              "impulses": 321,
+              "zone_visits": 167,
+              "no_rejection": 96,
+              "rejections": 55,
+              "payoff_skips": 50,
+              "missed_first": 186,
+              "orders": 5,
+              "fills": 5,
+              "small_impulse": 2
+            }
+          }
+        },
+        {
+          "start": "2024-07-01",
+          "end": "2025-01-01",
+          "summary": {
+            "trades": 13,
+            "net": 1334.9968031445605,
+            "profit_factor": 1.8044088704470342,
+            "gross_wins": 2994.596606417109,
+            "gross_losses": 1659.5998032725315,
+            "win_rate": 0.38461538461538464,
+            "max_drawdown_close": 1477.4848484725662,
+            "max_drawdown_5m_close": 1477.4848484725662,
+            "net_without_best": 254.5815864655201,
+            "fees": 722.25825091,
+            "funding": 1.8673540545479999,
+            "monthly_realized_net": {
+              "2024-07": 396.14305961000184,
+              "2024-08": 1487.4942674871083,
+              "2024-09": 12.283749497457933,
+              "2024-10": -434.33693669999525,
+              "2024-11": -631.8801281099951,
+              "2024-12": 505.2927913599999
+            },
+            "counts": {
+              "breakouts": 544,
+              "impulses": 314,
+              "invalidated": 257,
+              "zone_visits": 146,
+              "no_rejection": 77,
+              "missed_first": 156,
+              "rejections": 54,
+              "orders": 13,
+              "fills": 13,
+              "payoff_skips": 41
+            }
+          }
+        },
+        {
+          "start": "2025-01-01",
+          "end": "2025-07-01",
+          "summary": {
+            "trades": 9,
+            "net": -1117.049820526896,
+            "profit_factor": 0.3009274039971018,
+            "gross_wins": 480.85263897999704,
+            "gross_losses": 1597.902459506905,
+            "win_rate": 0.1111111111111111,
+            "max_drawdown_close": 1639.9658159468963,
+            "max_drawdown_5m_close": 1679.8749159468862,
+            "net_without_best": -1597.9024595069047,
+            "fees": 725.7190053400001,
+            "funding": 3.187384813056,
+            "monthly_realized_net": {
+              "2025-01": -630.544815799978,
+              "2025-02": -184.93899358694625,
+              "2025-03": -203.7107401999982,
+              "2025-04": -381.78050507998455,
+              "2025-05": 283.92523413999913
+            },
+            "counts": {
+              "breakouts": 534,
+              "missed_first": 165,
+              "invalidated": 237,
+              "impulses": 309,
+              "zone_visits": 147,
+              "no_rejection": 81,
+              "rejections": 50,
+              "orders": 9,
+              "fills": 9,
+              "payoff_skips": 41,
+              "small_impulse": 1
+            }
+          }
+        }
+      ],
+      "aggregate": {
+        "trades": 27,
+        "net": -493.54192738231126,
+        "profit_factor": 0.8756505353886458,
+        "net_without_best": -1573.9571440613688,
+        "profitable_folds": 1,
+        "sum_fold_drawdown": 3828.9395744194626,
+        "score": -0.12889781042239123
+      },
+      "eligible": false
+    },
+    {
+      "rules": {
+        "name": "shallower_market",
+        "pivot": 5,
+        "retracement": 0.382,
+        "entry": "market",
+        "extension": 1.0
+      },
+      "folds": [
+        {
+          "start": "2024-01-01",
+          "end": "2024-07-01",
+          "summary": {
+            "trades": 5,
+            "net": 1233.4175308600097,
+            "profit_factor": 4.087465899146724,
+            "gross_wins": 1632.9094025599989,
+            "gross_losses": 399.49187169998794,
+            "win_rate": 0.6,
+            "max_drawdown_close": 399.49187169998186,
+            "max_drawdown_5m_close": 420.97213881998323,
+            "net_without_best": 621.247560910015,
+            "fees": 222.33532188,
+            "funding": 9.79065274,
+            "monthly_realized_net": {
+              "2024-01": 612.1699699499961,
+              "2024-03": -203.5099891999883,
+              "2024-04": 232.13242438000253,
+              "2024-05": 592.6251257300006
+            },
+            "counts": {
+              "breakouts": 409,
+              "invalidated": 103,
+              "impulses": 120,
+              "missed_first": 247,
+              "zone_visits": 61,
+              "no_rejection": 45,
+              "rejections": 13,
+              "payoff_skips": 8,
+              "orders": 5,
+              "fills": 5
+            }
+          }
+        },
+        {
+          "start": "2024-07-01",
+          "end": "2025-01-01",
+          "summary": {
+            "trades": 6,
+            "net": 233.52907573331322,
+            "profit_factor": 1.2947682236198945,
+            "gross_wins": 1025.775515547848,
+            "gross_losses": 792.2464398145326,
+            "win_rate": 0.3333333333333333,
+            "max_drawdown_close": 1321.5246526799747,
+            "max_drawdown_5m_close": 1322.240652679975,
+            "net_without_best": -337.73555265452654,
+            "fees": 325.05935574,
+            "funding": -2.7569685267039996,
+            "monthly_realized_net": {
+              "2024-07": -181.062267199999,
+              "2024-08": -611.1841726145336,
+              "2024-10": 571.2646283878421,
+              "2024-12": 454.51088716000606
+            },
+            "counts": {
+              "breakouts": 396,
+              "impulses": 136,
+              "zone_visits": 76,
+              "no_rejection": 46,
+              "missed_first": 214,
+              "invalidated": 107,
+              "rejections": 29,
+              "payoff_skips": 23,
+              "orders": 6,
+              "fills": 6
+            }
+          }
+        },
+        {
+          "start": "2025-01-01",
+          "end": "2025-07-01",
+          "summary": {
+            "trades": 3,
+            "net": -588.2526351146371,
+            "profit_factor": 0.0,
+            "gross_wins": 0,
+            "gross_losses": 588.2526351146203,
+            "win_rate": 0.0,
+            "max_drawdown_close": 716.4321866546379,
+            "max_drawdown_5m_close": 716.4321866546379,
+            "net_without_best": -402.36974931462254,
+            "fees": 205.50548529000002,
+            "funding": 2.82655017537,
+            "monthly_realized_net": {
+              "2025-02": -185.88288579999772,
+              "2025-05": -198.19783815998852,
+              "2025-06": -204.17191115463407
+            },
+            "counts": {
+              "breakouts": 395,
+              "missed_first": 216,
+              "invalidated": 112,
+              "impulses": 131,
+              "zone_visits": 67,
+              "no_rejection": 50,
+              "rejections": 17,
+              "payoff_skips": 14,
+              "orders": 3,
+              "fills": 3
+            }
+          }
+        }
+      ],
+      "aggregate": {
+        "trades": 14,
+        "net": 878.6939714787062,
+        "profit_factor": 1.4936508093722238,
+        "net_without_best": 266.5240015287101,
+        "profitable_folds": 2,
+        "sum_fold_drawdown": 2437.4487110345945,
+        "score": 0.36049741990498646
+      },
+      "eligible": false
+    },
+    {
+      "rules": {
+        "name": "faster_market_extension",
+        "pivot": 3,
+        "retracement": 0.5,
+        "entry": "market",
+        "extension": 1.272
+      },
+      "folds": [
+        {
+          "start": "2024-01-01",
+          "end": "2024-07-01",
+          "summary": {
+            "trades": 23,
+            "net": -1610.4132730245765,
+            "profit_factor": 0.5393552448633894,
+            "gross_wins": 1885.585009962413,
+            "gross_losses": 3495.998282986946,
+            "win_rate": 0.17391304347826086,
+            "max_drawdown_close": 1922.5990053469868,
+            "max_drawdown_5m_close": 1959.1643136369967,
+            "net_without_best": -2249.542634386937,
+            "fees": 1475.09665982,
+            "funding": -19.335813204625,
+            "monthly_realized_net": {
+              "2024-01": -501.60097879996533,
+              "2024-03": -821.423171883498,
+              "2024-04": -393.16471714349973,
+              "2024-05": 49.5263110424157,
+              "2024-06": 56.24928376001452
+            },
+            "counts": {
+              "breakouts": 551,
+              "invalidated": 220,
+              "impulses": 315,
+              "zone_visits": 163,
+              "no_rejection": 93,
+              "rejections": 54,
+              "payoff_skips": 31,
+              "missed_first": 181,
+              "orders": 23,
+              "fills": 23,
+              "small_impulse": 2
+            }
+          }
+        },
+        {
+          "start": "2024-07-01",
+          "end": "2025-01-01",
+          "summary": {
+            "trades": 23,
+            "net": -2548.61937255034,
+            "profit_factor": 0.3789519812086737,
+            "gross_wins": 1555.120266633136,
+            "gross_losses": 4103.73963918345,
+            "win_rate": 0.13043478260869565,
+            "max_drawdown_close": 4370.955480409233,
+            "max_drawdown_5m_close": 4626.005780409236,
+            "net_without_best": -3192.0514980934504,
+            "fees": 1341.99953223,
+            "funding": 2.6240596796079996,
+            "monthly_realized_net": {
+              "2024-07": -581.9941521299899,
+              "2024-08": 801.6425275744627,
+              "2024-09": -1234.0586144348147,
+              "2024-10": -622.6264919199896,
+              "2024-11": -1452.3929627299797,
+              "2024-12": 540.8103210899976
+            },
+            "counts": {
+              "breakouts": 540,
+              "impulses": 313,
+              "invalidated": 256,
+              "zone_visits": 145,
+              "no_rejection": 77,
+              "missed_first": 154,
+              "rejections": 53,
+              "orders": 23,
+              "fills": 23,
+              "payoff_skips": 30
+            }
+          }
+        },
+        {
+          "start": "2025-01-01",
+          "end": "2025-07-01",
+          "summary": {
+            "trades": 24,
+            "net": -4831.353252261615,
+            "profit_factor": 0.0,
+            "gross_wins": 0,
+            "gross_losses": 4831.353252261648,
+            "win_rate": 0.0,
+            "max_drawdown_close": 4831.353252261615,
+            "max_drawdown_5m_close": 4831.353252261615,
+            "net_without_best": -4659.053388861658,
+            "fees": 1700.51588637,
+            "funding": 12.886134108256,
+            "monthly_realized_net": {
+              "2025-01": -1061.957864269962,
+              "2025-02": -389.0152625709143,
+              "2025-03": -600.5551294400045,
+              "2025-04": -1191.9823049706597,
+              "2025-05": -1205.6532858899914,
+              "2025-06": -382.18940512011613
+            },
+            "counts": {
+              "breakouts": 527,
+              "missed_first": 162,
+              "invalidated": 236,
+              "impulses": 305,
+              "zone_visits": 144,
+              "no_rejection": 79,
+              "rejections": 49,
+              "orders": 24,
+              "fills": 24,
+              "payoff_skips": 25,
+              "small_impulse": 1
+            }
+          }
+        }
+      ],
+      "aggregate": {
+        "trades": 70,
+        "net": -8990.385897836495,
+        "profit_factor": 0.2767822412623202,
+        "net_without_best": -9633.818023379632,
+        "profitable_folds": 0,
+        "sum_fold_drawdown": 11124.907738017835,
+        "score": -0.8081312770903343
+      },
+      "eligible": false
+    }
+  ],
+  "selection": {
+    "name": "reclaim_market",
+    "pivot": 5,
+    "retracement": 0.5,
+    "entry": "market",
+    "extension": 1.0
+  },
+  "limitations": [
+    "Canonical signals aggregated from official 5m archives; discrepancies published.",
+    "5m entry subbar ambiguity is treated conservatively; no native TradingView parity claim.",
+    "Funding notional uses trade open as a mark-price proxy.",
+    "0.07% commission includes 0.01% execution reserve; actual spread not observed."
+  ]
+}
