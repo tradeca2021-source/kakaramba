@@ -1,0 +1,10 @@
+{
+ "status":"Separate failed-break retest architecture; known data, no independent validation",
+ "candidates":["existing live continuation baseline","failed-break retest to61.8% recovery","failed-break retest to78.6% recovery","failed-break retest to100% origin"],
+ "confirmation":"Same causal first50% impulse retracement after confirmedBOS in4h trend. Opposite candle body closes across midpoint and broken structural pivot; completed5m price/EMA21/slope agree with reversal. This arms a retest, not an immediate trade.",
+ "retest":"Freeze broken pivot and +/-0.1 confirmationATR zone. On a later15m candle, within12bars of reclaim, first retest must reject in reversal direction and close beyond reclaimed level on touch or next candle. Stop uses the two-candle retest extreme plus0.15currentATR. A close0.25 confirmationATR back beyond broken level, old endpoint break, target visit before entry or expired12bar window consumes setup. Macro4h trend may change after reclaim because trade is reversal; original context remains required before reclaim.",
+ "orders":"Resting stop one tick beyond retest rejection candle; eligible only on later bars. Pending3bar expiry, original retest-extreme violation, lost reclaimed pivot, stop/target touch and sourceorigin/endpoint invalidation. Frozen target is recovery fraction from original impulse endpoint toward its origin; never extend beyond origin.",
+ "unchanged":"0.25%risk,95%cap,max1BTC,1.5 modelednetR,0.07%cost/side,2tick slip,0.25ATR sizinggap,actual funding,5m stop-first replay",
+ "periods":"Same seven known independent accounts2024H1/H2,2025H1/H2,2026Q1/Q2/Q3",
+ "decision":"No grid or subsequent retuning. Publish all. Ship separate experimental Pine only if net>baseline,>=4 positive periods,net without largest winner>0 and worst period5m closing drawdown<=2xbaseline. Higherfee0.10% and20tick slip for qualifiers. Preserve existing baseline; no independent validation claim."
+}
