@@ -1,0 +1,9 @@
+{
+ "status":"Exploratory enhancement on known data, not fresh validation",
+ "hypothesis":"A wide rejection candle can make its extreme-break entry fail the reward gate. Compare entries after the same live impulse midpoint rejection.",
+ "candidates":["rejection-break stop control","next-open market after closed rejection","resting midpoint limit after rejection","cost-bounded resting limit inside 50-61.8 zone"],
+ "unchanged":"Live closed-bar endpoint, confirmed pivot5, prior closed 4h EMA50, first 50-61.8 retracement, at most two-candle reclaim, 1.5 modeled net R, frozen stop and swing target, 0.25% risk, 95% notional, max1BTC, three-bar expiry",
+ "execution":"Submit only after rejection close. No same-bar entries. Five-minute stop-first brackets and entry-subbar conservative extremes; 0.07% per-side fee/reserve, 2 tick slip on stop/market, no favorable limit gap improvement; actual funding on carried positions.",
+ "periods":"Same seven independent account periods 2024 H1/H2,2025 H1/H2,2026 Q1/Q2/Q3; all previously inspected",
+ "decision":"Report all modes, every period and stage counts. No grids or retuning. Optional Pine entry mode only if net improves versus control and at least four periods profitable, positive net excluding largest trade and drawdown no more than twice control. No baseline promotion without unused validation. Higher fee 0.10% and slippage20tick sensitivity for qualifying modes."
+}
