@@ -1,0 +1,8 @@
+{
+ "status":"Exploratory known-period timeframe comparison; no fresh validation",
+ "candidates":["15 minute control","30 minute signal chart","60 minute signal chart"],
+ "unchanged":"Same live impulse 50-61.8 midpoint rejection, pivot5, prior closed4h EMA50, 14ATR, 2ATR impulse, 0.15ATR stop buffer, 1.5 netR gate, three signal-bar trigger expiry, 60 signal-bar setup expiry, 0.25% risk, 95% cap, max1BTC, fixed stops and targets",
+ "sampling":"Aggregate canonical15m signals into complete UTC-aligned30m and60m candles. Keep verified5m execution and actual funding; new entries occur after signal close. Bar-based ages and expiry retain same settings so elapsed durations are longer; disclose this instead of claiming timeframe is isolated from duration.",
+ "periods":"Same seven independent account periods2024H1/H2,2025H1/H2,2026Q1/Q2/Q3",
+ "decision":"Report all candidates and period counts. No parameter retuning. Qualifying exploratory candidate must improve aggregate net, >=4 profitable periods, net excluding largest trade>0 and worst period5m closing drawdown<=2x control. No automatic baseline promotion or independent claim. Check qualifying candidates at0.10% fees and20tick slip; disclose failed periods and concentration."
+}
