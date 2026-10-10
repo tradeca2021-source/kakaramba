@@ -1,0 +1,9 @@
+{
+ "status":"Exploratory guards on repeatedly inspected data, not unused validation",
+ "hypothesis":"Avoid continuation entries after unusually extended impulses or rapid large countertrend rebounds. The user's single stop-out motivates investigation, not validation or screenshot-specific tuning.",
+ "candidates":["live baseline control","skip impulse >8 current ATR at first touch","skip rapid rebound: impulse >=4 current ATR and first midpoint touch <=3 bars after last extreme","both guards"],
+ "timing":"Store bar index when a closed candle establishes the running extreme. Evaluate only at first retracement using previous closed endpoint and current ATR; no future candles or revising frozen endpoints. Ambiguous extension/touch remains excluded. Guard rejection consumes setup.",
+ "unchanged":"15m signal, confirmedpivot5, prior closed4h EMA50, minimum2ATR impulse, midpoint/deep50-61.8, two-candle rejection, wick-break resting stop, original fixed stop/target,1.5 netR,0.25% risk,95% cap,max1BTC,0.07% fee/reserve,two tick slip and actual funding",
+ "periods":"Same seven known independent account periods2024H1/H2,2025H1/H2,2026Q1/Q2/Q3",
+ "decision":"No threshold grid or retuning. Publish all periods and aggregate. Optional candidate only if net>control, >=4 positive periods, net excluding best>0, worst period5m closing drawdown<=control. Preserve baseline defaults. Qualifiers require higher cost checks fee0.10% and20tick slip; no claim of fresh validation."
+}
