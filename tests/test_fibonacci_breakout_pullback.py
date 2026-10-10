@@ -61,6 +61,24 @@ class EntryBoundaries(unittest.TestCase):
         self.assertFalse(eval(condition,{'__builtins__':{}},base|{'pendingTooDeep':False}))
         self.assertTrue(eval(condition,{'__builtins__':{}},base|{'pendingTooDeep':True}))
 
+    def test_explicit_entry_window_excludes_end_boundary(self):
+        base=dict(useDates=True,firstDate=100,lastDate=200)
+        self.assertFalse(predicate('inDates',**base,time=90,time_close=100))
+        self.assertTrue(predicate('inDates',**base,time=100,time_close=110))
+        self.assertFalse(predicate('inDates',**base,time=190,time_close=200))
+        self.assertFalse(predicate('inDates',**base,time=200,time_close=210))
+        self.assertTrue(predicate('inDates',**(base|{'useDates':False}),time=200,time_close=210))
+
+    def test_execution_reserve_is_in_both_actual_pine_cost_formulas(self):
+        risk=re.search(r'modeledUnitRisk\(float entry.*?\n    float pv = [^\n]+\n    (.+)',SOURCE).group(1)
+        reward=re.search(r'modeledNetReward\(float entry.*?\n    float pv = [^\n]+\n    (.+)',SOURCE).group(1)
+        def value(expr,reserve):
+            expr=expr.replace('math.abs','abs').replace('syminfo.mintick','tick')
+            return eval(expr,{'__builtins__':{},'abs':abs},dict(entry=60000,stop=59000,target=62000,atrValue=200,pv=1,tick=.1,slippageTicks=2,gapAllowanceATR=.25,feePercent=.06,executionReservePercent=reserve))
+        self.assertAlmostEqual(value(risk,.01)-value(risk,0),11.9)
+        self.assertAlmostEqual(value(reward,0)-value(reward,.01),12.2)
+        self.assertIn('commission_value=0.07',SOURCE)
+
     def test_closed_htf_and_delayed_endpoint_contract(self):
         self.assertIn('[close[1], ta.ema(close, trendLength)[1], ta.ema(close, trendLength)[2]]',SOURCE)
         self.assertIn('bar_index - pivotBars >= breakoutBar',SOURCE)

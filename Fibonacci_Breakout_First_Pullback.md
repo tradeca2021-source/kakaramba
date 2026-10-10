@@ -46,3 +46,15 @@ python3 -B tests/test_fibonacci_breakout_pullback.py
 python3 -B tests/test_breakout_execution.py
 python3 -B research/breakout_pullback_backtest.py
 ```
+
+## v4: audited costs and consistent competition windows
+
+v4 keeps the v3 stop-entry logic. The eight-candidate comparison and subsequent limit-entry experiments did **not** establish a validated upgrade. Read the complete [competition research](research/results/competition/README.md), including the failed independent holdout and rejected higher-frequency variants.
+
+The default Strategy Properties commission is now **0.07% per side**: exchange-fee assumption 0.06% plus 0.01% execution reserve. Both the net-R eligibility check and position sizing use their sum. Set Properties commission to the sum if you change those inputs; Pine cannot read Properties overrides. This is a conservative spread/execution allowance, not observed spread. Native strategy PnL excludes funding, while the external research applies actual funding rates with a mark-price proxy.
+
+Optional “Restrict entry and exit dates” warms indicators/pivots on prior bars but starts no setups outside the chosen window. The start is inclusive; signals closing at the exclusive end are disallowed. Pending entries cancel and open positions close at the end. It remains off by default. Use the same dates in Deep Backtesting, and enough prior candles for stable indicator history. The script cannot control TradingView's Deep Backtesting selector.
+
+The panel adds chart-run net profit/PF, modeled cost per side and explicit window/loaded-start dates. Chart-run counters and PnL may differ from a separately selected Deep Backtesting run. No signal-frequency changes, widened stops, leverage increases or extended targets were added to improve the headline score.
+
+18 focused local checks pass across the Pine predicates, the prior execution audit and the new funding-aware 5m engine. Native Pine compilation and venue-exact trading performance remain unverified. Current status: experimental, no variant earned validated promotion.

@@ -17,8 +17,19 @@ class Rules:
     extension:float=1.0
 
 
+def cost_bounded_entry(mid,stop,target,atr,d,cfg):
+    r=cfg.minimum_net_r
+    slip=2*cfg.slippage_ticks*cfg.tick
+    gap=cfg.gap_atr*atr
+    if d==1:
+        bound=((target+r*stop)*(1-cfg.fee)-(1+r)*slip-r*gap)/((1+r)*(1+cfg.fee))
+        return math.floor(min(mid,bound)/cfg.tick)*cfg.tick
+    bound=((target+r*stop)*(1+cfg.fee)+(1+r)*slip+r*gap)/((1+r)*(1-cfg.fee))
+    return math.ceil(max(mid,bound)/cfg.tick)*cfg.tick
+
+
 def replay(bars,lower,rates,rules,start,end,fee=.0007,slippage_ticks=2,prepared=None):
-    if rules.entry not in ('stop','market') or not 0<=start<end<=len(bars):raise ValueError('Invalid rules/period')
+    if rules.entry not in ('stop','market','limit_mid','limit_cost') or not 0<=start<end<=len(bars):raise ValueError('Invalid rules/period')
     cfg=replace(f.Config(),pivot=rules.pivot,fee=fee,slippage_ticks=slippage_ticks,minimum_net_r=1.5,setup_life=60)
     if prepared is None:
         _,_,atrs,events=f.features(bars,cfg);trends=closed_htf_trends(bars)
@@ -37,7 +48,6 @@ def replay(bars,lower,rates,rules,start,end,fee=.0007,slippage_ticks=2,prepared=
         trades.append(dict(entry_time=p['time'],exit_time=stamp,direction=p['d'],entry=p['entry'],exit=price,quantity=p['qty'],stop=p['stop'],target=p['target'],gross=gross,fees=p['entry_fee']+exit_fee,funding=p['funding'],net=gross-p['entry_fee']-exit_fee+p['funding'],exit_reason=reason))
         position=None
     for i,b in enumerate(bars[:end]):
-        closed_this_bar=False
         if i>=start:
             for offset in (0,300,600):
                 sub=lower[b.time+offset]
@@ -48,10 +58,11 @@ def replay(bars,lower,rates,rules,start,end,fee=.0007,slippage_ticks=2,prepared=
                     cashflow.append(dict(time=sub.time,rate=funding[sub.time],amount=payment,price_proxy=sub.open))
                 entered=False
                 if pending:
-                    hit=pending['mode']=='market' or (sub.high>=pending['trigger'] if d==1 else sub.low<=pending['trigger'])
+                    limit=pending['mode'] in ('limit_mid','limit_cost')
+                    hit=pending['mode']=='market' or ((sub.low<=pending['trigger'] if d==1 else sub.high>=pending['trigger']) if limit else (sub.high>=pending['trigger'] if d==1 else sub.low<=pending['trigger']))
                     if hit:
-                        raw=sub.open if pending['mode']=='market' else max(sub.open,pending['trigger']) if d==1 else min(sub.open,pending['trigger'])
-                        fill=raw+d*cfg.tick*cfg.slippage_ticks
+                        raw=pending['trigger'] if limit else sub.open if pending['mode']=='market' else max(sub.open,pending['trigger']) if d==1 else min(sub.open,pending['trigger'])
+                        fill=raw if limit else raw+d*cfg.tick*cfg.slippage_ticks
                         entry_fee=fill*pending['qty']*cfg.fee
                         if fill*pending['qty']+entry_fee<=balance:
                             balance-=entry_fee
@@ -63,7 +74,7 @@ def replay(bars,lower,rates,rules,start,end,fee=.0007,slippage_ticks=2,prepared=
                     # Entry is known to occur within this subbar: its original open preceded entry.
                     execution_bar=replace(sub,open=position['entry']) if entered else sub
                     exit_fill=f.bracket_fill(execution_bar,position['d'],position['stop'],position['target'],cfg)
-                    if exit_fill:close(*exit_fill,sub.time);closed_this_bar=True
+                    if exit_fill:close(*exit_fill,sub.time)
                     phase=0
                 mark=balance+(position['d']*(sub.close-position['entry'])*position['qty'] if position else 0)
                 subpeak=max(subpeak,mark);subdrawdown=max(subdrawdown,subpeak-mark)
@@ -107,9 +118,14 @@ def replay(bars,lower,rates,rules,start,end,fee=.0007,slippage_ticks=2,prepared=
                         stop_raw=extreme-d*max(cfg.tick,.15*a)
                         stop=(math.floor(stop_raw/cfg.tick) if d==1 else math.ceil(stop_raw/cfg.tick))*cfg.tick
                         target=f.round_price(origin+d*abs(endpoint-origin)*rules.extension,cfg.tick)
+                        if rules.entry in ('limit_mid','limit_cost'):
+                            trigger=mid
+                            if rules.entry=='limit_cost':
+                                trigger=cost_bounded_entry(mid,stop,target,a,d,cfg)
                         risk=f.unit_risk(trigger,stop,a,cfg);reward=f.net_reward(trigger,target,cfg)
                         qty=f.quantity(trigger,stop,a,balance,cfg)
                         geometry=stop<trigger<target if d==1 else target<trigger<stop
+                        if rules.entry in ('limit_mid','limit_cost'):geometry=geometry and (deep<=trigger<=mid if d==1 else mid<=trigger<=deep)
                         if geometry and reward>0 and reward>=1.5*risk and qty>0 and i<end-1:
                             pending=dict(trigger=trigger,stop=stop,target=target,qty=qty,mode=rules.entry);rejection=i;phase=4;count('orders')
                         else:

@@ -16,7 +16,9 @@ OUTPUT=ROOT/'research/results/competition'
 def stamp(s):return int(datetime.fromisoformat(s).replace(tzinfo=timezone.utc).timestamp())
 def index(bars,when):return next((i for i,b in enumerate(bars) if b.time>=when),len(bars))
 def write_rows(path,rows):
-    if not rows:return
+    if not rows:
+        if path.exists():path.unlink()
+        return
     with path.open('w',newline='') as stream:
         writer=csv.DictWriter(stream,fieldnames=list(rows[0]));writer.writeheader();writer.writerows(rows)
 
@@ -90,5 +92,6 @@ def holdout():
     print('PROMOTE',promotion,flush=True)
 
 if __name__=='__main__':
-    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('phase',choices=['development','holdout']);args=parser.parse_args()
+    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('phase',choices=['development','holdout']);parser.add_argument('--output',type=Path,help='Separate output directory for reproduction');args=parser.parse_args()
+    if args.output:OUTPUT=args.output
     (development if args.phase=='development' else holdout)()

@@ -1,0 +1,261 @@
+{
+  "frozen_selection": {
+    "protocol_sha256": "f00658e50f22f70c1776a2bd46676d1d993a2bfcd7d07a40f71a9a9632eca739",
+    "development_sha256": "8c1e9a35298e4ebb1962fb285f53a962642c086e523b5be22bebc72a4e978381",
+    "selected": {
+      "name": "reclaim_market",
+      "pivot": 5,
+      "retracement": 0.5,
+      "entry": "market",
+      "extension": 1.0
+    },
+    "baseline": {
+      "name": "baseline_v3",
+      "pivot": 5,
+      "retracement": 0.5,
+      "entry": "stop",
+      "extension": 1.0
+    },
+    "holdout": [
+      "2025-07-01",
+      "2026-01-01"
+    ],
+    "policy": "No eligible candidate means no promotion. Baseline holdout may still be recorded as a diagnostic."
+  },
+  "archives": {
+    "BTCUSDT-15m-2025-01.zip": "0867b0b8e22069621de45df42cc49a8df1b8217cf777529b1df6d43253927588",
+    "BTCUSDT-5m-2025-01.zip": "0c99422d64fa3cc58564cf77969fc5a96d6f44783c79ecfcf94b103753bf7570",
+    "BTCUSDT-fundingRate-2025-01.zip": "df725010d55458866eb5a47e9ee708c6796c9d7e77b14c38342cea11f381815e",
+    "BTCUSDT-15m-2025-02.zip": "44280cf80923ec6ee42e28e4606723b2f36909eab5c334ee5aee132ff989f12b",
+    "BTCUSDT-5m-2025-02.zip": "fdd6fb92b75bae5c02dd583b5be44ca6673d1807ce4b0c08160d3c5cf7677a46",
+    "BTCUSDT-fundingRate-2025-02.zip": "e918b90fb33df3a3317feea13807a892047f1ec86eeac100bdb7b3dd83285d46",
+    "BTCUSDT-15m-2025-03.zip": "aea345f1561a16710812658f2d435f0e02de5fc25d7ba8ad821526d67b2ab229",
+    "BTCUSDT-5m-2025-03.zip": "46f83773b9cec38a09be429727a5a300ccca6d11c8e8ca5fa9545fad6eda131f",
+    "BTCUSDT-fundingRate-2025-03.zip": "a3b95cfb315641fbfddc61eb32adf2a2588afb7a3973a61f464aca007ad43e3f",
+    "BTCUSDT-15m-2025-04.zip": "6a5166823a9e80e25f520a8e7e26f34550c975e26bd1c5bb95a20d530b89bfa5",
+    "BTCUSDT-5m-2025-04.zip": "9eda69fd858e9ced7e72cfbb75bffe34458763c37c8ee73910e572b4baba21ed",
+    "BTCUSDT-fundingRate-2025-04.zip": "01dbb7bd0135f98bd63bdde6b943cde1accc1770cabf92f68a1ec0653ced3888",
+    "BTCUSDT-15m-2025-05.zip": "303a174c2d15248fe00342ac2b01bec41bb4e11c4a5d26d480e2a382808bc020",
+    "BTCUSDT-5m-2025-05.zip": "073da284f178e72777abbfbcf79faa99fcf77bd69c4a678938abbf6cd7d14f5b",
+    "BTCUSDT-fundingRate-2025-05.zip": "e7355e2775b88009c984db1783bb8ed6b5f24ede2b52bb764151b5722d6a5e42",
+    "BTCUSDT-15m-2025-06.zip": "4c980922647b630dbf146cb80934776930f8b4a9b419967710ecb8ce398e036d",
+    "BTCUSDT-5m-2025-06.zip": "da39c04e24a90c87406b9030e1aaf376655ad59d4bc0496f38e4162a9babf514",
+    "BTCUSDT-fundingRate-2025-06.zip": "a1f4a40953740fa83ee9ad97776ff8325d1958654a67f1325614071a983819d4",
+    "BTCUSDT-15m-2025-07.zip": "dd5bb32a02e5a3dc93717530abe572f41e1bc50b920daad6e226bb6024e52b51",
+    "BTCUSDT-5m-2025-07.zip": "2cea4750d51d9c064d674ec8d0d8d1f39448960284272fdc74698562c873bf0f",
+    "BTCUSDT-fundingRate-2025-07.zip": "b097dff828f6e43fece23db0d3cb98042a9d7bc19693b8cbfd051d88eb973b7b",
+    "BTCUSDT-15m-2025-08.zip": "b8965932ae4008e4f1f8ec1ed344f11fbd1f743b44679dacfab665f05414aced",
+    "BTCUSDT-5m-2025-08.zip": "7f78f6f88ae1946f8bd8312a37d1d74b24e24d6b13bc37d2909ad7c8c0c7e9ae",
+    "BTCUSDT-fundingRate-2025-08.zip": "1180129860b6e196e8d70bb9719e81573aa6b4acb423ba5ee7f82f10c836f7ab",
+    "BTCUSDT-15m-2025-09.zip": "fcfe6d1c17890b82788b13707bbdc99694361f701a49f15347c8f0e85e55fd1f",
+    "BTCUSDT-5m-2025-09.zip": "dbfb8bc2f9343107c7a702acd6919d77060a8f7ea4b25359c71e5fc018a85209",
+    "BTCUSDT-fundingRate-2025-09.zip": "21dc6570fc6bffad0e7b5f9e99211b82ad07c95ab4f18c3a2daa3b95ec98344c",
+    "BTCUSDT-15m-2025-10.zip": "14f11249137327f5ecadfaceab1eea9ba87f819298af645998fc9bd2cde02b77",
+    "BTCUSDT-5m-2025-10.zip": "fab262ca4318f8f65164ae33a020458439adc6f7bc2e59bbfce1886118d05a48",
+    "BTCUSDT-fundingRate-2025-10.zip": "9ecdedab6344fc4cdb154763266b8e09627a71c3cc5574cf868158b541c259c2",
+    "BTCUSDT-15m-2025-11.zip": "66c714d54807c313814d0aef6ee2ef21e07e311605b47c23ae32978c721a4b23",
+    "BTCUSDT-5m-2025-11.zip": "2759d4be0fe68cc2be3d4d91940fcd95abc69f0c31f25d0b6cb5e0629c625d2d",
+    "BTCUSDT-fundingRate-2025-11.zip": "23735400405627d610123e3a43db3e98ae7addb93459cd670e65a7659a5f081b",
+    "BTCUSDT-15m-2025-12.zip": "d497e319364b0c13a0cd59e0192568ea1542e8f430844046189a8cf534895805",
+    "BTCUSDT-5m-2025-12.zip": "0e923a3d2ac4f6711d8c841220f4e5d2e479c1bdb40b41515eb250e16808304f",
+    "BTCUSDT-fundingRate-2025-12.zip": "35318b789f020b0e04c9043112480743855554e52e1d188437cbdaa67246d51d"
+  },
+  "quality": {
+    "canonical_5m_aggregation": true,
+    "discrepancies": [
+      {
+        "time": 1738114200,
+        "official_15m": [
+          101627.4,
+          101700.0,
+          101422.2,
+          101675.0
+        ],
+        "aggregated_5m": [
+          101770.1,
+          101770.1,
+          101422.2,
+          101675.0
+        ]
+      }
+    ]
+  },
+  "results": [
+    {
+      "rules": {
+        "name": "baseline_v3",
+        "pivot": 5,
+        "retracement": 0.5,
+        "entry": "stop",
+        "extension": 1.0
+      },
+      "summary": {
+        "trades": 2,
+        "net": -437.45946716000617,
+        "profit_factor": 0.0,
+        "gross_wins": 0,
+        "gross_losses": 437.45946715999906,
+        "win_rate": 0.0,
+        "max_drawdown_close": 685.6851086000097,
+        "max_drawdown_5m_close": 687.8019085999986,
+        "net_without_best": -229.70376239999905,
+        "fees": 96.22524604,
+        "funding": -3.9750211200000005,
+        "monthly_realized_net": {
+          "2025-07": -229.70376239999905,
+          "2025-11": -207.75570476000001
+        },
+        "counts": {
+          "breakouts": 387,
+          "missed_first": 135,
+          "impulses": 205,
+          "invalidated": 180,
+          "zone_visits": 85,
+          "rejections": 25,
+          "payoff_skips": 21,
+          "orders": 4,
+          "cancellations": 2,
+          "no_rejection": 47,
+          "fills": 2
+        }
+      },
+      "passes_promotion_gate": false
+    },
+    {
+      "rules": {
+        "name": "reclaim_market",
+        "pivot": 5,
+        "retracement": 0.5,
+        "entry": "market",
+        "extension": 1.0
+      },
+      "summary": {
+        "trades": 7,
+        "net": -1475.405499971108,
+        "profit_factor": 0.0,
+        "gross_wins": 0,
+        "gross_losses": 1475.4054999710747,
+        "win_rate": 0.0,
+        "max_drawdown_close": 1504.0229041211132,
+        "max_drawdown_5m_close": 1506.133404121123,
+        "net_without_best": -1288.9567301910706,
+        "fees": 434.74599763000003,
+        "funding": -4.622402341088,
+        "monthly_realized_net": {
+          "2025-07": -447.8895907499923,
+          "2025-08": -218.41889604,
+          "2025-09": -215.95617679999697,
+          "2025-10": -209.52997780108336,
+          "2025-11": -383.61085858000206
+        },
+        "counts": {
+          "breakouts": 387,
+          "missed_first": 135,
+          "impulses": 205,
+          "invalidated": 180,
+          "zone_visits": 85,
+          "rejections": 25,
+          "payoff_skips": 18,
+          "orders": 7,
+          "fills": 7,
+          "no_rejection": 47
+        }
+      },
+      "passes_promotion_gate": false
+    }
+  ],
+  "promotion": false,
+  "stress_tests": [
+    {
+      "name": "fee_0.10_percent",
+      "rules": {
+        "name": "reclaim_market",
+        "pivot": 5,
+        "retracement": 0.5,
+        "entry": "market",
+        "extension": 1.0
+      },
+      "fee": 0.001,
+      "slippage_ticks": 2,
+      "summary": {
+        "trades": 5,
+        "net": -1069.2656855199893,
+        "profit_factor": 0.0,
+        "gross_wins": 0,
+        "gross_losses": 1069.2656855199946,
+        "win_rate": 0.0,
+        "max_drawdown_close": 1069.2656855199893,
+        "max_drawdown_5m_close": 1069.2656855199893,
+        "net_without_best": -875.6634167199908,
+        "fees": 367.40337700000003,
+        "funding": -3.6201085199999996,
+        "monthly_realized_net": {
+          "2025-07": -452.0849031199929,
+          "2025-08": -221.5668336,
+          "2025-11": -395.6139488000018
+        },
+        "counts": {
+          "breakouts": 387,
+          "missed_first": 135,
+          "impulses": 205,
+          "invalidated": 180,
+          "zone_visits": 85,
+          "rejections": 25,
+          "payoff_skips": 20,
+          "orders": 5,
+          "fills": 5,
+          "no_rejection": 47
+        }
+      }
+    },
+    {
+      "name": "slippage_20_ticks",
+      "rules": {
+        "name": "reclaim_market",
+        "pivot": 5,
+        "retracement": 0.5,
+        "entry": "market",
+        "extension": 1.0
+      },
+      "fee": 0.0007,
+      "slippage_ticks": 20,
+      "summary": {
+        "trades": 7,
+        "net": -1477.6711172997893,
+        "profit_factor": 0.0,
+        "gross_wins": 0,
+        "gross_losses": 1477.6711172997784,
+        "win_rate": 0.0,
+        "max_drawdown_close": 1504.725528439798,
+        "max_drawdown_5m_close": 1506.8297284397995,
+        "net_without_best": -1290.6644296597715,
+        "fees": 432.393458,
+        "funding": -4.6072592997760005,
+        "monthly_realized_net": {
+          "2025-07": -448.63095397999575,
+          "2025-08": -218.57660090000215,
+          "2025-09": -216.15257543999996,
+          "2025-10": -209.90266333977368,
+          "2025-11": -384.408323640007
+        },
+        "counts": {
+          "breakouts": 387,
+          "missed_first": 135,
+          "impulses": 205,
+          "invalidated": 180,
+          "zone_visits": 85,
+          "rejections": 25,
+          "payoff_skips": 18,
+          "orders": 7,
+          "fills": 7,
+          "no_rejection": 47
+        }
+      }
+    }
+  ],
+  "limitations": [
+    "Holdout used once after candidate freeze; no retuning after this result.",
+    "Binance proxy, not Bitunix. Funding uses candle-open price proxy.",
+    "5m entry-subbar stop-first assumption remains conservative. Native compilation/backtesting unavailable."
+  ]
+}

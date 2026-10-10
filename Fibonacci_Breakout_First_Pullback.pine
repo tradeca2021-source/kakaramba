@@ -1,10 +1,11 @@
 //@version=6
-// Experimental hypothesis; not optimized or validated for profitability.
-strategy("Fibonacci Breakout First Pullback v3", shorttitle="Fib BOS Pullback v3", overlay=true,
+// Experimental: development-selected entry change failed independent holdout.
+// v4 preserves original stop-entry rules; adds audited costs and explicit test dates.
+strategy("Fibonacci Breakout First Pullback v4", shorttitle="Fib BOS Pullback v4", overlay=true,
      initial_capital=100000, pyramiding=1, calc_on_every_tick=false,
      process_orders_on_close=false, use_bar_magnifier=true,
      default_qty_type=strategy.fixed, commission_type=strategy.commission.percent,
-     commission_value=0.06, slippage=2, margin_long=100, margin_short=100, max_labels_count=200)
+     commission_value=0.07, slippage=2, margin_long=100, margin_short=100, max_labels_count=200)
 
 G_SETUP = "Breakout and first pullback"
 pivotBars = input.int(5, "Confirmed pivot left/right bars", minval=2, maxval=30, group=G_SETUP)
@@ -28,9 +29,18 @@ exposurePercent = input.float(95, "Maximum notional / equity (%)", minval=1, max
 quantityStep = input.float(0.001, "Quantity step (BTC defaults)", minval=0.000001, group=G_RISK)
 minimumQuantity = input.float(0.001, "Minimum quantity", minval=0.000001, group=G_RISK)
 maximumQuantity = input.float(1, "Maximum quantity", minval=0.000001, group=G_RISK)
-feePercent = input.float(0.06, "Modeled fee per side (%)", minval=0, maxval=5, step=0.01, group=G_RISK)
+feePercent = input.float(0.06, "Exchange fee per side (%)", minval=0, maxval=5, step=0.01, group=G_RISK)
+executionReservePercent = input.float(0.01, "Additional execution reserve per side (%)", minval=0, maxval=1, step=0.01, group=G_RISK)
 slippageTicks = input.int(2, "Modeled slippage per side (ticks)", minval=0, group=G_RISK)
 gapAllowanceATR = input.float(0.25, "Stop-gap sizing allowance / ATR", minval=0, step=0.05, group=G_RISK)
+
+G_DATES = "Competition/test dates"
+useDates = input.bool(false, "Restrict entry and exit dates", group=G_DATES)
+firstDate = input.time(timestamp("2026-01-01 00:00 +0000"), "Start (inclusive)", group=G_DATES)
+lastDate = input.time(timestamp("2027-01-01 00:00 +0000"), "End (exclusive)", group=G_DATES)
+bool inDates = not useDates or (time >= firstDate and time_close < lastDate)
+if useDates and firstDate >= lastDate
+    runtime.error("Test start must precede test end")
 
 if timeframe.in_seconds(trendTF) <= timeframe.in_seconds()
     runtime.error("Choose a trend timeframe higher than the chart timeframe")
@@ -53,11 +63,11 @@ roundPrice(float price) =>
 // These functions account for entry/exit fees at their respective prices.
 modeledUnitRisk(float entry, float stop, float atrValue) =>
     float pv = syminfo.pointvalue
-    (math.abs(entry - stop) + 2.0 * slippageTicks * syminfo.mintick + gapAllowanceATR * atrValue) * pv + (math.abs(entry) + math.abs(stop)) * pv * feePercent / 100.0
+    (math.abs(entry - stop) + 2.0 * slippageTicks * syminfo.mintick + gapAllowanceATR * atrValue) * pv + (math.abs(entry) + math.abs(stop)) * pv * (feePercent + executionReservePercent) / 100.0
 
 modeledNetReward(float entry, float target) =>
     float pv = syminfo.pointvalue
-    (math.abs(target - entry) - 2.0 * slippageTicks * syminfo.mintick) * pv - (math.abs(entry) + math.abs(target)) * pv * feePercent / 100.0
+    (math.abs(target - entry) - 2.0 * slippageTicks * syminfo.mintick) * pv - (math.abs(entry) + math.abs(target)) * pv * (feePercent + executionReservePercent) / 100.0
 
 riskQuantity(float entry, float stop, float atrValue) =>
     float equity = math.max(strategy.equity, 0.0)
@@ -110,6 +120,7 @@ var bool fillObserved = false
 bool breakoutSignal = false
 bool rejectionSignal = false
 bool submittedSignal = false
+var int firstLoaded = time
 // Count a fill once, including entries that fill and exit between calculations.
 if not fillObserved and (strategy.position_size != 0 or strategy.closedtrades > submittedClosedCount)
     filledOrders += 1
@@ -125,11 +136,24 @@ if strategy.position_size != 0
     phase := 0
     reason := "Position open; fixed stop and swing-extreme target"
 
+// Indicators/pivots warm up before the window; no setup/order starts outside it.
+if useDates and not inDates and phase > 0
+    if phase == 4
+        canceledOrders += 1
+    strategy.cancel("Fib")
+    strategy.cancel("Fib exit")
+    phase := 0
+    reason := "Outside test dates"
+if useDates and time_close >= lastDate
+    strategy.cancel("Fib")
+    if strategy.position_size != 0
+        strategy.close_all(comment="Test window end", immediately=true)
+
 if barstate.isconfirmed
     // Evaluate breakouts using structure known BEFORE this candle's newly confirmed pivots.
     bool longBreak = allowLong and upTrend and not na(swingHigh) and not na(swingLow) and close > swingHigh and close[1] <= swingHigh and (na(usedHighBar) or usedHighBar != swingHighBar)
     bool shortBreak = allowShort and downTrend and not na(swingHigh) and not na(swingLow) and close < swingLow and close[1] >= swingLow and (na(usedLowBar) or usedLowBar != swingLowBar)
-    if phase == 0 and strategy.position_size == 0 and (longBreak or shortBreak)
+    if inDates and phase == 0 and strategy.position_size == 0 and (longBreak or shortBreak)
         breakouts += 1
         breakoutSignal := true
         direction := longBreak ? 1 : -1
@@ -275,10 +299,10 @@ plotshape(showSignals and breakoutSignal, title="Confirmed breakout", style=shap
 plotshape(showSignals and rejectionSignal, title="Rejection evaluated", style=shape.circle, location=location.belowbar, color=color.yellow, size=size.tiny, text="REJ")
 plotshape(showSignals and submittedSignal and direction == 1, title="Buy-stop submitted (not fill)", style=shape.triangleup, location=location.belowbar, color=color.lime, size=size.small, text="ORDER")
 plotshape(showSignals and submittedSignal and direction == -1, title="Sell-stop submitted (not fill)", style=shape.triangledown, location=location.abovebar, color=color.red, size=size.small, text="ORDER")
-var table panel = table.new(position.top_right, 2, 9, bgcolor=color.new(color.black, 15))
+var table panel = table.new(position.top_right, 2, 12, bgcolor=color.new(color.black, 15))
 if barstate.islast and showPanel
-    panel.cell(0, 0, "Fib BOS Pullback v3", text_color=color.white)
-    panel.cell(1, 0, reason, text_color=color.yellow)
+    panel.cell(0, 0, "Fib BOS Pullback v4", text_color=color.white)
+    panel.cell(1, 0, not inDates ? "Outside test dates" : reason, text_color=color.yellow)
     panel.cell(0, 1, "Planned net R / qty", text_color=color.white)
     panel.cell(1, 1, str.tostring(plannedNetR, "0.00") + " / " + str.tostring(plannedQty), text_color=color.white)
     panel.cell(0, 2, "Risk / HTF", text_color=color.white)
@@ -295,3 +319,9 @@ if barstate.islast and showPanel
     panel.cell(1, 7, str.tostring(missedPullbacks) + " / " + str.tostring(invalidatedSetups) + " / " + str.tostring(canceledOrders), text_color=color.white)
     panel.cell(0, 8, "Phase / active side", text_color=color.white)
     panel.cell(1, 8, str.tostring(phase) + " / " + (phase == 0 ? "none" : direction == 1 ? "long" : "short"), text_color=color.white)
+    panel.cell(0, 9, "Chart net / PF", text_color=color.white)
+    panel.cell(1, 9, str.tostring(strategy.netprofit, "0.00") + " / " + (strategy.grossloss > 0 ? str.tostring(strategy.grossprofit / strategy.grossloss, "0.00") : "n/a"), text_color=color.white)
+    panel.cell(0, 10, "Modeled fee + reserve / side", text_color=color.white)
+    panel.cell(1, 10, str.tostring(feePercent + executionReservePercent, "0.000") + "%; match Properties; funding excluded", text_color=color.white)
+    panel.cell(0, 11, "Test window / loaded start UTC", text_color=color.white)
+    panel.cell(1, 11, (useDates ? str.format_time(firstDate, "yyyy-MM-dd", "UTC") + " to " + str.format_time(lastDate, "yyyy-MM-dd", "UTC") : "All loaded bars") + " | " + str.format_time(firstLoaded, "yyyy-MM-dd", "UTC"), text_color=color.white)

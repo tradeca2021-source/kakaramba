@@ -2,11 +2,23 @@
 from pathlib import Path
 import sys
 import unittest
+import tempfile
+from unittest.mock import patch
 from dataclasses import replace
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'research/competition'))
 import engine as m
+import data as archive_data
 
 class ReplayTests(unittest.TestCase):
+    def test_corrupt_archive_fails_before_parsing(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder);name='BTCUSDT-5m-2025-01.zip'
+            (root/name).write_bytes(b'corrupt data; not a zip')
+            (root/(name+'.CHECKSUM')).write_text('f'*64+'  '+name)
+            with patch.object(archive_data,'CACHE',root):
+                with self.assertRaisesRegex(ValueError,'Invalid SHA256'):
+                    archive_data.archive('2025-01','5m')
+
     def fixture(self):
         prices=[(100,105,99,100),(100,101,90,100),(104,107,103,106),(108,110,107,109)]+[(104,106,102,104)]*5+[(99,101.1,98,101),(100.5,104,97,103),(105,111,104,110)]
         bars=[m.f.Candle(i*900,*p) for i,p in enumerate(prices)]
@@ -48,6 +60,26 @@ class ReplayTests(unittest.TestCase):
         self.assertEqual(trades[0]['entry_time'],9000)
         self.assertAlmostEqual(trades[0]['entry'],102.2)
         self.assertNotEqual(trades[0]['entry'],bars[9].close)
+
+    def test_cost_bound_preserves_net_r_and_never_chases(self):
+        cfg=replace(m.f.Config(),minimum_net_r=1.5,fee=.0007)
+        for d in (1,-1):
+            for midpoint in (100,1000,60000):
+                for gap in (midpoint*.002,midpoint*.005,midpoint*.01):
+                    stop=midpoint-d*gap;target=midpoint+d*gap*2
+                    entry=m.cost_bounded_entry(midpoint,stop,target,gap,d,cfg)
+                    self.assertLessEqual(d*(entry-midpoint),0)
+                    if (stop<entry<target if d==1 else target<entry<stop):
+                        self.assertGreaterEqual(m.f.net_reward(entry,target,cfg)+1e-8,1.5*m.f.unit_risk(entry,stop,gap,cfg))
+
+    def test_limit_order_does_not_fill_without_a_later_touch(self):
+        bars,lower,prepared=self.fixture()
+        # Rejection close is 101, but all later subbars remain above the 100 midpoint.
+        for t in (9000,9300,9600):lower[t]=m.f.Candle(t,102,104,101,103)
+        r,trades,_,_=m.replay(bars,lower,[],m.Rules(entry='limit_mid'),0,len(bars),prepared=prepared)
+        self.assertEqual(r['counts']['orders'],1)
+        self.assertNotIn('fills',r['counts'])
+        self.assertEqual(trades,[])
 
     def test_warmup_cannot_submit_outside_test_period(self):
         bars,lower,prepared=self.fixture()
