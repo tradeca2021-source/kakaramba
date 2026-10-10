@@ -15,6 +15,7 @@ class Rules:
     retracement:float=.5
     entry:str='stop'
     extension:float=1.0
+    breakout_filter:str='none'
 
 
 def reward_price_boundary(stop,target,atr,d,cfg):
@@ -46,6 +47,15 @@ def stop_limit_fill(order,bar,d):
         if acceptable:return bar.open
     touched=bar.low<=cap if d==1 else bar.high>=cap
     return cap if touched else None # Conservative: no favorable limit gap improvement.
+
+
+def breakout_quality(bar,atr,level,origin_bar,index,d,mode):
+    if mode not in ('none','displacement','fresh_origin','both'):raise ValueError('Unknown breakout filter')
+    if mode=='none':return True
+    span=bar.high-bar.low
+    displacement=atr is not None and atr>0 and span>0 and d*(bar.close-bar.open)>=.5*atr and (bar.close-bar.low if d==1 else bar.high-bar.close)>=.75*span and d*(bar.close-level)>=.1*atr
+    fresh=origin_bar is not None and 1<=index-origin_bar<=40
+    return displacement if mode=='displacement' else fresh if mode=='fresh_origin' else displacement and fresh
 
 
 def replay(bars,lower,rates,rules,start,end,fee=.0007,slippage_ticks=2,prepared=None):
@@ -104,6 +114,14 @@ def replay(bars,lower,rates,rules,start,end,fee=.0007,slippage_ticks=2,prepared=
         if phase==0 and position is None and i>0 and sh and sl and start<=i<end-1:
             long=up and b.close>sh[0] and bars[i-1].close<=sh[0] and used_h!=sh[1]
             short=down and b.close<sl[0] and bars[i-1].close>=sl[0] and used_l!=sl[1]
+            if long or short:
+                candidate_direction=1 if long else -1
+                level=sh[0] if long else sl[0]
+                origin_bar=sl[1] if long else sh[1]
+                quality=breakout_quality(b,atrs[i],level,origin_bar,i,candidate_direction,rules.breakout_filter)
+                if not quality:
+                    count('quality_rejected')
+                    long=short=False
             if long or short:
                 d=1 if long else -1;origin=sl[0] if long else sh[0];breakout=i;phase=1;count('breakouts')
                 if long:used_h=sh[1]

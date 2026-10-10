@@ -17,7 +17,7 @@ def predicate(name, **values):
         yes,no=rest.split(' : ',1)
         expr=f'({yes}) if ({cond}) else ({no})'
     expr = prefix + '(' + expr + ')'
-    return eval(expr,{'__builtins__':{}},values)
+    return eval(expr,{'__builtins__':{},'na':lambda v:v is None},values)
 
 class EntryBoundaries(unittest.TestCase):
     def test_zone_intersection_both_directions(self):
@@ -97,6 +97,29 @@ class EntryBoundaries(unittest.TestCase):
         self.assertIn('protectEntryPrice = input.bool(false,',SOURCE)
         self.assertIn('limit=protectEntryPrice ? entryLimit : na',SOURCE)
         self.assertIn('riskQuantity(sizingPrice, tradeStop, atr, math.max(trigger, sizingPrice))',SOURCE)
+
+    def test_actual_pine_displacement_boundaries(self):
+        long=dict(atr=2,breakoutRange=3,open=100,close=101.5,low=99,swingHigh=101)
+        self.assertTrue(predicate('longDisplacement',**long))
+        self.assertFalse(predicate('longDisplacement',**(long|{'open':101})))
+        self.assertFalse(predicate('longDisplacement',**(long|{'breakoutRange':6})))
+        self.assertFalse(predicate('longDisplacement',**(long|{'swingHigh':101.4})))
+        short=dict(atr=2,breakoutRange=3,open=100,close=98.5,high=101,swingLow=99)
+        self.assertTrue(predicate('shortDisplacement',**short))
+        self.assertFalse(predicate('shortDisplacement',**(short|{'open':99})))
+        self.assertFalse(predicate('shortDisplacement',**(short|{'atr':None})))
+
+    def test_actual_pine_freshness_and_filter_modes(self):
+        for age in (0,1,40,41):
+            self.assertEqual(predicate('longFresh',bar_index=100,swingLowBar=100-age),age in (1,40))
+            self.assertEqual(predicate('shortFresh',bar_index=100,swingHighBar=100-age),age in (1,40))
+        for mode in ('None','Displacement','Fresh origin','Both'):
+            for displacement in (True,False):
+                for fresh in (True,False):
+                    expected=mode=='None' or (mode=='Displacement' and displacement) or (mode=='Fresh origin' and fresh) or (mode=='Both' and displacement and fresh)
+                    self.assertEqual(predicate('longQualityOK',breakoutQuality=mode,longDisplacement=displacement,longFresh=fresh),expected)
+                    self.assertEqual(predicate('shortQualityOK',breakoutQuality=mode,shortDisplacement=displacement,shortFresh=fresh),expected)
+        self.assertIn('breakoutQuality = input.string("None",',SOURCE)
 
     def test_closed_htf_and_delayed_endpoint_contract(self):
         self.assertIn('[close[1], ta.ema(close, trendLength)[1], ta.ema(close, trendLength)[2]]',SOURCE)

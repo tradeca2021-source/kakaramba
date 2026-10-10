@@ -77,3 +77,24 @@ python3 -B tests/test_competition_engine.py
 python3 -B tests/test_breakout_execution.py
 python3 -B research/competition/stop_limit_study.py --output /workspace/fib-gap-audit
 ```
+
+## v6: experimental breakout-quality options
+
+“Breakout quality (experimental)” defaults to **None**, preserving v5's default signals and entries. Four modes are available:
+
+- **None:** original confirmed breakout cross.
+- **Displacement:** directional candle body >=0.5 ATR, close within the directional outer 25% of its range, and close >=0.1 ATR beyond the broken confirmed swing.
+- **Fresh origin:** the confirmed opposite pivot used as the impulse origin must be 1–40 chart bars old at breakout. On a 15m chart, the maximum is 10 hours from the pivot's occurrence, not its later confirmation.
+- **Both:** require both conditions.
+
+The checks run on the closed breakout candle, using pivots already known before that candle's newly confirmed pivots. Rejected crosses do not consume the swing identifier, but a later entry still requires a genuine recross; a strong follow-through already above/below a broken level cannot become a backdated breakout. Stops, targets, costs, sizing and first-pullback rules remain unchanged. The gray FILTER marker and panel count explain rejected crosses when a filter is enabled.
+
+The [quality audit](research/results/competition/breakout_quality_audit.json) uses seven previously inspected independent-account periods. None: 23 trades, $2,957.97 aggregate net, PF2.140. Fresh origin: 22 trades, $3,183.75 net, PF2.342. The gain is mostly one skipped $222.52 loss plus subsequent sizing effects. Displacement/Both: 17 trades, $2,883.36 net, PF2.670. The July–December 2025 losing period remains unchanged for every filter. These results are exploratory, not fresh validation, and none is promoted as a validated default.
+
+For an explicit TradingView paper comparison, select **Fresh origin** and keep all other settings/date windows the same. Match 0.07% commission/reserve and the same chart history. It is a candidate to test, not a proven profitable upgrade. Native Pine compilation and Bitunix results remain unverified.
+
+26 focused checks now include the actual Pine displacement/freshness/mode expressions and matching simulator boundaries. Thresholds were fixed in the [protocol](research/competition/breakout_quality_protocol.json) before running this experiment; no grid search or threshold retuning was performed.
+
+```sh
+python3 -B research/competition/breakout_quality_study.py --output /workspace/fib-quality-audit
+```

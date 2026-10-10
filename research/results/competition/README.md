@@ -91,3 +91,18 @@ The [stop-limit protocol](../../competition/stop_limit_protocol.json) was record
 Both control and capped mode produced 23 trades. Capped mode totaled $2,399.85 net versus $2,957.97 for the control. Sum of independent-period closing drawdowns decreased from $3,077.03 to $2,464.81; the smaller quantities explain much of that decrease. PF was 2.112 versus 2.140. These are sums across period accounts, not continuous portfolio metrics. The feature stays optional and off by default in Pine v5 because it did not improve profit.
 
 The model explicitly distinguishes stop activation from subsequent limit fills. A price touch before activation cannot fill the order. An opening gap past the cap may remain unfilled; a later retrace can fill the active limit. Long and short regression checks cover these sequences. Native TradingView stop-limit fill behavior remains unverified, and 5m path ambiguity remains a limitation.
+
+## Subsequent v6 breakout-quality research
+
+The [quality protocol](../../competition/breakout_quality_protocol.json) defines just three optional filters plus the unchanged control. Displacement requires a >=0.5 ATR directional body, a close in the directional outer quarter of the range, and >=0.1 ATR clearance of the broken swing. Fresh origin requires the opposite confirmed pivot to be 1–40 chart bars old. Both combines them. Every test keeps the v5 control entry cap off and all other costs, risk, exits and pullback rules unchanged.
+
+| Quality mode | Trades | Sum of seven period net USDT | PF | Profitable periods |
+|---|---:|---:|---:|---:|
+| None/control | 23 | +2,957.97 | 2.140 | 4/7 |
+| Displacement | 17 | +2,883.36 | 2.670 | 4/7 |
+| Fresh origin | 22 | +3,183.75 | 2.342 | 4/7 |
+| Both | 17 | +2,883.36 | 2.670 | 4/7 |
+
+These are known-period independent-account totals, not continuous portfolio returns or a new holdout. Fresh origin mostly avoids one $222.52 losing trade in 2026 Q1, with small effects on subsequent risk-based sizing. That single removal cannot establish a robust improvement. Every mode still loses the same two trades in the already-used 2025 H2 period. Strong displacement finds a 2026 Q3 trade that the original sequence missed, but loses some other opportunities and reduces aggregate net.
+
+The [JSON report](breakout_quality_audit.json) retains all results, fixed rules, input hashes, quality discrepancies, stage counts and individual trade logs. v6 provides these modes for explicit comparison, with **None as the default**. No parameter thresholds were retuned after results, and none is promoted as independently profitable.

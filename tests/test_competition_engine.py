@@ -103,6 +103,23 @@ class ReplayTests(unittest.TestCase):
             bar=m.f.Candle(0,99 if d==1 else 101,101,99,100)
             self.assertEqual(m.stop_limit_fill(order,bar,d),100)
 
+    def test_breakout_quality_requires_body_close_and_actual_cross_distance(self):
+        b=m.f.Candle(0,100,102,99,101.5)
+        self.assertTrue(m.breakout_quality(b,2,101,1,10,1,'displacement'))
+        self.assertFalse(m.breakout_quality(replace(b,open=101),2,101,1,10,1,'displacement'))
+        self.assertFalse(m.breakout_quality(replace(b,high=105),2,101,1,10,1,'displacement'))
+        self.assertFalse(m.breakout_quality(b,2,101.4,1,10,1,'displacement'))
+        short=m.f.Candle(0,100,101,98,98.5)
+        self.assertTrue(m.breakout_quality(short,2,99,1,10,-1,'displacement'))
+        self.assertFalse(m.breakout_quality(replace(short,open=99),2,99,1,10,-1,'displacement'))
+
+    def test_fresh_origin_boundaries_and_none_preserves_legacy(self):
+        bar=m.f.Candle(0,100,101,99,100)
+        for age in (0,1,40,41):
+            self.assertEqual(m.breakout_quality(bar,None,100,100-age,100,1,'fresh_origin'),age in (1,40))
+        self.assertTrue(m.breakout_quality(bar,None,100,None,100,1,'none'))
+        self.assertFalse(m.breakout_quality(bar,None,100,99,100,1,'both'))
+
     def test_warmup_cannot_submit_outside_test_period(self):
         bars,lower,prepared=self.fixture()
         r,trades,curve,_=m.replay(bars,lower,[],m.Rules(),10,len(bars),prepared=prepared)

@@ -1,7 +1,7 @@
 //@version=6
 // Experimental: development-selected entry change failed independent holdout.
-// v5 adds an optional bounded stop-limit entry, sized at its worst permitted price.
-strategy("Fibonacci Breakout First Pullback v5", shorttitle="Fib BOS Pullback v5", overlay=true,
+// v6 adds optional exploratory breakout-quality filters; defaults preserve v5.
+strategy("Fibonacci Breakout First Pullback v6", shorttitle="Fib BOS Pullback v6", overlay=true,
      initial_capital=100000, pyramiding=1, calc_on_every_tick=false,
      process_orders_on_close=false, use_bar_magnifier=true,
      default_qty_type=strategy.fixed, commission_type=strategy.commission.percent,
@@ -13,6 +13,7 @@ trendTF = input.timeframe("240", "Higher trend timeframe", group=G_SETUP)
 trendLength = input.int(50, "Higher timeframe EMA", minval=2, group=G_SETUP)
 setupBars = input.int(60, "Maximum bars after breakout", minval=5, group=G_SETUP)
 triggerBars = input.int(3, "Entry trigger life (bars)", minval=1, group=G_SETUP)
+breakoutQuality = input.string("None", "Breakout quality (experimental)", options=["None", "Displacement", "Fresh origin", "Both"], group=G_SETUP)
 minImpulseATR = input.float(2.0, "Minimum impulse / ATR", minval=0.5, step=0.25, group=G_SETUP)
 atrLength = input.int(14, "ATR length", minval=2, group=G_SETUP)
 allowLong = input.bool(true, "Long entries", group=G_SETUP)
@@ -116,6 +117,7 @@ var float plannedNetR = na
 var int observedClosed = 0
 var string reason = "Waiting for confirmed structure breakout"
 var int breakouts = 0
+var int qualityRejected = 0
 var int impulses = 0
 var int missedPullbacks = 0
 var int zoneVisits = 0
@@ -130,6 +132,7 @@ var int filledOrders = 0
 var int submittedClosedCount = 0
 var bool fillObserved = false
 bool breakoutSignal = false
+bool qualityRejectedSignal = false
 bool rejectionSignal = false
 bool submittedSignal = false
 var int firstLoaded = time
@@ -165,6 +168,21 @@ if barstate.isconfirmed
     // Evaluate breakouts using structure known BEFORE this candle's newly confirmed pivots.
     bool longBreak = allowLong and upTrend and not na(swingHigh) and not na(swingLow) and close > swingHigh and close[1] <= swingHigh and (na(usedHighBar) or usedHighBar != swingHighBar)
     bool shortBreak = allowShort and downTrend and not na(swingHigh) and not na(swingLow) and close < swingLow and close[1] >= swingLow and (na(usedLowBar) or usedLowBar != swingLowBar)
+    float breakoutRange = high - low
+    bool longDisplacement = not na(atr) and atr > 0 and breakoutRange > 0 and close - open >= 0.5 * atr and close - low >= 0.75 * breakoutRange and not na(swingHigh) and close - swingHigh >= 0.1 * atr
+    bool shortDisplacement = not na(atr) and atr > 0 and breakoutRange > 0 and open - close >= 0.5 * atr and high - close >= 0.75 * breakoutRange and not na(swingLow) and swingLow - close >= 0.1 * atr
+    bool longFresh = not na(swingLowBar) and bar_index - swingLowBar >= 1 and bar_index - swingLowBar <= 40
+    bool shortFresh = not na(swingHighBar) and bar_index - swingHighBar >= 1 and bar_index - swingHighBar <= 40
+    bool longQualityOK = breakoutQuality == "None" or (breakoutQuality == "Displacement" and longDisplacement) or (breakoutQuality == "Fresh origin" and longFresh) or (breakoutQuality == "Both" and longDisplacement and longFresh)
+    bool shortQualityOK = breakoutQuality == "None" or (breakoutQuality == "Displacement" and shortDisplacement) or (breakoutQuality == "Fresh origin" and shortFresh) or (breakoutQuality == "Both" and shortDisplacement and shortFresh)
+    if inDates and phase == 0 and strategy.position_size == 0 and (longBreak or shortBreak)
+        bool qualityOK = longBreak ? longQualityOK : shortQualityOK
+        if not qualityOK
+            qualityRejected += 1
+            qualityRejectedSignal := true
+            reason := "Breakout rejected by " + breakoutQuality + " filter"
+            longBreak := false
+            shortBreak := false
     if inDates and phase == 0 and strategy.position_size == 0 and (longBreak or shortBreak)
         breakouts += 1
         breakoutSignal := true
@@ -317,9 +335,10 @@ plotshape(showSignals and breakoutSignal, title="Confirmed breakout", style=shap
 plotshape(showSignals and rejectionSignal, title="Rejection evaluated", style=shape.circle, location=location.belowbar, color=color.yellow, size=size.tiny, text="REJ")
 plotshape(showSignals and submittedSignal and direction == 1, title="Buy-stop submitted (not fill)", style=shape.triangleup, location=location.belowbar, color=color.lime, size=size.small, text="ORDER")
 plotshape(showSignals and submittedSignal and direction == -1, title="Sell-stop submitted (not fill)", style=shape.triangledown, location=location.abovebar, color=color.red, size=size.small, text="ORDER")
-var table panel = table.new(position.top_right, 2, 13, bgcolor=color.new(color.black, 15))
+plotshape(showSignals and qualityRejectedSignal, title="Breakout quality rejected (not order)", style=shape.xcross, location=location.abovebar, color=color.gray, size=size.tiny, text="FILTER")
+var table panel = table.new(position.top_right, 2, 14, bgcolor=color.new(color.black, 15))
 if barstate.islast and showPanel
-    panel.cell(0, 0, "Fib BOS Pullback v5", text_color=color.white)
+    panel.cell(0, 0, "Fib BOS Pullback v6", text_color=color.white)
     panel.cell(1, 0, not inDates ? "Outside test dates" : reason, text_color=color.yellow)
     panel.cell(0, 1, protectEntryPrice ? "Cap net R / qty" : "Trigger net R / qty", text_color=color.white)
     panel.cell(1, 1, str.tostring(plannedNetR, "0.00") + " / " + str.tostring(plannedQty), text_color=color.white)
@@ -345,3 +364,5 @@ if barstate.islast and showPanel
     panel.cell(1, 11, (useDates ? str.format_time(firstDate, "yyyy-MM-dd", "UTC") + " to " + str.format_time(lastDate, "yyyy-MM-dd", "UTC") : "All loaded bars") + " | " + str.format_time(firstLoaded, "yyyy-MM-dd", "UTC"), text_color=color.white)
     panel.cell(0, 12, "Entry mode / cap", text_color=color.white)
     panel.cell(1, 12, (protectEntryPrice ? "Stop-limit / " : "Stop / ") + (phase == 4 ? str.tostring(entryLimit, format.mintick) : "n/a"), text_color=color.white)
+    panel.cell(0, 13, "Quality mode / rejected crosses", text_color=color.white)
+    panel.cell(1, 13, breakoutQuality + " / " + str.tostring(qualityRejected), text_color=color.white)
