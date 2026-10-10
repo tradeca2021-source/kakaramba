@@ -1,0 +1,10 @@
+{
+ "status":"Exploratory known-period local reversal confirmation, no independent validation",
+ "hypothesis":"A 4h trend may remain down during a local reversal. Require completed5m momentum agreement at the15m rejection close before submitting a continuation entry.",
+ "candidates":["baseline without micro filter","5m close and EMA21 slope agree with trade","5m EMA8/EMA21 alignment agrees with trade","both conditions"],
+ "timing":"EMA values use only completed5m candles up to the15m rejection candle's close (final subbar open time +600sec). No intrabar decisions or future values. Apply once at rejection and consume failed setup; original subsequent resting stop entry unchanged.",
+ "definitions":"Price/slope: long close>EMA21 and EMA21>prior5mEMA21, short inverse. Alignment: long EMA8>EMA21, short inverse. EMA seeds follow existing causal EMA convention with2023 warmup.",
+ "unchanged":"Live endpoint,pivot5,previous closed4hEMA50,15m signal,min2ATR,first50-61.8 pullback,two-candle rejection,wick trigger,fixed pullback stop,swing target,netR1.5,0.25%risk,95%cap,max1BTC,cost0.07%/side,slip2tick,actual funding",
+ "periods":"Same seven previously inspected independent account periods2024H1/H2,2025H1/H2,2026Q1/Q2/Q3",
+ "decision":"No grids or retuning. Publish all candidates. Optional experimental filter only if aggregate net>control, >=4 positive periods, net without largest winner>0 and worst period5m closing drawdown<=control. Qualifiers tested at0.10%fees and20tick slip. Baseline unchanged until unused validation; repeated-data results do not prove reliability."
+}
