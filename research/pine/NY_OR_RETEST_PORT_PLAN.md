@@ -1,0 +1,13 @@
+# Native comparison artifact; replacement criteria still failed
+
+The original NY opening-range retest is the strongest new session design in the published comparisons: it has positive account net after costs and funding in both reused periods, positive higher-cost stresses, and more winning positions than the Fibonacci reference. It still fails the replacement gate because recent net is lower than the reference and only three of six recent half-year blocks are positive. `selected` remains null in every session report. No threshold or gate is changed.
+
+The Pine file here is a separate research artifact for native comparison, not a promoted or independently verified strategy. This explicit decision follows the user asking to continue developing the strategy and the earlier requests for usable Pine. A passing research selection is not claimed, and the repository's active baseline remains unchanged.
+
+Port exactly the original whole-range stop, fixed three-R target, first same-candle boundary rejection, one setup per New York date and 16:00 cash-close liquidation. Do not port the worse Fibonacci projection, later confirmation or overnight holding variants. The original protocol was committed at `c317d8f`, source at `5806263` before its outcomes. The Python reference is `research/competition/session_breakout_engine.py`, `mode='retest'`.
+
+Require standard BTCUSDT 15m candles, fixed0.25% risk/95% exposure/max1BTC,0.001 lot step,.07% modeled per-side fees,two ticks slip,.25ATR gap reserve and1.5 net reward floor. Dates and display controls may change; trading parameters are fixed. Native strategy Properties remain separate from modeled assumptions. Pine excludes funding; the Python reports include actual archived settlements.
+
+Use prior closed4h EMA50 via offset security expressions. Construct the range from exactly the09:30 and09:45 New York bars, freezing ATR14 at the second close. Maintain IANA daylight-saving time. The breakout candle cannot supply its own retest; reject setups on expired windows, lost trend, opposite range-stop breach or a failed first touch. Submit the market entry and protective bracket together for next-tick execution. Preserve protective orders until the position closes, including the cash-close exit tick. Record actual-fill warnings without retroactively canceling fills.
+
+Validate syntax with an isolated Pine parser if available, and record its limits. Parser success and Python tests cannot establish TradingView compilation, native execution parity or Bitunix profitability. Native broker intrabar paths and Bar Magnifier coverage can differ from the conservative five-minute stop-first replay. Keep those distinctions visible in the research documentation.

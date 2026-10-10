@@ -1,0 +1,20 @@
+{
+  "file": "research/pine/NY_OR_Retest_Research.pine",
+  "sha256": "9e7acb5a8a2324d880cf540a39c2652a6c1eac83c2d0d6b2d4cf5bf850f3dd75",
+  "parser": {
+    "name": "pynescript",
+    "version": "0.3.0",
+    "antlr4_python3_runtime": "4.13.2",
+    "click": "8.5.0",
+    "command": "pynescript parse-and-dump research/pine/NY_OR_Retest_Research.pine --output-file /tmp/ny-or-retest-ast.txt",
+    "exit_code": 0,
+    "diagnostics": "none",
+    "ast_sha256": "07b57268bb04fba2fcde6db9103b7238a56cd9159bd5baa58d7ca06cb662a946"
+  },
+  "native_tradingview_compilation": false,
+  "native_execution_parity": false,
+  "prospective_validation": false,
+  "replacement_criteria_passed": false,
+  "status": "Separate research artifact for native comparison; active baseline unchanged",
+  "funding_in_pine": false
+}

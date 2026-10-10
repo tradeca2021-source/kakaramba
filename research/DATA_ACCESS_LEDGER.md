@@ -14,6 +14,8 @@ Web-research update on 10 October 2026: small Bitunix BTCUSDT 15m samples from 1
 
 The [six strategy follow-ups](STRATEGY_FOLLOWUP.md) reuse 2021–2022 and January 2024–September 2026 with their previously accessed 2020/2023 warmups. Fixed-horizon diagnostic labels and new strategy outcomes are additional inspections of those years, including explicit post-hoc exit comparisons. No new untouched period or prospective result is claimed.
 
+The [five NY session designs](SESSION_STRATEGY_RESEARCH.md) further reuse the same archives and evaluated periods. The later Fibonacci projection/confirmation and24h holding hypotheses were formed after seeing the initial session results. The research Pine ports the original positive retest only for native comparison; its failed replacement criteria and unverified native status remain explicit. No additional untouched history was accessed.
+
 The 2021–2022 test was a backward historical generalization test, not prospective evidence. Both the fixed channel design and the existing Fibonacci baseline lost on its base cost assumptions. Positive known-period outcomes do not establish a durable edge.
 
 References: [channel historical report](results/channel/historical.json), [channel development freeze](results/channel/frozen_selection.json), [failed regime results](results/regime/development.json) and [earlier structural research](results/competition/STRUCTURAL_RESEARCH.md). Actual archive and source checksums are published in those reports. Cache files reside outside Git at `/workspace/fibonacci-competition-data`.
