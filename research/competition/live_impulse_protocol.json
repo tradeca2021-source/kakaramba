@@ -1,0 +1,8 @@
+{
+ "status":"Exploratory redesign on already inspected periods; no unused holdout remains in this data set",
+ "hypothesis":"Waiting five bars to confirm the post-breakout endpoint discards pullbacks that have already occurred. Track the extreme of closed bars after a confirmed structural breakout and freeze the previous bar's endpoint at the first retracement instead.",
+ "candidates":["confirmed control","live endpoint 50%","live endpoint 38.2%","live endpoint 50% with 127.2% target"],
+ "causality":"On bars strictly after breakout, compare retracement against endpoint known at prior close. A candle both extending endpoint and touching retracement consumes the setup as ambiguous. Otherwise extend endpoint on closed bars until first touch. Freeze immediately at that touch. Keep origin, prior closed 4h trend, 2 ATR impulse minimum, rejection and subsequent resting stop entry.",
+ "risk":"Same 1.5 net R gate, 0.25% risk, 95% exposure, 1 BTC maximum, 0.07% per-side cost, 2 tick slip and actual funding; no leverage or averaging",
+ "evaluation":"Same seven independent account periods 2024 H1/H2, 2025 H1/H2, 2026 Q1/Q2/Q3. Publish every candidate, counts, net, win rate, drawdown and concentration. No grid tuning after results. A favorable candidate is experimental and does not establish independent profitability."
+}
