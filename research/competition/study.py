@@ -20,7 +20,7 @@ def write_rows(path,rows):
         if path.exists():path.unlink()
         return
     with path.open('w',newline='') as stream:
-        writer=csv.DictWriter(stream,fieldnames=list(rows[0]));writer.writeheader();writer.writerows(rows)
+        writer=csv.DictWriter(stream,fieldnames=list(rows[0]),lineterminator="\n");writer.writeheader();writer.writerows(rows)
 
 def features(bars,pivots):
     trend=engine.closed_htf_trends(bars)
