@@ -1,0 +1,10 @@
+{
+ "status": "Exploratory research on known periods, not fresh validation",
+ "candidates": ["none (v5 control, entry cap off)", "displacement", "fresh_origin", "both"],
+ "displacement": "Breakout candle directional body >= 0.5 current ATR, close in directional outer 25% of its range, and close at least 0.1 ATR beyond previously confirmed broken swing",
+ "fresh_origin": "Most recent confirmed opposite pivot must be between 1 and 40 chart bars old at breakout",
+ "application": "Evaluate only on the first closed breakout cross while flat/idle. Rejecting a weak cross does not consume its swing identifier; it may qualify only on a later genuine recross. No late confirmation above an already-broken level.",
+ "unchanged": "Confirmed pivots, prior closed 4h trend, first 50-61.8 pullback, two-candle rejection, rejection-break stop entry, 1.5 modeled net R, 0.25% risk, 95% notional, maximum 1 BTC, fixed stop/target, modeled 0.07% fee/reserve and actual funding",
+ "periods": "Same seven previously inspected 2024 H1/H2, 2025 H1/H2, 2026 Q1/Q2/Q3 independent-account periods",
+ "policy": "No threshold grid or tuning after results. Report all candidates. No default promotion or independent profitability claim without a new unused validation period."
+}
