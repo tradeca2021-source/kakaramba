@@ -83,3 +83,11 @@ python3 -B research/competition/limit_study.py --output /workspace/fib-limit-rep
 Rerunning known holdout data is reproduction, not a fresh test. There are 18 focused regression checks covering actual Pine entry/cost/date expressions, causal HTF behavior, next-bar entries, funding signs, intrabar order chronology, cost-bound algebra, no-touch limit rejection and corrupted archive rejection. Synthetic fixtures validate implementation only.
 
 `plot_results.py` optionally regenerates PNG/SVG figures with matplotlib; plotting is not required to run backtests. Reports contain configurations, hashes, individual modeled trade/funding logs, holdout equity and quality discrepancies. Both successful and rejected hypotheses are retained.
+
+## Subsequent v5 stop-limit execution audit
+
+The [stop-limit protocol](../../competition/stop_limit_protocol.json) was recorded before the [gap audit](stop_limit_audit.json). It changes execution only: break the rejection trigger first, then apply an adverse fill-price cap consistent with 1.5 modeled net R. It sizes at that cap and preserves the original fixed stop/target. This uses the same known seven research periods and makes no new validation claim.
+
+Both control and capped mode produced 23 trades. Capped mode totaled $2,399.85 net versus $2,957.97 for the control. Sum of independent-period closing drawdowns decreased from $3,077.03 to $2,464.81; the smaller quantities explain much of that decrease. PF was 2.112 versus 2.140. These are sums across period accounts, not continuous portfolio metrics. The feature stays optional and off by default in Pine v5 because it did not improve profit.
+
+The model explicitly distinguishes stop activation from subsequent limit fills. A price touch before activation cannot fill the order. An opening gap past the cap may remain unfilled; a later retrace can fill the active limit. Long and short regression checks cover these sequences. Native TradingView stop-limit fill behavior remains unverified, and 5m path ambiguity remains a limitation.

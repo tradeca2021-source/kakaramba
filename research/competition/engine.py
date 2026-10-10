@@ -17,19 +17,39 @@ class Rules:
     extension:float=1.0
 
 
-def cost_bounded_entry(mid,stop,target,atr,d,cfg):
+def reward_price_boundary(stop,target,atr,d,cfg):
     r=cfg.minimum_net_r
     slip=2*cfg.slippage_ticks*cfg.tick
     gap=cfg.gap_atr*atr
     if d==1:
         bound=((target+r*stop)*(1-cfg.fee)-(1+r)*slip-r*gap)/((1+r)*(1+cfg.fee))
-        return math.floor(min(mid,bound)/cfg.tick)*cfg.tick
+        return math.floor(bound/cfg.tick)*cfg.tick
     bound=((target+r*stop)*(1+cfg.fee)+(1+r)*slip+r*gap)/((1+r)*(1-cfg.fee))
-    return math.ceil(max(mid,bound)/cfg.tick)*cfg.tick
+    return math.ceil(bound/cfg.tick)*cfg.tick
+
+
+def cost_bounded_entry(mid,stop,target,atr,d,cfg):
+    bound=reward_price_boundary(stop,target,atr,d,cfg)
+    return (bound if bound < mid else math.floor(mid/cfg.tick)*cfg.tick) if d==1 else (bound if bound > mid else math.ceil(mid/cfg.tick)*cfg.tick)
+
+
+def stop_limit_fill(order,bar,d):
+    """Return no fill until stop activates; never use a pre-activation touch."""
+    trigger=order['trigger'];cap=order['cap']
+    if not order.get('activated',False):
+        crossed=bar.high>=trigger if d==1 else bar.low<=trigger
+        if not crossed:return None
+        order['activated']=True
+        gap=bar.open>=trigger if d==1 else bar.open<=trigger
+        if not gap:return trigger # Eligible cap lies beyond trigger; fill on the crossing.
+        acceptable=bar.open<=cap if d==1 else bar.open>=cap
+        if acceptable:return bar.open
+    touched=bar.low<=cap if d==1 else bar.high>=cap
+    return cap if touched else None # Conservative: no favorable limit gap improvement.
 
 
 def replay(bars,lower,rates,rules,start,end,fee=.0007,slippage_ticks=2,prepared=None):
-    if rules.entry not in ('stop','market','limit_mid','limit_cost') or not 0<=start<end<=len(bars):raise ValueError('Invalid rules/period')
+    if rules.entry not in ('stop','stop_limit','market','limit_mid','limit_cost') or not 0<=start<end<=len(bars):raise ValueError('Invalid rules/period')
     cfg=replace(f.Config(),pivot=rules.pivot,fee=fee,slippage_ticks=slippage_ticks,minimum_net_r=1.5,setup_life=60)
     if prepared is None:
         _,_,atrs,events=f.features(bars,cfg);trends=closed_htf_trends(bars)
@@ -60,9 +80,11 @@ def replay(bars,lower,rates,rules,start,end,fee=.0007,slippage_ticks=2,prepared=
                 if pending:
                     limit=pending['mode'] in ('limit_mid','limit_cost')
                     hit=pending['mode']=='market' or ((sub.low<=pending['trigger'] if d==1 else sub.high>=pending['trigger']) if limit else (sub.high>=pending['trigger'] if d==1 else sub.low<=pending['trigger']))
+                    protected_fill=stop_limit_fill(pending,sub,d) if pending['mode']=='stop_limit' else None
+                    if pending['mode']=='stop_limit':hit=protected_fill is not None
                     if hit:
                         raw=pending['trigger'] if limit else sub.open if pending['mode']=='market' else max(sub.open,pending['trigger']) if d==1 else min(sub.open,pending['trigger'])
-                        fill=raw if limit else raw+d*cfg.tick*cfg.slippage_ticks
+                        fill=protected_fill if pending['mode']=='stop_limit' else raw if limit else raw+d*cfg.tick*cfg.slippage_ticks
                         entry_fee=fill*pending['qty']*cfg.fee
                         if fill*pending['qty']+entry_fee<=balance:
                             balance-=entry_fee
@@ -114,7 +136,7 @@ def replay(bars,lower,rates,rules,start,end,fee=.0007,slippage_ticks=2,prepared=
                     left=b.close>mid if d==1 else b.close<mid
                     if reject:
                         count('rejections')
-                        trigger=(math.ceil(b.high/cfg.tick)*cfg.tick+cfg.tick if d==1 else math.floor(b.low/cfg.tick)*cfg.tick-cfg.tick) if rules.entry=='stop' else f.round_price(b.close,cfg.tick)
+                        trigger=(math.ceil(b.high/cfg.tick)*cfg.tick+cfg.tick if d==1 else math.floor(b.low/cfg.tick)*cfg.tick-cfg.tick) if rules.entry in ('stop','stop_limit') else f.round_price(b.close,cfg.tick)
                         stop_raw=extreme-d*max(cfg.tick,.15*a)
                         stop=(math.floor(stop_raw/cfg.tick) if d==1 else math.ceil(stop_raw/cfg.tick))*cfg.tick
                         target=f.round_price(origin+d*abs(endpoint-origin)*rules.extension,cfg.tick)
@@ -122,12 +144,19 @@ def replay(bars,lower,rates,rules,start,end,fee=.0007,slippage_ticks=2,prepared=
                             trigger=mid
                             if rules.entry=='limit_cost':
                                 trigger=cost_bounded_entry(mid,stop,target,a,d,cfg)
-                        risk=f.unit_risk(trigger,stop,a,cfg);reward=f.net_reward(trigger,target,cfg)
-                        qty=f.quantity(trigger,stop,a,balance,cfg)
+                        cap=reward_price_boundary(stop,target,a,d,cfg) if rules.entry=='stop_limit' else trigger
+                        sizing=cap if rules.entry=='stop_limit' else trigger
+                        risk=f.unit_risk(sizing,stop,a,cfg);reward=f.net_reward(sizing,target,cfg)
+                        qty=f.quantity(sizing,stop,a,balance,cfg)
+                        if rules.entry=='stop_limit':
+                            exposure_qty=math.floor(balance*cfg.exposure_percent/100/max(trigger,cap)/cfg.quantity_step)*cfg.quantity_step
+                            qty=min(qty,exposure_qty)
+                            if qty<cfg.minimum_quantity:qty=0
                         geometry=stop<trigger<target if d==1 else target<trigger<stop
+                        if rules.entry=='stop_limit':geometry=geometry and (trigger<=cap<target if d==1 else target<cap<=trigger)
                         if rules.entry in ('limit_mid','limit_cost'):geometry=geometry and (deep<=trigger<=mid if d==1 else mid<=trigger<=deep)
-                        if geometry and reward>0 and reward>=1.5*risk and qty>0 and i<end-1:
-                            pending=dict(trigger=trigger,stop=stop,target=target,qty=qty,mode=rules.entry);rejection=i;phase=4;count('orders')
+                        if geometry and reward>0 and (reward>=1.5*risk or (rules.entry=='stop_limit' and reward+1e-8>=1.5*risk)) and qty>0 and i<end-1:
+                            pending=dict(trigger=trigger,stop=stop,target=target,qty=qty,mode=rules.entry,cap=cap,activated=False);rejection=i;phase=4;count('orders')
                         else:
                             count('geometry_skips' if not geometry else 'payoff_skips' if reward<1.5*risk or reward<=0 else 'quantity_skips');phase=0
                     elif left or i-touch>=1:phase=0;count('no_rejection')

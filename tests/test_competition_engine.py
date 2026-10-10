@@ -81,6 +81,28 @@ class ReplayTests(unittest.TestCase):
         self.assertNotIn('fills',r['counts'])
         self.assertEqual(trades,[])
 
+    def test_stop_limit_activation_and_gap_retrace_long(self):
+        order=dict(trigger=100,cap=101,activated=False)
+        self.assertIsNone(m.stop_limit_fill(order,m.f.Candle(0,99,99.5,98,99),1))
+        self.assertFalse(order['activated'])
+        self.assertIsNone(m.stop_limit_fill(order,m.f.Candle(300,103,104,102,103),1))
+        self.assertTrue(order['activated'])
+        self.assertEqual(m.stop_limit_fill(order,m.f.Candle(600,102,103,100.5,101),1),101)
+
+    def test_stop_limit_activation_and_gap_retrace_short(self):
+        order=dict(trigger=100,cap=99,activated=False)
+        self.assertIsNone(m.stop_limit_fill(order,m.f.Candle(0,101,102,100.5,101),-1))
+        self.assertFalse(order['activated'])
+        self.assertIsNone(m.stop_limit_fill(order,m.f.Candle(300,97,98,96,97),-1))
+        self.assertTrue(order['activated'])
+        self.assertEqual(m.stop_limit_fill(order,m.f.Candle(600,98,99.5,97,99),-1),99)
+
+    def test_stop_limit_normal_crossing_fills_at_trigger(self):
+        for d in (1,-1):
+            order=dict(trigger=100,cap=101 if d==1 else 99,activated=False)
+            bar=m.f.Candle(0,99 if d==1 else 101,101,99,100)
+            self.assertEqual(m.stop_limit_fill(order,bar,d),100)
+
     def test_warmup_cannot_submit_outside_test_period(self):
         bars,lower,prepared=self.fixture()
         r,trades,curve,_=m.replay(bars,lower,[],m.Rules(),10,len(bars),prepared=prepared)

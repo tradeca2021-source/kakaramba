@@ -58,3 +58,22 @@ Optional “Restrict entry and exit dates” warms indicators/pivots on prior ba
 The panel adds chart-run net profit/PF, modeled cost per side and explicit window/loaded-start dates. Chart-run counters and PnL may differ from a separately selected Deep Backtesting run. No signal-frequency changes, widened stops, leverage increases or extended targets were added to improve the headline score.
 
 18 focused local checks pass across the Pine predicates, the prior execution audit and the new funding-aware 5m engine. Native Pine compilation and venue-exact trading performance remain unverified. Current status: experimental, no variant earned validated promotion.
+
+## v5: optional bounded stop-limit entry
+
+The default remains v4's rejection-high/low stop entry. Enable **“Cap adverse entry price with stop-limit”** to activate a stop-limit order. For a long, the rejection high must break before the buy limit becomes active; for a short, the rejection low must break before the sell limit becomes active. This is different from immediately placing a retracement limit after rejection.
+
+The cap is the most adverse entry price satisfying the selected minimum net R after modeled commission/reserve, two-sided slippage and ATR gap allowance. Long caps round down; short caps round up. Position size uses that worst entry, and notional sizing uses the larger of trigger and cap. The bracket is fixed. A gap beyond the cap can leave an activated order unfilled until it retraces; original expiry and close-based invalidations still cancel unfilled orders. The aqua line shows the pending cap.
+
+This bounds entry price, not total loss. Stop gaps, funding, unknown fees and execution can still exceed modeled risk. Improved sell-limit gap fills can also exceed the notional sizing estimate; cash/margin rules remain the broker constraint. Pending cancellations happen at bar close and cannot undo an earlier fill. Pine native stop-limit/bar-magnifier behavior still needs verification.
+
+The [execution audit](research/results/competition/stop_limit_audit.json) compares the same seven previously inspected independent-account periods. Both modes took 23 trades. Ordinary stop entry totaled $2,957.97; capped entry totaled $2,399.85. Sum of period closing drawdowns declined from $3,077.03 to $2,464.81, largely because sizing at the adverse cap reduced quantities. These sums are not one continuous account's return/drawdown. Capped entry did not improve profit and has not passed fresh validation, so it stays **off by default**.
+
+22 focused local checks cover entry/cost/date formulas, cap algebra and geometry, long/short stop-limit activation, adverse gaps that remain unfilled, later retrace fills, normal trigger crossings, funding and causal execution. The feature is an optional execution control, not a promoted trading-edge change.
+
+```sh
+python3 -B tests/test_fibonacci_breakout_pullback.py
+python3 -B tests/test_competition_engine.py
+python3 -B tests/test_breakout_execution.py
+python3 -B research/competition/stop_limit_study.py --output /workspace/fib-gap-audit
+```

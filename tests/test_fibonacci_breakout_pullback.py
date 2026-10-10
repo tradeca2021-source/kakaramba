@@ -1,6 +1,7 @@
 """Boundary checks of actual Pine entry predicates; not native Pine compilation."""
 from pathlib import Path
 import re
+import math
 import unittest
 
 SOURCE=(Path(__file__).resolve().parents[1]/'Fibonacci_Breakout_First_Pullback.pine').read_text()
@@ -78,6 +79,24 @@ class EntryBoundaries(unittest.TestCase):
         self.assertAlmostEqual(value(risk,.01)-value(risk,0),11.9)
         self.assertAlmostEqual(value(reward,0)-value(reward,.01),12.2)
         self.assertIn('commission_value=0.07',SOURCE)
+
+    def test_adverse_entry_cap_matches_net_r_floor(self):
+        long_expr=re.search(r'float rawLong = (.+)',SOURCE).group(1)
+        short_expr=re.search(r'float rawShort = (.+)',SOURCE).group(1)
+        for is_long in (True,False):
+            for entry in (1000,60000):
+                stop=entry-200 if is_long else entry+200
+                target=entry+700 if is_long else entry-700
+                values=dict(target=target,stop=stop,fee=.0007,r=1.5,slip=.4,gap=10)
+                raw=eval(long_expr if is_long else short_expr,{'__builtins__':{}},values)
+                cap=(math.floor(raw/.1) if is_long else math.ceil(raw/.1))*.1
+                risk=abs(cap-stop)+.4+10+(cap+stop)*.0007
+                reward=abs(target-cap)-.4-(cap+target)*.0007
+                self.assertGreaterEqual(reward+1e-8,1.5*risk)
+                self.assertTrue(predicate('capGeometry',longSide=is_long,trigger=entry,entryLimit=cap,tradeTarget=target))
+        self.assertIn('protectEntryPrice = input.bool(false,',SOURCE)
+        self.assertIn('limit=protectEntryPrice ? entryLimit : na',SOURCE)
+        self.assertIn('riskQuantity(sizingPrice, tradeStop, atr, math.max(trigger, sizingPrice))',SOURCE)
 
     def test_closed_htf_and_delayed_endpoint_contract(self):
         self.assertIn('[close[1], ta.ema(close, trendLength)[1], ta.ema(close, trendLength)[2]]',SOURCE)

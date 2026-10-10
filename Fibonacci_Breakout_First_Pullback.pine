@@ -1,7 +1,7 @@
 //@version=6
 // Experimental: development-selected entry change failed independent holdout.
-// v4 preserves original stop-entry rules; adds audited costs and explicit test dates.
-strategy("Fibonacci Breakout First Pullback v4", shorttitle="Fib BOS Pullback v4", overlay=true,
+// v5 adds an optional bounded stop-limit entry, sized at its worst permitted price.
+strategy("Fibonacci Breakout First Pullback v5", shorttitle="Fib BOS Pullback v5", overlay=true,
      initial_capital=100000, pyramiding=1, calc_on_every_tick=false,
      process_orders_on_close=false, use_bar_magnifier=true,
      default_qty_type=strategy.fixed, commission_type=strategy.commission.percent,
@@ -23,6 +23,7 @@ showSignals = input.bool(true, "Show breakout/rejection/order markers", group=G_
 showPanel = input.bool(true, "Show setup diagnostics", group=G_SETUP)
 G_RISK = "Fixed exits and account risk"
 stopBufferATR = input.float(0.15, "Pullback stop buffer / ATR", minval=0, step=0.05, group=G_RISK)
+protectEntryPrice = input.bool(false, "Cap adverse entry price with stop-limit", group=G_RISK)
 minimumNetR = input.float(1.5, "Minimum net reward / stopped risk", minval=0.1, step=0.1, group=G_RISK)
 riskPercent = input.float(0.25, "Equity risk per entry (%)", minval=0.01, maxval=2, step=0.01, group=G_RISK)
 exposurePercent = input.float(95, "Maximum notional / equity (%)", minval=1, maxval=100, group=G_RISK)
@@ -69,11 +70,21 @@ modeledNetReward(float entry, float target) =>
     float pv = syminfo.pointvalue
     (math.abs(target - entry) - 2.0 * slippageTicks * syminfo.mintick) * pv - (math.abs(entry) + math.abs(target)) * pv * (feePercent + executionReservePercent) / 100.0
 
-riskQuantity(float entry, float stop, float atrValue) =>
+// Worst price consistent with the net-R floor. Point value cancels in the ratio.
+rewardPriceBoundary(float stop, float target, float atrValue, bool isLong) =>
+    float fee = (feePercent + executionReservePercent) / 100.0
+    float r = minimumNetR
+    float slip = 2.0 * slippageTicks * syminfo.mintick
+    float gap = gapAllowanceATR * atrValue
+    float rawLong = ((target + r * stop) * (1.0 - fee) - (1.0 + r) * slip - r * gap) / ((1.0 + r) * (1.0 + fee))
+    float rawShort = ((target + r * stop) * (1.0 + fee) + (1.0 + r) * slip + r * gap) / ((1.0 + r) * (1.0 - fee))
+    isLong ? math.floor(rawLong / syminfo.mintick) * syminfo.mintick : math.ceil(rawShort / syminfo.mintick) * syminfo.mintick
+
+riskQuantity(float entry, float stop, float atrValue, float notionalPrice) =>
     float equity = math.max(strategy.equity, 0.0)
     float unitRisk = modeledUnitRisk(entry, stop, atrValue)
     float riskQty = unitRisk > 0 ? equity * riskPercent / 100.0 / unitRisk : 0.0
-    float exposureQty = entry > 0 and syminfo.pointvalue > 0 ? equity * exposurePercent / 100.0 / (entry * syminfo.pointvalue) : 0.0
+    float exposureQty = notionalPrice > 0 and syminfo.pointvalue > 0 ? equity * exposurePercent / 100.0 / (notionalPrice * syminfo.pointvalue) : 0.0
     float rawQty = math.min(riskQty, math.min(exposureQty, maximumQuantity))
     float qty = math.floor(rawQty / quantityStep) * quantityStep
     qty >= minimumQuantity ? qty : 0.0
@@ -97,6 +108,7 @@ var float midpoint = na
 var float deep = na
 var float pullbackExtreme = na
 var float trigger = na
+var float entryLimit = na
 var float tradeStop = na
 var float tradeTarget = na
 var float plannedQty = na
@@ -169,6 +181,7 @@ if barstate.isconfirmed
         tradeStop := na
         tradeTarget := na
         trigger := na
+        entryLimit := na
         plannedQty := na
         plannedNetR := na
         phase := 1
@@ -245,13 +258,17 @@ if barstate.isconfirmed
                     float stopRaw = pullbackExtreme - direction * math.max(tick, stopBufferATR * atr)
                     tradeStop := longSide ? math.floor(stopRaw / tick) * tick : math.ceil(stopRaw / tick) * tick
                     tradeTarget := roundPrice(endpoint)
-                    float risk = modeledUnitRisk(trigger, tradeStop, atr)
-                    float reward = modeledNetReward(trigger, tradeTarget)
+                    entryLimit := protectEntryPrice ? rewardPriceBoundary(tradeStop, tradeTarget, atr, longSide) : trigger
+                    float sizingPrice = protectEntryPrice ? entryLimit : trigger
+                    float risk = modeledUnitRisk(sizingPrice, tradeStop, atr)
+                    float reward = modeledNetReward(sizingPrice, tradeTarget)
                     plannedNetR := risk > 0 ? reward / risk : na
-                    plannedQty := riskQuantity(trigger, tradeStop, atr)
+                    plannedQty := riskQuantity(sizingPrice, tradeStop, atr, math.max(trigger, sizingPrice))
                     bool geometryOK = longSide ? tradeStop < trigger and trigger < tradeTarget : tradeTarget < trigger and trigger < tradeStop
-                    if geometryOK and risk > 0 and reward > 0 and reward >= minimumNetR * risk and plannedQty > 0
-                        strategy.entry("Fib", longSide ? strategy.long : strategy.short, qty=plannedQty, stop=trigger, comment=longSide ? "First Fib pullback L" : "First Fib pullback S")
+                    bool capGeometry = longSide ? trigger <= entryLimit and entryLimit < tradeTarget : tradeTarget < entryLimit and entryLimit <= trigger
+                    bool payoffOK = risk > 0 and reward > 0 and reward + (protectEntryPrice ? syminfo.pointvalue * 0.00000001 : 0.0) >= minimumNetR * risk
+                    if geometryOK and capGeometry and payoffOK and plannedQty > 0
+                        strategy.entry("Fib", longSide ? strategy.long : strategy.short, qty=plannedQty, stop=trigger, limit=protectEntryPrice ? entryLimit : na, comment=longSide ? "First Fib pullback L" : "First Fib pullback S")
                         strategy.exit("Fib exit", "Fib", stop=tradeStop, limit=tradeTarget, comment_profit="Impulse extreme TP", comment_loss="Pullback SL")
                         submittedOrders += 1
                         submittedSignal := true
@@ -259,19 +276,19 @@ if barstate.isconfirmed
                         fillObserved := false
                         rejectionBar := bar_index
                         phase := 4
-                        reason := "Stop entry placed beyond rejection candle; bracket frozen"
+                        reason := protectEntryPrice ? "Stop-limit submitted; capped price and fixed bracket" : "Stop entry placed beyond rejection candle; bracket frozen"
                     else
                         phase := 0
-                        if not geometryOK
+                        if not geometryOK or not capGeometry
                             geometrySkips += 1
-                        else if risk <= 0 or reward <= 0 or reward < minimumNetR * risk
+                        else if not payoffOK
                             payoffSkips += 1
                         else
                             quantitySkips += 1
-                        reason := not geometryOK ? "Rejection skipped: trigger outside stop/target" : risk <= 0 or reward <= 0 or reward < minimumNetR * risk ? "Rejection skipped: net R below " + str.tostring(minimumNetR) : "Rejection skipped: quantity below minimum"
+                        reason := not geometryOK or not capGeometry ? "Rejection skipped: trigger/cap outside valid bracket" : not payoffOK ? "Rejection skipped: net R below " + str.tostring(minimumNetR) : "Rejection skipped: quantity below minimum"
                     if showReasons
-                        string decision = submittedSignal ? "ORDER" : not geometryOK ? "SKIP: geometry" : risk <= 0 or reward <= 0 or reward < minimumNetR * risk ? "SKIP: net R" : "SKIP: quantity"
-                        label.new(bar_index, longSide ? low : high, decision + "\nNet R " + str.tostring(plannedNetR, "0.00") + " / min " + str.tostring(minimumNetR, "0.00"), style=longSide ? label.style_label_up : label.style_label_down, color=submittedSignal ? color.new(color.green, 20) : color.new(color.red, 20), textcolor=color.white, size=size.small)
+                        string decision = submittedSignal ? (protectEntryPrice ? "STOP-LIMIT ORDER" : "ORDER") : not geometryOK or not capGeometry ? "SKIP: entry/cap" : not payoffOK ? "SKIP: net R" : "SKIP: quantity"
+                        label.new(bar_index, longSide ? low : high, decision + (protectEntryPrice ? "\nCap modeled R " : "\nTrigger modeled R ") + str.tostring(plannedNetR, "0.00") + " / min " + str.tostring(minimumNetR, "0.00"), style=longSide ? label.style_label_up : label.style_label_down, color=submittedSignal ? color.new(color.green, 20) : color.new(color.red, 20), textcolor=color.white, size=size.small)
                 else if leftZone or bar_index - firstTouchBar >= (allowTwoCandle ? 1 : 0)
                     phase := 0
                     invalidatedSetups += 1
@@ -293,17 +310,18 @@ midPlot = plot(visible ? midpoint : na, "50%", color=color.yellow, style=plot.st
 deepPlot = plot(visible ? deep : na, "61.8%", color=color.yellow, style=plot.style_linebr)
 fill(midPlot, deepPlot, color=color.new(color.yellow, 88), title="First pullback zone")
 plot(phase == 4 ? trigger : na, "Rejection break entry", color=color.blue, style=plot.style_linebr)
+plot(phase == 4 and protectEntryPrice ? entryLimit : na, "Adverse entry price cap", color=color.aqua, style=plot.style_linebr)
 plot(phase == 4 or strategy.position_size != 0 ? tradeStop : na, "Fixed pullback stop", color=color.red, style=plot.style_linebr)
 plot(visible ? endpoint : na, "Impulse-extreme target", color=color.lime, style=plot.style_linebr)
 plotshape(showSignals and breakoutSignal, title="Confirmed breakout", style=shape.diamond, location=location.abovebar, color=color.orange, size=size.tiny, text="BOS")
 plotshape(showSignals and rejectionSignal, title="Rejection evaluated", style=shape.circle, location=location.belowbar, color=color.yellow, size=size.tiny, text="REJ")
 plotshape(showSignals and submittedSignal and direction == 1, title="Buy-stop submitted (not fill)", style=shape.triangleup, location=location.belowbar, color=color.lime, size=size.small, text="ORDER")
 plotshape(showSignals and submittedSignal and direction == -1, title="Sell-stop submitted (not fill)", style=shape.triangledown, location=location.abovebar, color=color.red, size=size.small, text="ORDER")
-var table panel = table.new(position.top_right, 2, 12, bgcolor=color.new(color.black, 15))
+var table panel = table.new(position.top_right, 2, 13, bgcolor=color.new(color.black, 15))
 if barstate.islast and showPanel
-    panel.cell(0, 0, "Fib BOS Pullback v4", text_color=color.white)
+    panel.cell(0, 0, "Fib BOS Pullback v5", text_color=color.white)
     panel.cell(1, 0, not inDates ? "Outside test dates" : reason, text_color=color.yellow)
-    panel.cell(0, 1, "Planned net R / qty", text_color=color.white)
+    panel.cell(0, 1, protectEntryPrice ? "Cap net R / qty" : "Trigger net R / qty", text_color=color.white)
     panel.cell(1, 1, str.tostring(plannedNetR, "0.00") + " / " + str.tostring(plannedQty), text_color=color.white)
     panel.cell(0, 2, "Risk / HTF", text_color=color.white)
     panel.cell(1, 2, str.tostring(riskPercent) + "% / " + trendTF, text_color=color.white)
@@ -325,3 +343,5 @@ if barstate.islast and showPanel
     panel.cell(1, 10, str.tostring(feePercent + executionReservePercent, "0.000") + "%; match Properties; funding excluded", text_color=color.white)
     panel.cell(0, 11, "Test window / loaded start UTC", text_color=color.white)
     panel.cell(1, 11, (useDates ? str.format_time(firstDate, "yyyy-MM-dd", "UTC") + " to " + str.format_time(lastDate, "yyyy-MM-dd", "UTC") : "All loaded bars") + " | " + str.format_time(firstLoaded, "yyyy-MM-dd", "UTC"), text_color=color.white)
+    panel.cell(0, 12, "Entry mode / cap", text_color=color.white)
+    panel.cell(1, 12, (protectEntryPrice ? "Stop-limit / " : "Stop / ") + (phase == 4 ? str.tostring(entryLimit, format.mintick) : "n/a"), text_color=color.white)
