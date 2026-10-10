@@ -16,6 +16,16 @@ class Rules:
     entry:str='stop'
     extension:float=1.0
     breakout_filter:str='none'
+    target_net_r:float=0.0
+    split_exit:bool=False
+
+
+def net_r_target(entry,stop,atr,d,multiple,cfg):
+    """Freeze a cost-aware reward target; round outward to preserve reward."""
+    risk=f.unit_risk(entry,stop,atr,cfg)
+    reserve=2*cfg.slippage_ticks*cfg.tick
+    raw=(entry*(1+cfg.fee)+reserve+multiple*risk)/(1-cfg.fee) if d==1 else (entry*(1-cfg.fee)-reserve-multiple*risk)/(1+cfg.fee)
+    return (math.ceil(raw/cfg.tick) if d==1 else math.floor(raw/cfg.tick))*cfg.tick
 
 
 def reward_price_boundary(stop,target,atr,d,cfg):
@@ -60,6 +70,7 @@ def breakout_quality(bar,atr,level,origin_bar,index,d,mode):
 
 def replay(bars,lower,rates,rules,start,end,fee=.0007,slippage_ticks=2,prepared=None):
     if rules.entry not in ('stop','stop_limit','market','limit_mid','limit_cost') or not 0<=start<end<=len(bars):raise ValueError('Invalid rules/period')
+    if rules.target_net_r and rules.target_net_r<1.5:raise ValueError('Target must preserve minimum net reward')
     cfg=replace(f.Config(),pivot=rules.pivot,fee=fee,slippage_ticks=slippage_ticks,minimum_net_r=1.5,setup_life=60)
     if prepared is None:
         _,_,atrs,events=f.features(bars,cfg);trends=closed_htf_trends(bars)
@@ -71,11 +82,19 @@ def replay(bars,lower,rates,rules,start,end,fee=.0007,slippage_ticks=2,prepared=
     breakout=touch=rejection=None;pending=position=None
     counts={};trades=[];curve=[];cashflow=[]
     def count(k):counts[k]=counts.get(k,0)+1
-    def close(price,reason,stamp):
+    def close(price,reason,stamp,quantity=None):
         nonlocal balance,position
-        p=position;exit_fee=price*p['qty']*cfg.fee
-        gross=p['d']*(price-p['entry'])*p['qty'];balance+=gross-exit_fee
-        trades.append(dict(entry_time=p['time'],exit_time=stamp,direction=p['d'],entry=p['entry'],exit=price,quantity=p['qty'],stop=p['stop'],target=p['target'],gross=gross,fees=p['entry_fee']+exit_fee,funding=p['funding'],net=gross-p['entry_fee']-exit_fee+p['funding'],exit_reason=reason))
+        p=position;q=p['qty'] if quantity is None else quantity
+        exit_fee=price*q*cfg.fee
+        gross=p['d']*(price-p['entry'])*q;balance+=gross-exit_fee
+        p['realized_gross']+=gross;p['exit_fees']+=exit_fee;p['qty']-=q
+        if p['qty']>1e-10:
+            p['partial_time']=stamp;p['partial_price']=price
+            return
+        total_gross=p['realized_gross'];fees=p['entry_fee']+p['exit_fees']
+        row=dict(entry_time=p['time'],exit_time=stamp,direction=p['d'],entry=p['entry'],exit=price,quantity=p['original_qty'],stop=p['stop'],target=p['target'],gross=total_gross,fees=fees,funding=p['funding'],net=total_gross-fees+p['funding'],exit_reason=reason)
+        if 'partial_time' in p:row.update(partial_time=p['partial_time'],partial_price=p['partial_price'],partial_quantity=p['first_qty'])
+        trades.append(row)
         position=None
     for i,b in enumerate(bars[:end]):
         if i>=start:
@@ -98,15 +117,22 @@ def replay(bars,lower,rates,rules,start,end,fee=.0007,slippage_ticks=2,prepared=
                         entry_fee=fill*pending['qty']*cfg.fee
                         if fill*pending['qty']+entry_fee<=balance:
                             balance-=entry_fee
-                            position=pending|dict(entry=fill,entry_fee=entry_fee,time=sub.time,d=d,funding=0.0)
+                            position=pending|dict(entry=fill,entry_fee=entry_fee,time=sub.time,d=d,funding=0.0,original_qty=pending['qty'],realized_gross=0.0,exit_fees=0.0)
                             entered=True;count('fills')
                         else:count('margin_rejections')
                         pending=None;phase=0
                 if position:
                     # Entry is known to occur within this subbar: its original open preceded entry.
                     execution_bar=replace(sub,open=position['entry']) if entered else sub
-                    exit_fill=f.bracket_fill(execution_bar,position['d'],position['stop'],position['target'],cfg)
-                    if exit_fill:close(*exit_fill,sub.time)
+                    first=position.get('first_target')
+                    partial_active=first is not None and 'partial_time' not in position
+                    exit_fill=f.bracket_fill(execution_bar,position['d'],position['stop'],first if partial_active else position['target'],cfg)
+                    if exit_fill:
+                        if partial_active and exit_fill[1]=='target':
+                            close(exit_fill[0],'partial',sub.time,position['first_qty'])
+                            final=f.bracket_fill(execution_bar,position['d'],position['stop'],position['target'],cfg)
+                            if final:close(*final,sub.time)
+                        else:close(*exit_fill,sub.time)
                     phase=0
                 mark=balance+(position['d']*(sub.close-position['entry'])*position['qty'] if position else 0)
                 subpeak=max(subpeak,mark);subdrawdown=max(subdrawdown,subpeak-mark)
@@ -158,6 +184,9 @@ def replay(bars,lower,rates,rules,start,end,fee=.0007,slippage_ticks=2,prepared=
                         stop_raw=extreme-d*max(cfg.tick,.15*a)
                         stop=(math.floor(stop_raw/cfg.tick) if d==1 else math.ceil(stop_raw/cfg.tick))*cfg.tick
                         target=f.round_price(origin+d*abs(endpoint-origin)*rules.extension,cfg.tick)
+                        if rules.target_net_r:
+                            candidate=net_r_target(trigger,stop,a,d,rules.target_net_r,cfg)
+                            target=min(target,candidate) if d==1 else max(target,candidate)
                         if rules.entry in ('limit_mid','limit_cost'):
                             trigger=mid
                             if rules.entry=='limit_cost':
@@ -174,7 +203,15 @@ def replay(bars,lower,rates,rules,start,end,fee=.0007,slippage_ticks=2,prepared=
                         if rules.entry=='stop_limit':geometry=geometry and (trigger<=cap<target if d==1 else target<cap<=trigger)
                         if rules.entry in ('limit_mid','limit_cost'):geometry=geometry and (deep<=trigger<=mid if d==1 else mid<=trigger<=deep)
                         if geometry and reward>0 and (reward>=1.5*risk or (rules.entry=='stop_limit' and reward+1e-8>=1.5*risk)) and qty>0 and i<end-1:
-                            pending=dict(trigger=trigger,stop=stop,target=target,qty=qty,mode=rules.entry,cap=cap,activated=False);rejection=i;phase=4;count('orders')
+                            pending=dict(trigger=trigger,stop=stop,target=target,qty=qty,mode=rules.entry,cap=cap,activated=False)
+                            if rules.split_exit:
+                                first_qty=math.floor(qty/2/cfg.quantity_step)*cfg.quantity_step
+                                if first_qty>=cfg.minimum_quantity and qty-first_qty>=cfg.minimum_quantity:
+                                    first_target=net_r_target(sizing,stop,a,d,1.5,cfg)
+                                    first_target=min(target,first_target) if d==1 else max(target,first_target)
+                                    pending.update(first_qty=first_qty,first_target=first_target)
+                                else:count('unsplittable_quantity')
+                            rejection=i;phase=4;count('orders')
                         else:
                             count('geometry_skips' if not geometry else 'payoff_skips' if reward<1.5*risk or reward<=0 else 'quantity_skips');phase=0
                     elif left or i-touch>=1:phase=0;count('no_rejection')

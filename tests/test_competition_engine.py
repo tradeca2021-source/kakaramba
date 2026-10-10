@@ -39,6 +39,45 @@ class ReplayTests(unittest.TestCase):
         self.assertEqual(trades[0]['exit_reason'],'target')
         self.assertGreater(result['net'],0)
 
+    def test_net_target_preserves_cost_adjusted_reward_both_directions(self):
+        cfg=m.f.Config()
+        for d,stop in ((1,98),(-1,102)):
+            target=m.net_r_target(100,stop,1,d,1.5,cfg)
+            self.assertGreaterEqual(m.f.net_reward(100,target,cfg)+1e-10,1.5*m.f.unit_risk(100,stop,1,cfg))
+            self.assertGreater(d*(target-100),0)
+
+    def test_split_is_one_trade_with_full_fee_accounting(self):
+        bars,lower,prepared=self.fixture()
+        result,trades,_,_=m.replay(bars,lower,[],m.Rules(split_exit=True),0,len(bars),prepared=prepared)
+        self.assertEqual(len(trades),1)
+        t=trades[0]
+        self.assertIn('partial_quantity',t)
+        q1=t['partial_quantity'];q2=t['quantity']-q1
+        expected_gross=(t['partial_price']-t['entry'])*q1+(t['exit']-t['entry'])*q2
+        expected_fee=(t['entry']*t['quantity']+t['partial_price']*q1+t['exit']*q2)*.0007
+        self.assertAlmostEqual(t['gross'],expected_gross)
+        self.assertAlmostEqual(t['fees'],expected_fee)
+        self.assertAlmostEqual(result['net'],t['net'])
+        self.assertEqual(result['trades'],1)
+
+    def test_split_funding_uses_remaining_quantity(self):
+        bars,lower,prepared=self.fixture()
+        lower[9900]=m.f.Candle(9900,108,109,104,108)
+        lower[10200]=m.f.Candle(10200,109,111,108,110)
+        result,trades,_,cash=m.replay(bars,lower,[(10200,.001)],m.Rules(split_exit=True),0,len(bars),prepared=prepared)
+        self.assertEqual(trades[0]['partial_time'],9900)
+        self.assertEqual(trades[0]['exit_time'],10200)
+        self.assertAlmostEqual(cash[0]['amount'],-.001*.5*109)
+        self.assertAlmostEqual(result['net'],trades[0]['net'])
+
+    def test_split_stop_wins_ambiguous_bar_without_partial_credit(self):
+        bars,lower,prepared=self.fixture()
+        lower[9900]=m.f.Candle(9900,108,111,97,108)
+        _,trades,_,_=m.replay(bars,lower,[],m.Rules(split_exit=True),0,len(bars),prepared=prepared)
+        self.assertEqual(trades[0]['exit_reason'],'stop_both_touched')
+        self.assertNotIn('partial_time',trades[0])
+        self.assertLess(trades[0]['net'],0)
+
     def test_signed_funding_accounted_once_and_before_exit(self):
         bars,lower,prepared=self.fixture()
         results=[]

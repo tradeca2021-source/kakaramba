@@ -106,3 +106,21 @@ The [quality protocol](../../competition/breakout_quality_protocol.json) defines
 These are known-period independent-account totals, not continuous portfolio returns or a new holdout. Fresh origin mostly avoids one $222.52 losing trade in 2026 Q1, with small effects on subsequent risk-based sizing. That single removal cannot establish a robust improvement. Every mode still loses the same two trades in the already-used 2025 H2 period. Strong displacement finds a 2026 Q3 trade that the original sequence missed, but loses some other opportunities and reduces aggregate net.
 
 The [JSON report](breakout_quality_audit.json) retains all results, fixed rules, input hashes, quality discrepancies, stage counts and individual trade logs. v6 provides these modes for explicit comparison, with **None as the default**. No parameter thresholds were retuned after results, and none is promoted as independently profitable.
+
+
+## Profit-taking comparison
+
+The predeclared `profit_target_protocol.json` comparison uses the same seven **previously inspected** independent-account periods, 5m execution, actual funding rates, 0.07% per-side cost assumption and original entry/risk rules. Each completed position counts as one trade, including split exits. Values below sum the seven separate account results; they are not a continuous portfolio return.
+
+| Exit plan | Trades | Winning positions | Net USDT | Profit factor | Worst period 5m closing drawdown USDT |
+|---|---:|---:|---:|---:|---:|
+| Original swing target | 23 | 11 (47.8%) | 2,957.97 | 2.140 | 822.30 |
+| Fixed 1.5 modeled net R | 23 | 11 (47.8%) | 1,558.61 | 1.603 | 817.31 |
+| Fixed 2.0 modeled net R, capped at swing | 23 | 11 (47.8%) | 2,384.92 | 1.920 | 820.98 |
+| Half at 1.5 modeled net R, half at swing | 23 | 11 (47.8%) | 2,259.10 | 1.872 | 820.34 |
+
+Targets are frozen at submission from the intended entry trigger, stop, fees, slippage reserve and ATR gap allowance. Both split legs retain the original stop; no breakeven or trailing change. The first quantity rounds down to the BTC step. Unsplittable quantities retain the full swing bracket. Funding after a partial exit applies only to the remaining position. Stops take priority when a 5m candle touches both stop and target. Win rate counts total position net after costs and funding, not successful individual partial fills.
+
+None of these exits added winners. The smaller targets reduced the size of profitable trades. All candidates still lost in 2025 H1/H2 and took zero trades in 2026 Q3. The original Pine exit remains unchanged; no new profitability claim or default promotion follows from this exploratory comparison. Details and trade-level cashflows are in `profit_target_audit.json` and `*_target_period*_trades.csv`. Native Pine execution and Bitunix venue parity remain unverified.
+
+Reproduce with `python research/competition/profit_target_study.py --output /tmp/fib-target-replay`.
