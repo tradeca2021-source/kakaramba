@@ -104,6 +104,46 @@ class ReplayTests(unittest.TestCase):
         self.assertGreater(high['counts']['payoff_skips'],0)
         self.assertLessEqual(low_trades[0]['quantity'],1)
 
+    def test_cost_covering_stop_includes_fees_and_exit_slippage(self):
+        cfg=m.f.Config()
+        for d in (1,-1):
+            stop=m.cost_covering_stop(100,d,cfg)
+            exit_price=stop-d*cfg.slippage_ticks*cfg.tick
+            net=d*(exit_price-100)-(100+exit_price)*cfg.fee
+            self.assertGreaterEqual(net,-1e-10)
+
+    def test_stop_protection_takes_effect_only_after_signal_close(self):
+        bars,lower,prepared=self.fixture()
+        bars[10]=m.f.Candle(9000,100.5,109,97,108)
+        lower[9600]=m.f.Candle(9600,103,109,100,108)
+        lower[9900]=m.f.Candle(9900,108,109,100,101)
+        result,trades,_,_=m.replay(bars,lower,[],m.Rules(live_endpoint=True,protect_at_r=1),0,len(bars),prepared=prepared)
+        self.assertEqual(len(trades),1)
+        self.assertEqual(trades[0]['exit_time'],9900)
+        self.assertTrue(trades[0]['protection_armed'])
+        self.assertGreater(trades[0]['exit_stop'],trades[0]['stop'])
+        self.assertGreaterEqual(trades[0]['net'],0)
+        self.assertEqual(result['counts']['cost_covering_stop_armed'],1)
+
+    def test_intrabar_high_alone_cannot_arm_stop_protection(self):
+        bars,lower,prepared=self.fixture()
+        bars[10]=m.f.Candle(9000,100.5,109,97,103)
+        lower[9600]=m.f.Candle(9600,103,109,100,103)
+        result,trades,_,_=m.replay(bars,lower,[],m.Rules(live_endpoint=True,protect_at_r=1),0,len(bars),prepared=prepared)
+        self.assertNotIn('cost_covering_stop_armed',result['counts'])
+        self.assertFalse(trades[0]['protection_armed'])
+
+    def test_thirty_minute_orders_replay_all_six_subbars(self):
+        original,_,prepared=self.fixture()
+        bars=[replace(b,time=b.time*2) for b in original]
+        lower={b.time+j*300:replace(b,time=b.time+j*300) for b in bars for j in range(6)}
+        for j in range(5):lower[18000+j*300]=m.f.Candle(18000+j*300,100,101,99,100)
+        lower[19500]=m.f.Candle(19500,102,104,101,103)
+        _,trades,curve,_=m.replay(bars,lower,[],m.Rules(live_endpoint=True,signal_seconds=1800),0,len(bars),prepared=prepared)
+        self.assertEqual(trades[0]['entry_time'],19500)
+        self.assertEqual(trades[0]['exit_time'],19800)
+        self.assertEqual(curve[-1]['time'],21600)
+
     def test_signed_funding_accounted_once_and_before_exit(self):
         bars,lower,prepared=self.fixture()
         results=[]

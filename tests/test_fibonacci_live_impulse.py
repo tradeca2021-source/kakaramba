@@ -1,5 +1,6 @@
 """Actual Pine predicates plus inherited entry/risk checks; no native compilation."""
 from pathlib import Path
+import unittest
 from unittest.mock import patch
 import test_fibonacci_breakout_pullback as base
 
@@ -29,3 +30,22 @@ class LivePineBoundaries(base.EntryBoundaries):
         self.assertIn('strategy.cancel("Fib")',SOURCE)
         self.assertIn('stop=trigger',SOURCE)
         self.assertNotIn('process_orders_on_close=true',SOURCE)
+
+class FillDiagnostics(unittest.TestCase):
+    def setUp(self):
+        source_patch=patch.object(base,'SOURCE',SOURCE)
+        source_patch.start();self.addCleanup(source_patch.stop)
+
+    def test_actual_fill_geometry_does_not_treat_overshoot_as_reward(self):
+        for direction in (1,-1):
+            values=dict(direction=direction,tradeStop=90 if direction==1 else 110,tradeTarget=110 if direction==1 else 90)
+            self.assertTrue(base.predicate('fillGeometryOK',actualEntry=100,**values))
+            self.assertFalse(base.predicate('fillGeometryOK',actualEntry=111 if direction==1 else 89,**values))
+            self.assertFalse(base.predicate('fillGeometryOK',actualEntry=89 if direction==1 else 111,**values))
+
+    def test_fill_warning_compares_actual_values_to_planned_limits(self):
+        values=dict(fillGeometryOK=True,lastFillNetR=1.6,minimumNetR=1.5,lastFillRiskPercent=.24,riskPercent=.25)
+        self.assertFalse(base.predicate('fillWarning',**values))
+        self.assertTrue(base.predicate('fillWarning',**(values|{'lastFillNetR':1.4})))
+        self.assertTrue(base.predicate('fillWarning',**(values|{'lastFillRiskPercent':.26})))
+        self.assertTrue(base.predicate('fillWarning',**(values|{'fillGeometryOK':False,'lastFillNetR':None})))

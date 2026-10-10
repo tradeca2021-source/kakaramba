@@ -134,3 +134,8 @@ See [the candidate documentation](../../../Fibonacci_Live_Impulse_Pullback.md) a
 ## Settings tuning
 
 [TUNING.md](TUNING.md) records nine predeclared configurations, chronological development selection and confirmation. Three-bar pivots won the 2024 comparison but failed 2025 and 2026 checks. Keep the live strategy defaults (five-bar pivots, 4h EMA50, minimum net R1.5, no quality filter). The separate Pivot3 Research Pine file is a rejected research candidate, not an upgrade.
+
+
+## Entry, stop protection and chart configuration follow-ups
+
+[ENHANCEMENTS.md](ENHANCEMENTS.md) records all predeclared comparisons and their failed qualification results. Fifteen-minute rejection-break stop entries with fixed brackets remain the strongest observed version. Pine v2 adds actual-fill risk/reward diagnostics; no new trading mode or profitability claim is promoted.

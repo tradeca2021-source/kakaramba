@@ -21,6 +21,8 @@ class Rules:
     live_endpoint:bool=False
     trend_length:int=50
     minimum_net_r:float=1.5
+    protect_at_r:float=0.0
+    signal_seconds:int=900
 
 
 def net_r_target(entry,stop,atr,d,multiple,cfg):
@@ -28,6 +30,12 @@ def net_r_target(entry,stop,atr,d,multiple,cfg):
     risk=f.unit_risk(entry,stop,atr,cfg)
     reserve=2*cfg.slippage_ticks*cfg.tick
     raw=(entry*(1+cfg.fee)+reserve+multiple*risk)/(1-cfg.fee) if d==1 else (entry*(1-cfg.fee)-reserve-multiple*risk)/(1+cfg.fee)
+    return (math.ceil(raw/cfg.tick) if d==1 else math.floor(raw/cfg.tick))*cfg.tick
+
+
+def cost_covering_stop(entry,d,cfg):
+    slip=cfg.slippage_ticks*cfg.tick
+    raw=entry*(1+cfg.fee)/(1-cfg.fee)+slip if d==1 else entry*(1-cfg.fee)/(1+cfg.fee)-slip
     return (math.ceil(raw/cfg.tick) if d==1 else math.floor(raw/cfg.tick))*cfg.tick
 
 
@@ -74,6 +82,7 @@ def breakout_quality(bar,atr,level,origin_bar,index,d,mode):
 def replay(bars,lower,rates,rules,start,end,fee=.0007,slippage_ticks=2,prepared=None):
     if rules.entry not in ('stop','stop_limit','market','limit_mid','limit_cost') or not 0<=start<end<=len(bars):raise ValueError('Invalid rules/period')
     if rules.target_net_r and rules.target_net_r<1.5:raise ValueError('Target must preserve minimum net reward')
+    if rules.signal_seconds not in (900,1800,3600):raise ValueError('Unsupported signal timeframe')
     cfg=replace(f.Config(),pivot=rules.pivot,fee=fee,slippage_ticks=slippage_ticks,minimum_net_r=rules.minimum_net_r,setup_life=60)
     if prepared is None:
         _,_,atrs,events=f.features(bars,cfg);trends=closed_htf_trends(bars,length=rules.trend_length)
@@ -95,13 +104,14 @@ def replay(bars,lower,rates,rules,start,end,fee=.0007,slippage_ticks=2,prepared=
             p['partial_time']=stamp;p['partial_price']=price
             return
         total_gross=p['realized_gross'];fees=p['entry_fee']+p['exit_fees']
-        row=dict(entry_time=p['time'],exit_time=stamp,direction=p['d'],entry=p['entry'],exit=price,quantity=p['original_qty'],stop=p['stop'],target=p['target'],gross=total_gross,fees=fees,funding=p['funding'],net=total_gross-fees+p['funding'],exit_reason=reason)
+        row=dict(entry_time=p['time'],exit_time=stamp,direction=p['d'],entry=p['entry'],exit=price,quantity=p['original_qty'],stop=p.get('initial_stop',p['stop']),target=p['target'],gross=total_gross,fees=fees,funding=p['funding'],net=total_gross-fees+p['funding'],exit_reason=reason)
+        if rules.protect_at_r:row.update(exit_stop=p['stop'],protection_armed=p.get('protection_armed',False))
         if 'partial_time' in p:row.update(partial_time=p['partial_time'],partial_price=p['partial_price'],partial_quantity=p['first_qty'])
         trades.append(row)
         position=None
     for i,b in enumerate(bars[:end]):
         if i>=start:
-            for offset in (0,300,600):
+            for offset in range(0,rules.signal_seconds,300):
                 sub=lower[b.time+offset]
                 # Settlement affects only positions carried into the event, before new entries.
                 if position and sub.time in funding:
@@ -218,7 +228,7 @@ def replay(bars,lower,rates,rules,start,end,fee=.0007,slippage_ticks=2,prepared=
                         if rules.entry=='stop_limit':geometry=geometry and (trigger<=cap<target if d==1 else target<cap<=trigger)
                         if rules.entry in ('limit_mid','limit_cost'):geometry=geometry and (deep<=trigger<=mid if d==1 else mid<=trigger<=deep)
                         if geometry and reward>0 and (reward>=cfg.minimum_net_r*risk or (rules.entry=='stop_limit' and reward+1e-8>=cfg.minimum_net_r*risk)) and qty>0 and i<end-1:
-                            pending=dict(trigger=trigger,stop=stop,target=target,qty=qty,mode=rules.entry,cap=cap,activated=False)
+                            pending=dict(trigger=trigger,stop=stop,target=target,qty=qty,mode=rules.entry,cap=cap,activated=False,initial_risk=risk)
                             if rules.split_exit:
                                 first_qty=math.floor(qty/2/cfg.quantity_step)*cfg.quantity_step
                                 if first_qty>=cfg.minimum_quantity and qty-first_qty>=cfg.minimum_quantity:
@@ -233,12 +243,20 @@ def replay(bars,lower,rates,rules,start,end,fee=.0007,slippage_ticks=2,prepared=
         if ev:
             if ev[0]==1:sh=(ev[1],ev[2])
             else:sl=(ev[1],ev[2])
+        if i>=start and position and rules.protect_at_r and not position.get('protection_armed',False):
+            favorable=position['d']*(b.close-position['entry'])
+            if favorable>=rules.protect_at_r*position['initial_risk']:
+                candidate=cost_covering_stop(position['entry'],position['d'],cfg)
+                valid=position['stop']<candidate<b.close if position['d']==1 else b.close<candidate<position['stop']
+                if valid:
+                    position['initial_stop']=position['stop'];position['stop']=candidate;position['protection_armed']=True
+                    count('cost_covering_stop_armed')
         if i>=start:
             if i==end-1 and position:
-                close(b.close-position['d']*cfg.tick*cfg.slippage_ticks,'period_end',b.time+900)
+                close(b.close-position['d']*cfg.tick*cfg.slippage_ticks,'period_end',b.time+rules.signal_seconds)
             mark=balance+(position['d']*(b.close-position['entry'])*position['qty'] if position else 0)
             peak=max(peak,mark);drawdown=max(drawdown,peak-mark)
-            curve.append(dict(time=b.time+900,equity=mark))
+            curve.append(dict(time=b.time+rules.signal_seconds,equity=mark))
     wins=sum(t['net'] for t in trades if t['net']>0);losses=-sum(t['net'] for t in trades if t['net']<0)
     monthly={}
     for t in trades:

@@ -1,4 +1,4 @@
-# Fibonacci Live Impulse Pullback v1
+# Fibonacci Live Impulse Pullback v2
 
 Experimental redesign of the confirmed-endpoint strategy. Load `Fibonacci_Live_Impulse_Pullback.pine` on standard BTCUSDT 15-minute candles, with its default closed 4-hour trend filter. Keep the original strategy for comparison. The new script has not been compiled or backtested natively in TradingView here.
 
@@ -28,3 +28,12 @@ This is a testable candidate, not a validated best strategy. Binance prices are 
 ## Reproduction
 
 Run `python research/competition/live_impulse_study.py --output /tmp/fib-live-replay`. Cost sensitivity: `python research/competition/live_impulse_stress.py`. The predeclared protocol, full reports and individual trades are in `research/competition/live_impulse_protocol.json` and `research/results/competition/live_impulse_*.json` / `*_live_period*_trades.csv`. Execution tests include absence of future endpoint confirmation and rejection of ambiguous extension/touch candles; Pine checks cover actual predicates, costs, quantity and entry windows rather than native compilation.
+
+
+## v2 execution diagnostics
+
+Entry and exit rules retain the v1 defaults. The panel now records the last actual filled price, adverse ticks versus the submitted trigger, modeled reward ratio at that fill and modeled stopped risk as a percentage of equity frozen at submission. The ATR is also frozen at submission. This avoids silently substituting later volatility into the risk estimate. It handles positions that both open and close between chart calculations by reading the latest native closed-trade entry price and size before clearing the bracket.
+
+Orange labels flag fills outside the bracket, below the intended reward floor or above the requested risk budget. These are observations after execution; they do not undo a fill, alter orders or guarantee realized losses. Funding is excluded, slippage is an assumed reserve, and price gaps can exceed modeled risk. A gap past the target is classified as invalid geometry instead of treating its absolute distance as positive reward.
+
+The latest predeclared entry, protective-stop and timeframe comparisons are documented in [ENHANCEMENTS.md](research/results/competition/ENHANCEMENTS.md). None passed the criteria for adding a new trading mode. Retain the 15m chart, pivot5, prior closed4h EMA50, minimum netR1.5, fixed stop and swing target. The experimental strategy still needs unused-period and native TradingView verification.

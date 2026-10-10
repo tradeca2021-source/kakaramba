@@ -1,7 +1,7 @@
 //@version=6
 // Experimental live impulse redesign: favorable known-period research, no fresh validation.
 // Freeze a causal running extreme at the first pullback; skip ambiguous candles.
-strategy("Fibonacci Live Impulse Pullback v1", shorttitle="Fib Live Pullback v1", overlay=true,
+strategy("Fibonacci Live Impulse Pullback v2", shorttitle="Fib Live Pullback v2", overlay=true,
      initial_capital=100000, pyramiding=1, calc_on_every_tick=false,
      process_orders_on_close=false, use_bar_magnifier=true,
      default_qty_type=strategy.fixed, commission_type=strategy.commission.percent,
@@ -55,7 +55,6 @@ float atr = ta.atr(atrLength)
 float tick = syminfo.mintick
 float ph = ta.pivothigh(high, pivotBars, pivotBars)
 float pl = ta.pivotlow(low, pivotBars, pivotBars)
-// Exclude today's confirmation candle: an earlier touch would be a missed first pullback.
 
 roundPrice(float price) =>
     math.round(price / syminfo.mintick) * syminfo.mintick
@@ -94,7 +93,7 @@ var int swingHighBar = na
 var int swingLowBar = na
 var int usedHighBar = na
 var int usedLowBar = na
-// 0 idle, 1 awaiting endpoint confirmation, 2 awaiting first zone touch,
+// 0 idle, 1 tracking causal impulse extreme, 2 frozen first zone touch,
 // 3 first pullback underway, 4 resting breakout-of-rejection stop order.
 var int phase = 0
 var int direction = 0
@@ -112,6 +111,13 @@ var float tradeStop = na
 var float tradeTarget = na
 var float plannedQty = na
 var float plannedNetR = na
+var float submittedATR = na
+var float submittedEquity = na
+var float lastFillEntry = na
+var float lastFillNetR = na
+var float lastFillRiskPercent = na
+var float lastFillGapTicks = na
+var string lastFillStatus = "No filled position yet"
 var int observedClosed = 0
 var string reason = "Waiting for confirmed structure breakout"
 var int breakouts = 0
@@ -138,6 +144,19 @@ var int firstLoaded = time
 if not fillObserved and (strategy.position_size != 0 or strategy.closedtrades > submittedClosedCount)
     filledOrders += 1
     fillObserved := true
+    // Capture before closed-trade cleanup, including fills and exits between calculations.
+    float actualEntry = strategy.position_size != 0 ? strategy.position_avg_price : strategy.closedtrades.entry_price(strategy.closedtrades - 1)
+    float actualQty = strategy.position_size != 0 ? math.abs(strategy.position_size) : math.abs(strategy.closedtrades.size(strategy.closedtrades - 1))
+    float actualRisk = modeledUnitRisk(actualEntry, tradeStop, submittedATR)
+    bool fillGeometryOK = direction == 1 ? tradeStop < actualEntry and actualEntry < tradeTarget : tradeTarget < actualEntry and actualEntry < tradeStop
+    lastFillEntry := actualEntry
+    lastFillNetR := fillGeometryOK and actualRisk > 0 ? modeledNetReward(actualEntry, tradeTarget) / actualRisk : na
+    lastFillRiskPercent := submittedEquity > 0 ? actualQty * actualRisk / submittedEquity * 100.0 : na
+    lastFillGapTicks := direction * (actualEntry - trigger) / tick
+    bool fillWarning = not fillGeometryOK or (not na(lastFillNetR) and lastFillNetR < minimumNetR) or (not na(lastFillRiskPercent) and lastFillRiskPercent > riskPercent + 0.00000001)
+    lastFillStatus := not fillGeometryOK ? "Fill outside planned bracket" : fillWarning ? "Fill exceeds planned risk/reward limits" : "Fill within modeled limits"
+    if showReasons and fillWarning
+        label.new(bar_index, actualEntry, lastFillStatus + "\nFill R " + str.tostring(lastFillNetR, "0.00") + " / risk " + str.tostring(lastFillRiskPercent, "0.000") + "%", style=label.style_label_left, color=color.orange, textcolor=color.black, size=size.small)
 
 if strategy.closedtrades > observedClosed
     observedClosed := strategy.closedtrades
@@ -291,6 +310,8 @@ if barstate.isconfirmed
                     bool capGeometry = longSide ? trigger <= entryLimit and entryLimit < tradeTarget : tradeTarget < entryLimit and entryLimit <= trigger
                     bool payoffOK = risk > 0 and reward > 0 and reward + (protectEntryPrice ? syminfo.pointvalue * 0.00000001 : 0.0) >= minimumNetR * risk
                     if geometryOK and capGeometry and payoffOK and plannedQty > 0
+                        submittedATR := atr
+                        submittedEquity := math.max(strategy.equity, 0.0)
                         strategy.entry("Fib", longSide ? strategy.long : strategy.short, qty=plannedQty, stop=trigger, limit=protectEntryPrice ? entryLimit : na, comment=longSide ? "First Fib pullback L" : "First Fib pullback S")
                         strategy.exit("Fib exit", "Fib", stop=tradeStop, limit=tradeTarget, comment_profit="Impulse extreme TP", comment_loss="Pullback SL")
                         submittedOrders += 1
@@ -341,9 +362,9 @@ plotshape(showSignals and rejectionSignal, title="Rejection evaluated", style=sh
 plotshape(showSignals and submittedSignal and direction == 1, title="Buy-stop submitted (not fill)", style=shape.triangleup, location=location.belowbar, color=color.lime, size=size.small, text="ORDER")
 plotshape(showSignals and submittedSignal and direction == -1, title="Sell-stop submitted (not fill)", style=shape.triangledown, location=location.abovebar, color=color.red, size=size.small, text="ORDER")
 plotshape(showSignals and qualityRejectedSignal, title="Breakout quality rejected (not order)", style=shape.xcross, location=location.abovebar, color=color.gray, size=size.tiny, text="FILTER")
-var table panel = table.new(position.top_right, 2, 14, bgcolor=color.new(color.black, 15))
+var table panel = table.new(position.top_right, 2, 18, bgcolor=color.new(color.black, 15))
 if barstate.islast and showPanel
-    panel.cell(0, 0, "Fib Live Pullback v1", text_color=color.white)
+    panel.cell(0, 0, "Fib Live Pullback v2", text_color=color.white)
     panel.cell(1, 0, not inDates ? "Outside test dates" : reason, text_color=color.yellow)
     panel.cell(0, 1, protectEntryPrice ? "Cap net R / qty" : "Trigger net R / qty", text_color=color.white)
     panel.cell(1, 1, str.tostring(plannedNetR, "0.00") + " / " + str.tostring(plannedQty), text_color=color.white)
@@ -371,3 +392,11 @@ if barstate.islast and showPanel
     panel.cell(1, 12, (protectEntryPrice ? "Stop-limit / " : "Stop / ") + (phase == 4 ? str.tostring(entryLimit, format.mintick) : "n/a"), text_color=color.white)
     panel.cell(0, 13, "Quality mode / rejected crosses", text_color=color.white)
     panel.cell(1, 13, breakoutQuality + " / " + str.tostring(qualityRejected), text_color=color.white)
+    panel.cell(0, 14, "Last fill / adverse ticks", text_color=color.white)
+    panel.cell(1, 14, str.tostring(lastFillEntry, format.mintick) + " / " + str.tostring(lastFillGapTicks, "0.0"), text_color=color.white)
+    panel.cell(0, 15, "Last fill modeled R / minimum", text_color=color.white)
+    panel.cell(1, 15, str.tostring(lastFillNetR, "0.00") + " / " + str.tostring(minimumNetR, "0.00"), text_color=color.white)
+    panel.cell(0, 16, "Last fill modeled risk / budget", text_color=color.white)
+    panel.cell(1, 16, str.tostring(lastFillRiskPercent, "0.000") + "% / " + str.tostring(riskPercent, "0.000") + "%", text_color=color.white)
+    panel.cell(0, 17, "Last fill check (funding excluded)", text_color=color.white)
+    panel.cell(1, 17, lastFillStatus, text_color=lastFillStatus == "Fill within modeled limits" ? color.lime : color.orange)
