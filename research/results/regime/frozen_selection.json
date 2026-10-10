@@ -1,0 +1,21 @@
+{
+  "selected": null,
+  "sources_sha256": {
+    "research/competition/regime_engine.py": "2c22a8bc72be3ffb2ddf7d60773cad5efb6e404e015c7cc696e3bb9b8c18c943",
+    "research/competition/regime_study.py": "05de3d3d757d90f6e19bc7723753bbae583a256f0788ffa7a348f186ebf90f35",
+    "research/competition/regime_protocol.json": "95ab8df40f47a900d291d98d7422d7e05f5cce1400c43d3976f6072636e21d24",
+    "research/competition/engine.py": "176c6ebcdde42ad04ec17a31794de1f3139cd7825a4834fa42418ef5941c8378",
+    "research/competition/data.py": "bb678361f9e0e1782747a5db7fe070ea3ce6a3161ae54ed69787acc22b0a5810",
+    "research/competition/study.py": "5440e666d15412113306c29760271aa92ecdf5156947c6a9604ac49d49992d39",
+    "research/fibonacci_backtest.py": "3acd794fca04a233b9261baa5ae0548e22b8aec7231161fb05f65361998b275d",
+    "research/breakout_pullback_backtest.py": "95e4514071b26df1092618e01c5b8c6f401acacc8aedb840a6795dfca8f55328"
+  },
+  "development_sha256": "969d1578e3ba9cf1a2a51a9389cbb2b9501c0a9b9bc7ccccac99590c2dcf3807",
+  "historical_test": [
+    "2021-01-01",
+    "2023-01-01"
+  ],
+  "reserved_data_preexistence_audit": [],
+  "historical_status": "not accessed; no eligible candidate",
+  "pine_status": "No new Pine promotion before historical qualification"
+}
