@@ -1,7 +1,7 @@
 //@version=6
 // Native comparison artifact. Failed replacement criteria; active baseline unchanged.
 // Python reference: session_breakout_engine.py mode='retest'. Funding excluded here.
-strategy("RESEARCH NY Opening Range Retest v1", shorttitle="RESEARCH NY OR v1", overlay=true,
+strategy("RESEARCH NY OR Retest Diagnostic v1", shorttitle="NY OR Diagnostic", overlay=true,
      initial_capital=100000, pyramiding=0, calc_on_every_tick=false, calc_on_order_fills=false,
      process_orders_on_close=false, use_bar_magnifier=true,
      default_qty_type=strategy.fixed, commission_type=strategy.commission.percent,
@@ -165,11 +165,12 @@ if barstate.isconfirmed
                         submissionEquity := equity
                         submittedBar := bar_index
                         fillObserved := false
+                        string entryAudit = "First OR rejection " + (d == 1 ? "L" : "S") + " | Planned Entry " + str.tostring(close, format.mintick) + " | Stop " + str.tostring(stop, format.mintick) + " | Target " + str.tostring(target, format.mintick) + " | NetRR " + str.tostring(reward / risk, "0.0000") + " | EstRiskPct " + str.tostring(100 * risk * qty / equity, "0.0000") + " | FrozenATR " + str.tostring(rangeATR, "0.0000")
                         if d == 1
-                            strategy.entry("NY Long", strategy.long, qty=qty, comment="First OR rejection L")
+                            strategy.entry("NY Long", strategy.long, qty=qty, comment=entryAudit)
                             strategy.exit("L bracket", from_entry="NY Long", stop=stop, limit=target)
                         else
-                            strategy.entry("NY Short", strategy.short, qty=qty, comment="First OR rejection S")
+                            strategy.entry("NY Short", strategy.short, qty=qty, comment=entryAudit)
                             strategy.exit("S bracket", from_entry="NY Short", stop=stop, limit=target)
                         lastDecision := "Market order submitted for next tick"
                     else
@@ -204,10 +205,11 @@ plot(activeStop, "Frozen stop", color=color.red, style=plot.style_linebr)
 plot(activeTarget, "Frozen 3R target", color=color.lime, style=plot.style_linebr)
 plotshape(showSignals and breakoutMark, "Breakout", shape.diamond, location.abovebar, color=color.orange, size=size.tiny)
 plotshape(showSignals and rejectionMark, "Rejection", shape.circle, location.belowbar, color=color.yellow, size=size.tiny)
-var table status = table.new(position.top_right, 1, 5)
+var table status = table.new(position.top_right, 1, 6)
 if barstate.islast and showStatus
     table.cell(status, 0, 0, "RESEARCH — replacement gate failed", text_color=color.orange)
     table.cell(status, 0, 1, "BTC 15m / NY first OR retest", text_color=color.white)
     table.cell(status, 0, 2, "0.25% risk / 3R target / flat 16:00 NY", text_color=color.white)
     table.cell(status, 0, 3, lastDecision, text_color=color.white)
     table.cell(status, 0, 4, "Funding excluded; native parity unverified", text_color=color.orange)
+    table.cell(status, 0, 5, "Last observed fill: risk " + str.tostring(lastFillRisk, "#.###") + "% / net R " + str.tostring(lastFillR, "#.##"), text_color=color.white)

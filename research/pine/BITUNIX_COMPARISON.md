@@ -1,6 +1,6 @@
 # Next Bitunix comparison: structured NY opening-range retest
 
-Use `NY_OR_Retest_Research.pine` from this directory as a separate strategy. It already implements a more structured entry alternative; no new performance claim or optimized parameter was added. It does not use the v91 news library or its webhook order format. It is for native backtest comparison, not a drop-in live automation replacement.
+Use `NY_OR_Retest_Research.pine` from this directory as a separate strategy. The main script now includes planned-price, net-payoff and risk diagnostics in entry comments, plus last-fill estimates in its panel. It already implements a more structured entry alternative; no new performance claim or optimized parameter was added. It does not use the v91 news library or its webhook order format. It is for native backtest comparison, not a drop-in live automation replacement.
 
 ## Why compare this design
 

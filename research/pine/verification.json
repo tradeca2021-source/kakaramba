@@ -1,20 +1,21 @@
 {
   "file": "research/pine/NY_OR_Retest_Research.pine",
-  "sha256": "9e7acb5a8a2324d880cf540a39c2652a6c1eac83c2d0d6b2d4cf5bf850f3dd75",
+  "sha256": "d8c9bf37cee00da02059d20f7cb38b4991007b99e9e41b01848507af89ced47f",
   "parser": {
     "name": "pynescript",
     "version": "0.3.0",
     "antlr4_python3_runtime": "4.13.2",
     "click": "8.5.0",
-    "command": "pynescript parse-and-dump research/pine/NY_OR_Retest_Research.pine --output-file /tmp/ny-or-retest-ast.txt",
     "exit_code": 0,
-    "diagnostics": "none",
-    "ast_sha256": "07b57268bb04fba2fcde6db9103b7238a56cd9159bd5baa58d7ca06cb662a946"
+    "ast_sha256": "8c8ed2f1eed5a21e902a930ea33e731f4ae97014874c6de37cdf45d104b571a7",
+    "command": "pynescript parse-and-dump research/pine/NY_OR_Retest_Diagnostic.pine --output-file /tmp/ny-or-diagnostic-ast.txt",
+    "validation_basis": "Main script is byte-identical to the successfully parsed diagnostic script."
   },
   "native_tradingview_compilation": false,
   "native_execution_parity": false,
   "prospective_validation": false,
   "replacement_criteria_passed": false,
   "status": "Separate research artifact for native comparison; active baseline unchanged",
-  "funding_in_pine": false
+  "funding_in_pine": false,
+  "trading_rules_preserved_by_exact_normalized_source_comparison": true
 }

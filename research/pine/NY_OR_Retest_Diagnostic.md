@@ -1,6 +1,6 @@
 # NY retest diagnostic variant
 
-Use `NY_OR_Retest_Diagnostic.pine` instead of `NY_OR_Retest_Research.pine` for the next native export. Standard BITUNIX:BTCUSDT.P 15-minute candles, 0.07% commission per side, two-tick slippage and the original comparison dates are required. See BITUNIX_COMPARISON.md for the full protocol.
+The main `NY_OR_Retest_Research.pine` now includes these diagnostics. `NY_OR_Retest_Diagnostic.pine` is an identical compatibility copy; use either for the next native export. Standard BITUNIX:BTCUSDT.P 15-minute candles, 0.07% commission per side, two-tick slippage and the original comparison dates are required. See BITUNIX_COMPARISON.md for the full protocol.
 
 This variant only adds entry-comment and panel diagnostics. A normalized exact-source comparison confirms all eligibility rules, quantities, order prices, entry timing and exits remain the same as the reference. The strategy is still experimental; the original replacement criteria failed.
 
