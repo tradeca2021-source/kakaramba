@@ -3,22 +3,109 @@
   "declared_before_new_data_inspection": true,
   "data": "Binance BTCUSDT USD-M futures; checksum-verified 15m and 5m OHLC plus actual funding events",
   "development": "2023-01-01 through 2025-06-30",
-  "evaluation_folds": [["2024-01-01", "2024-07-01"], ["2024-07-01", "2025-01-01"], ["2025-01-01", "2025-07-01"]],
-  "holdout": ["2025-07-01", "2026-01-01"],
+  "evaluation_folds": [
+    [
+      "2024-01-01",
+      "2024-07-01"
+    ],
+    [
+      "2024-07-01",
+      "2025-01-01"
+    ],
+    [
+      "2025-01-01",
+      "2025-07-01"
+    ]
+  ],
+  "holdout": [
+    "2025-07-01",
+    "2026-01-01"
+  ],
   "holdout_policy": "Download and evaluate only after freezing the candidate chosen on development; no retuning on holdout",
   "known_2026_data": "Previously inspected; excluded from selection and fresh-validation claims",
-  "common": {"fee_percent_per_side": 0.07, "slippage_ticks": 2, "tick": 0.1, "risk_percent": 0.25, "maximum_quantity": 1, "exposure_percent": 95, "minimum_net_r": 1.5, "htf_seconds": 14400, "htf_ema": 50, "impulse_atr": 2, "setup_life": 60, "trigger_life": 3, "confirmation": "touch candle or immediately following directional reclaim", "funding": "actual signed event cashflows; extra 0.01% per-side commission is a spread/execution reserve, not an observed spread"},
+  "common": {
+    "fee_percent_per_side": 0.07,
+    "slippage_ticks": 2,
+    "tick": 0.1,
+    "risk_percent": 0.25,
+    "maximum_quantity": 1,
+    "exposure_percent": 95,
+    "minimum_net_r": 1.5,
+    "htf_seconds": 14400,
+    "htf_ema": 50,
+    "impulse_atr": 2,
+    "setup_life": 60,
+    "trigger_life": 3,
+    "confirmation": "touch candle or immediately following directional reclaim",
+    "funding": "actual signed event cashflows; extra 0.01% per-side commission is a spread/execution reserve, not an observed spread"
+  },
   "candidates": [
-    {"name": "baseline_v3", "pivot": 5, "retracement": 0.5, "entry": "stop", "extension": 1.0},
-    {"name": "faster_confirmation", "pivot": 3, "retracement": 0.5, "entry": "stop", "extension": 1.0},
-    {"name": "shallower_pullback", "pivot": 5, "retracement": 0.382, "entry": "stop", "extension": 1.0},
-    {"name": "reclaim_market", "pivot": 5, "retracement": 0.5, "entry": "market", "extension": 1.0},
-    {"name": "extension_target", "pivot": 5, "retracement": 0.5, "entry": "stop", "extension": 1.272},
-    {"name": "faster_market", "pivot": 3, "retracement": 0.5, "entry": "market", "extension": 1.0},
-    {"name": "shallower_market", "pivot": 5, "retracement": 0.382, "entry": "market", "extension": 1.0},
-    {"name": "faster_market_extension", "pivot": 3, "retracement": 0.5, "entry": "market", "extension": 1.272}
+    {
+      "name": "baseline_v3",
+      "pivot": 5,
+      "retracement": 0.5,
+      "entry": "stop",
+      "extension": 1.0
+    },
+    {
+      "name": "faster_confirmation",
+      "pivot": 3,
+      "retracement": 0.5,
+      "entry": "stop",
+      "extension": 1.0
+    },
+    {
+      "name": "shallower_pullback",
+      "pivot": 5,
+      "retracement": 0.382,
+      "entry": "stop",
+      "extension": 1.0
+    },
+    {
+      "name": "reclaim_market",
+      "pivot": 5,
+      "retracement": 0.5,
+      "entry": "market",
+      "extension": 1.0
+    },
+    {
+      "name": "extension_target",
+      "pivot": 5,
+      "retracement": 0.5,
+      "entry": "stop",
+      "extension": 1.272
+    },
+    {
+      "name": "faster_market",
+      "pivot": 3,
+      "retracement": 0.5,
+      "entry": "market",
+      "extension": 1.0
+    },
+    {
+      "name": "shallower_market",
+      "pivot": 5,
+      "retracement": 0.382,
+      "entry": "market",
+      "extension": 1.0
+    },
+    {
+      "name": "faster_market_extension",
+      "pivot": 3,
+      "retracement": 0.5,
+      "entry": "market",
+      "extension": 1.272
+    }
   ],
-  "selection": {"minimum_evaluation_trades": 30, "aggregate_profit_factor": 1.1, "profitable_folds_minimum": 2, "maximum_fold_closing_drawdown_percent": 5, "net_without_best_trade": "positive", "ranking": "aggregate net divided by sum of fold closing-equity maximum drawdowns, floored at 1"},
+  "selection": {
+    "minimum_evaluation_trades": 30,
+    "aggregate_profit_factor": 1.1,
+    "profitable_folds_minimum": 2,
+    "maximum_fold_closing_drawdown_percent": 5,
+    "net_without_best_trade": "positive",
+    "ranking": "aggregate net divided by sum of fold closing-equity maximum drawdowns, floored at 1"
+  },
   "promotion": "Only if selected candidate has at least 10 holdout trades, positive net, profit factor at least 1.1, closing drawdown below 5%, and positive net excluding its largest winner. Otherwise ship findings and retain experimental status.",
-  "execution": "Resting orders processed on 5m subbars; next-open market entries; stops gap and slip; no favorable limit gap improvement; stop-first if both bracket levels touch a 5m subbar; entry subbar extremes checked conservatively. No intrabar lookahead. Funding applied only to positions open at the event."
+  "execution": "Resting orders processed on 5m subbars; next-open market entries; stops gap and slip; no favorable limit gap improvement; stop-first if both bracket levels touch a 5m subbar; entry subbar extremes checked conservatively. No intrabar lookahead. Funding applied only to positions open at the event.",
+  "data_quality_amendment_before_results": "Canonical 15m signal candles are aggregated from verified 5m execution candles. Three discrepancies in development were independently checked against 1m archives, which agreed with 5m. Publish all discrepancies; do not silently blend resolutions."
 }
