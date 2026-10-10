@@ -1,0 +1,101 @@
+{
+  "version": 1,
+  "status": "Exploratory: all evaluation years were previously inspected; no fresh validation or parameter optimization",
+  "budget": "Three diagnostic holding horizons on the existing 4h breakout; one independent daily trend strategy. Publish every result, no retuning or fallback presets in this experiment.",
+  "hypothesis": "Daily channels and wider protective stops may reduce intraday whipsaw and let trend profits cover transaction costs. Fibonacci is not assumed to add value.",
+  "event_study": {
+    "signal": "Completed 4h close beyond the preceding 20-bar high/low",
+    "entry": "Next five-minute open, directional slippage",
+    "horizons_seconds": [
+      14400,
+      86400,
+      604800
+    ],
+    "exit": "Open at entry time plus horizon, directional slippage; no stops in diagnostic labels",
+    "unit": "Net price PnL including actual funding, divided by 2 signal ATR plus roundtrip costs and 0.25 ATR gap reserve",
+    "controls": "Nonbreakout closes, same calendar quarter and quintile of trailing ATR/price; measure each control in the event direction",
+    "uncertainty": "28-day calendar block bootstrap of paired event excess, 2000 draws, seed 20261010",
+    "overlap": "Drop labels crossing evaluation boundaries; overlapping events are dependent and never counted as portfolio trades",
+    "selection": "Diagnostic only: does not select or retune the daily strategy"
+  },
+  "strategy": {
+    "name": "macro_daily_55_20",
+    "chart_seconds": 14400,
+    "signal_seconds": 86400,
+    "entry_channel": 55,
+    "exit_channel": 20,
+    "atr_length": 14,
+    "stop_atr": 3.0,
+    "entry": "Market next 5m open after completed UTC daily close beyond the prior 55-day channel, while flat",
+    "exit": "Initial 3 daily ATR stop, tightened only at subsequent daily closes toward the completed 20-day opposite channel one tick outside",
+    "target": "None; keep favorable trends open",
+    "directions": "Long and short",
+    "pyramiding": false,
+    "signals_while_busy": "Discard, no queued reversal",
+    "risk_percent": 0.25,
+    "maximum_notional_percent": 95,
+    "maximum_quantity": 1,
+    "quantity_step": 0.001,
+    "gap_allowance_atr": 0.25
+  },
+  "execution": {
+    "initial_equity": 100000,
+    "tick": 0.1,
+    "fee_per_side": 0.0007,
+    "slippage_ticks": 2,
+    "funding": "Actual Binance rates on carried quantity, with 5m opening traded price as mark proxy",
+    "entry_candle": "Protective stop active immediately; gap stop at adverse opening price",
+    "capital": "Independent continuous account for each multi-year comparison, no within-period resets"
+  },
+  "periods": [
+    {
+      "name": "older",
+      "archives": [
+        "2020-01",
+        "2022-12"
+      ],
+      "evaluation": [
+        "2021-01-01",
+        "2023-01-01"
+      ],
+      "baseline_net": -737.2561102442269,
+      "minimum_positive_half_years": 3
+    },
+    {
+      "name": "recent",
+      "archives": [
+        "2023-01",
+        "2026-09"
+      ],
+      "evaluation": [
+        "2024-01-01",
+        "2026-10-01"
+      ],
+      "baseline_net": 3955.553286673603,
+      "minimum_positive_half_years": 4
+    }
+  ],
+  "gates": {
+    "minimum_positions_each_period": 10,
+    "minimum_positions_total": 30,
+    "positive_net_each_period": true,
+    "net_exceeds_unchanged_baseline_each_period": true,
+    "profit_factor_each_period": 1.2,
+    "net_without_best_positive_each_period": true,
+    "maximum_5m_close_drawdown_fraction": 0.05,
+    "higher_fee_and_slippage_net_positive_each_period": true
+  },
+  "stresses": [
+    {
+      "name": "fee_0.10_percent",
+      "fee": 0.001,
+      "slippage_ticks": 2
+    },
+    {
+      "name": "slippage_20_ticks",
+      "fee": 0.0007,
+      "slippage_ticks": 20
+    }
+  ],
+  "publication": "Only a candidate passing these exploratory comparisons proceeds to a Pine prototype; it remains unverified prospectively and natively. Failed results are published without relaxing gates. No Bitunix sample is used because the sampled execution pages were inconsistent."
+}
