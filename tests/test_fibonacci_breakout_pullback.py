@@ -45,6 +45,16 @@ class EntryBoundaries(unittest.TestCase):
             self.assertFalse(predicate('geometryOK',longSide=longSide,tradeStop=100,trigger=100,tradeTarget=110 if longSide else 90))
             self.assertFalse(predicate('geometryOK',longSide=longSide,tradeStop=90 if longSide else 110,trigger=100,tradeTarget=100))
 
+    def test_pending_entry_cancels_beyond_deep_boundary(self):
+        for direction in (1, -1):
+            self.assertFalse(predicate('pendingTooDeep',direction=direction,close=100,deep=100))
+            self.assertTrue(predicate('pendingTooDeep',direction=direction,close=99 if direction == 1 else 101,deep=100))
+        # Evaluate the actual cancellation gate with every other condition false.
+        condition=re.search(r'if (bar_index - rejectionBar >= triggerBars or stopBroken[^\n]+)',SOURCE).group(1)
+        base=dict(bar_index=10,rejectionBar=9,triggerBars=3,stopBroken=False,targetReached=False,newExtreme=False)
+        self.assertFalse(eval(condition,{'__builtins__':{}},base|{'pendingTooDeep':False}))
+        self.assertTrue(eval(condition,{'__builtins__':{}},base|{'pendingTooDeep':True}))
+
     def test_closed_htf_and_delayed_endpoint_contract(self):
         self.assertIn('[close[1], ta.ema(close, trendLength)[1], ta.ema(close, trendLength)[2]]',SOURCE)
         self.assertIn('bar_index - pivotBars >= breakoutBar',SOURCE)
