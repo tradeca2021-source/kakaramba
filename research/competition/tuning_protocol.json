@@ -1,0 +1,9 @@
+{
+ "status":"Exploratory tuning; all periods previously inspected, not fresh validation",
+ "base":"Live endpoint 50%, confirmed pivots 5, prior closed 4h EMA50, minimum net R1.5; unchanged 0.25% risk and costs",
+ "candidates":[{}, {"pivot":3}, {"pivot":7}, {"trend_length":34}, {"trend_length":100}, {"minimum_net_r":1.25}, {"minimum_net_r":2.0}, {"breakout_filter":"fresh_origin"}, {"breakout_filter":"displacement"}],
+ "policy":"One setting changed per candidate; no combinations or subsequent grid. Select using 2024 H1/H2 only: >=15 trades, net positive, PF>=1.1, net excluding best trade positive; rank net divided by sum of 5m closing drawdowns. Freeze selection before evaluating 2025 and 2026. Confirmation requires >=10 trades, positive net, PF>=1.1 and positive net excluding best in each calendar year. If failed retain experimental label and original defaults. No leverage, larger risk or farther target to manufacture improvement.",
+ "cost_sensitivity":"Evaluate frozen choice and baseline using 0.10% fees per side and separately 20 tick slippage after confirmation. No reselection.",
+ "data":"Existing checksum verified Binance BTCUSDT USD-M 5m archives, canonical aggregated 15m signals and actual funding rates. Three previously published official 15m discrepancies remain disclosed.",
+ "artifacts":"Report every development candidate and frozen selection, both confirmation years and all period summaries; separate experimental tuned Pine with selected settings, preserve current version. Native TradingView compilation unavailable."
+}
