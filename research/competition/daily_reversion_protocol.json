@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "status": "Independent exploratory design after the daily channel and breakout-horizon diagnostics failed. All years reused; no unused-period claim.",
+  "budget": "One fixed design, no RSI, trend, stop or exit parameter search",
+  "hypothesis": "Brief contrarian entries aligned with the broad trend may exploit pullback recovery without paying months of funding or chasing weak breakout labels",
+  "strategy": {
+    "name": "daily_rsi2_reversion",
+    "signal_seconds": 86400,
+    "chart_seconds": 14400,
+    "trend": "Daily close above EMA200 for long; below EMA200 for short",
+    "rsi_length": 2,
+    "long_entry": "Completed daily RSI2 below 10, close above EMA200, flat",
+    "short_entry": "Completed daily RSI2 above 90, close below EMA200, flat",
+    "execution": "Market at next 5m open after signal close; no same-close fill",
+    "stop": "Fixed 2 daily ATR14 from signal close, rounded outward, active on entry subbar",
+    "long_exit": "Completed daily RSI2 above 70; next open",
+    "short_exit": "Completed daily RSI2 below 30; next open",
+    "timeout": "Exit at next open when ten full UTC days from entry have elapsed",
+    "busy_signals": "Discard; no same-signal reverse, stacking or pyramiding",
+    "fibonacci": "Absent; no assumed benefit without a controlled comparison"
+  },
+  "execution": {
+    "initial_equity": 100000,
+    "risk_percent": 0.25,
+    "exposure_percent": 95,
+    "maximum_quantity": 1,
+    "quantity_step": 0.001,
+    "minimum_quantity": 0.001,
+    "tick": 0.1,
+    "fee_per_side": 0.0007,
+    "slippage_ticks": 2,
+    "gap_allowance_atr": 0.25,
+    "funding": "Actual Binance settlements on carried quantity, using five-minute opening traded price as mark proxy",
+    "stop_gap": "Adverse open plus directional slippage",
+    "entry_gap": "Submission sizes freeze; actual-fill risk warnings are recorded, never described as guaranteed loss caps"
+  },
+  "periods": [
+    {"name": "older", "archives": ["2020-01", "2022-12"], "evaluation": ["2021-01-01", "2023-01-01"], "baseline_net": -737.2561102442269, "minimum_positive_half_years": 3},
+    {"name": "recent", "archives": ["2023-01", "2026-09"], "evaluation": ["2024-01-01", "2026-10-01"], "baseline_net": 3955.553286673603, "minimum_positive_half_years": 4}
+  ],
+  "gates": {
+    "minimum_positions_each_period": 20,
+    "minimum_positions_total": 70,
+    "positive_net_each_period": true,
+    "net_exceeds_unchanged_baseline_each_period": true,
+    "profit_factor_each_period": 1.2,
+    "net_without_best_positive_each_period": true,
+    "maximum_5m_close_drawdown_fraction": 0.05,
+    "higher_fee_and_slippage_net_positive_each_period": true
+  },
+  "stresses": [
+    {"name": "fee_0.10_percent", "fee": 0.001, "slippage_ticks": 2},
+    {"name": "slippage_20_ticks", "fee": 0.0007, "slippage_ticks": 20}
+  ],
+  "publication": "Every outcome is published. A candidate meeting the declared exploratory gates can proceed to a visibly experimental Pine implementation; native and prospective verification remain outstanding. No gate relaxation after outcomes."
+}
