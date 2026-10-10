@@ -1,0 +1,9 @@
+{
+ "purpose": "Research-only follow-up after primary holdout failure; no promotion claim",
+ "rules": "Preserve confirmed BOS, closed 4h trend, first 50-61.8 pullback, two-candle rejection, origin invalidation, fixed buffered pullback stop and impulse-extreme target",
+ "candidates": ["v3 stop entry control", "limit at 50% after rejection", "cost-bounded limit at or deeper than 50%, only inside 50-61.8 zone"],
+ "cost_bound": "Solve net reward >= 1.5 * stopped unit risk for entry price, including fee 0.07% per side, 2 ticks modeled slippage per side and 0.25 ATR gap allowance. Round conservatively; never widen stop or extend target to force eligibility.",
+ "periods": ["2024 H1", "2024 H2", "2025 H1", "2025 H2 (already used holdout)", "2026 Q1", "2026 Q2", "2026 Q3 (previously inspected)"],
+ "execution": "Limit orders eligible only after rejection closes. At a favorable opening gap use the limit price conservatively; otherwise fill at limit touch, no entry slippage. Replay on verified 5m subbars. Stop-first ambiguous subbars; cancel unfilled orders at bar close under original invalidation/3-bar expiry. Apply actual funding cashflows. No parameter tuning.",
+ "decision": "Any favorable results are exploratory; retain experimental status and do not claim independent validation or overwrite the primary failed holdout. Require a new future unused period before promoting the limit-entry hypothesis."
+}
