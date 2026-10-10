@@ -1,0 +1,10 @@
+{
+ "status":"Distinct multi-timeframe setup architecture; known data, not unused validation",
+ "hypothesis":"4h structural swings define a meaningful Fibonacci objective, while15m rejection execution keeps local stopped risk smaller. Prior tests on30m/60m single charts did not test this separation.",
+ "candidates":["15m setup/15m entry baseline","4h setup pivots2 /15m entry","4h setup pivots3 /15m entry","4h setup pivots5 /15m entry"],
+ "structure":"Aggregate canonical15m candles to complete UTC4h candles. On completed4h close, detect first close cross of previously confirmed structural pivot in direction of its current EMA50 slope/price trend, before updating newly confirmed pivots. Opposite confirmed4h pivot anchors origin. Deliver break and closed4h extreme only to15m bars starting at or after4h completion.",
+ "pullback":"Track subsequent completed15m extremes from known4h extreme; freeze prior endpoint on first50% touch, skip candles that both extend and touch. Minimum impulse is2 times ATR14 frozen at4h breakout. First50-61.8 touch rejects directionally on touch or immediately next15m candle. Setup expires192 entry bars(48h); prior4h EMA trend and origin must hold.",
+ "execution":"One-tick stop beyond15m rejection wick; fixed stop beyond15m two-candle pullback extreme+0.15 local15mATR. Target frozen impulse endpoint. Original1.5 modelednetR,0.25%risk,95%cap,max1BTC,0.07%cost/side,2tick slip,0.25localATR sizinggap,actual funding,5m stop-first fills. Three15m-bar pending expiry.",
+ "periods":"Same seven independent known accounts2024H1/H2,2025H1/H2,2026Q1/Q2/Q3; all previously inspected",
+ "decision":"No grid beyond declared pivot choices and no retuning. Report every mode. Separate exploratory Pine if net>baseline, >=4 positive periods,net excluding best>0 and worst period5m closing drawdown<5% initialaccount. Rank qualifying candidates net divided by sum of period5m closing drawdowns. Freeze selected before fee0.10% and20tick cost sensitivity. Keep existing baseline; no independent profitability claim."
+}
