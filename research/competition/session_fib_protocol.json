@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "status": "Explicit post-hoc follow-up to the positive-but-ineligible NY retest result; all periods reused, no independent validation",
+  "hypothesis": "A protective stop beyond the actual rejection and a predetermined opening-range Fibonacci projection may improve net payoff without waiting for a full-range three-R move",
+  "budget": "Exactly two confirmation routes, fixed1.618 projection and0.25ATR rejection buffer. No projection, session, stop, trend or payoff tuning.",
+  "source_clock_and_range": "Identical session_breakout_protocol.json: NY weekdays09:30-10:00 range, width1-4 frozen ATR14, previous completed4h EMA50 trend, first aligned closing breakout10:00-13:00, flat16:00, IANA DST",
+  "target": "Range high plus1.618 opening-range widths for long; range low minus1.618 widths for short. Freeze when range completes; round toward entry. No target that depends on a future swing.",
+  "target_visit": "Consume setup if the breakout candle or any later armed candle already touched the fixed projected target, including the confirmation candle; no stale target entry",
+  "stop": "Beyond the first-touch candle extreme by0.25 frozen opening-range ATR; include the next candle extreme when it supplies confirmation; round outward. No stop adjustment after submission.",
+  "candidates": [
+    {"name": "ny_fib_same_candle", "mode": "same_candle", "entry": "Same first boundary touch/rejection as original retest, using the new fixed projection and rejection stop"},
+    {"name": "ny_fib_two_candle", "mode": "two_candle", "entry": "Use first-touch rejection when valid; otherwise allow exactly the immediately following closed15m candle to reclaim the broken boundary in a directional body. Both routes require close outside boundary and within half a range width, current trend agreement and original range-stop intact."}
+  ],
+  "one_setup": "First trend-aligned closing breakout consumes the date. Retest must first touch within4 later15m bars; a fifth bar can only confirm a touch on the fourth. Pending confirmation expires after its immediately next candle or at entry-window end. Payoff skip, stop breach, target visit or trend loss consumes the setup.",
+  "execution": "Unchanged0.25% equity modeled risk,95% notional cap,max1BTC,.001BTC step,.07% fee eachside,2tick directional slippage,.25ATR gap sizing reserve,1.5 minimum modeled net reward/risk,5m stop-first replay including entry subbar, actual carried-position funding. Market next open, no same-close fill or pyramiding.",
+  "periods": [
+    {"name": "older", "archives": ["2020-01", "2022-12"], "evaluation": ["2021-01-01", "2023-01-01"], "baseline_net": -737.2561102442269, "minimum_positive_half_years": 3},
+    {"name": "recent", "archives": ["2023-01", "2026-09"], "evaluation": ["2024-01-01", "2026-10-01"], "baseline_net": 3955.553286673603, "minimum_positive_half_years": 4}
+  ],
+  "gates": {
+    "minimum_positions_each_period": 20,
+    "minimum_positions_total": 70,
+    "positive_net_each_period": true,
+    "net_exceeds_unchanged_baseline_each_period": true,
+    "profit_factor_each_period": 1.2,
+    "net_without_best_positive_each_period": true,
+    "maximum_5m_close_drawdown_fraction": 0.05,
+    "higher_fee_and_slippage_net_positive_each_period": true
+  },
+  "stresses": [
+    {"name": "fee_0.10_percent", "fee": 0.001, "slippage_ticks": 2},
+    {"name": "slippage_20_ticks", "fee": 0.0007, "slippage_ticks": 20}
+  ],
+  "selection": "Among candidates passing all criteria, largest minimum across the two accounts of net divided by5m-close drawdown",
+  "publication": "Record all outcomes and post-hoc selection. Passing earns only an experimental Pine prototype; native, venue-exact and prospective verification remain outstanding. No promotion or weaker criteria when candidates fail."
+}
