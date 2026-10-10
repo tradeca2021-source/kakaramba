@@ -1,0 +1,9 @@
+{
+ "status":"Known-period exploratory follow-up; not unused validation",
+ "candidates":["live stop-entry control, fixed stop","cost-covering stop after 15m close reaches 1.0 initial modeled R","cost-covering stop after 15m close reaches 1.5 initial modeled R"],
+ "activation":"Use actual filled entry and risk frozen at order submission. Trigger only on a completed signal candle's close, not its high/low. Update stop only for subsequent execution subbars. Never loosen stop. Preserve fixed swing target.",
+ "stop":"Solve zero price PnL after actual entry and assumed 0.07% entry/exit fees plus adverse exit slippage. Funding is excluded so this is cost-covering, not guaranteed breakeven. Long round upward, short downward. No stop advance on bars after full exit.",
+ "unchanged":"Same 15m live first midpoint pullback, pivot5, prior closed 4h EMA50, two-candle rejection stop entry, 1.5 net R gate, 0.25% risk, 95% notional, max1BTC, actual funding and 5m stop-first fills",
+ "periods":"Same seven independent accounts 2024 H1/H2,2025 H1/H2,2026 Q1/Q2/Q3",
+ "decision":"No parameter grid or subsequent retuning. Optional Pine only if aggregate net improves, >=4 positive periods, net excluding largest winner positive and worst period drawdown <=2x control. Preserve fixed-stop default until fresh validation. Evaluate qualifying mode with fee0.10% and slippage20tick sensitivity; publish all outcomes."
+}
