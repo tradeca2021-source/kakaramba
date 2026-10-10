@@ -1,0 +1,30 @@
+{
+  "protocol_sha256": "880dc40a7347d44090b3c1e16414fc583d45db7ea33a92898778a16514b00eba",
+  "development_sha256": "c56cdbe49a3294297f244cb700ea177860ef60694c58e0eea1c556ac60d61d1d",
+  "selected": {
+    "name": "pivot_3",
+    "pivot": 3,
+    "retracement": 0.5,
+    "entry": "stop",
+    "extension": 1.0,
+    "breakout_filter": "none",
+    "target_net_r": 0.0,
+    "split_exit": false,
+    "live_endpoint": true,
+    "trend_length": 50,
+    "minimum_net_r": 1.5
+  },
+  "baseline": {
+    "name": "baseline",
+    "pivot": 5,
+    "retracement": 0.5,
+    "entry": "stop",
+    "extension": 1.0,
+    "breakout_filter": "none",
+    "target_net_r": 0.0,
+    "split_exit": false,
+    "live_endpoint": true,
+    "trend_length": 50,
+    "minimum_net_r": 1.5
+  }
+}
