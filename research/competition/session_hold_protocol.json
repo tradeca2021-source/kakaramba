@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "status": "Post-hoc lifecycle follow-up: original NY boundary retest was positive in both accounts; tighter-stop Fibonacci variants worsened recent results. All years reused.",
+  "budget": "One fixed design; no holding-time or target sweep",
+  "hypothesis": "Allowing the existing3R bracket up to24hours may retain continuation profits that the cash-close liquidation cuts short, while avoiding months of funding",
+  "strategy": {
+    "name": "ny_or_retest_24h",
+    "entry_and_bracket": "Exactly the original NY first-retest route, whole-opening-range stop with0.25 frozen ATR buffer, fixed3R target from signal close,1.5 modeled net reward floor",
+    "clock": "Identical New York09:30-10:00 weekday range,10:00-13:00 entry bars, IANA DST and previous completed4h EMA50 trend",
+    "maximum_holding": "At first15m close at or beyond24 elapsed hours after actual entry, submit market exit at next open. No16:00 liquidation. Friday positions may carry into Saturday.",
+    "busy_behavior": "Discard signals while in a position. No queued reversal. After flat, a later crossing in that day's entry window may arm its first eligible setup. One setup per NY date while eligible."
+  },
+  "execution": "Unchanged0.25% modeled account risk,95% notional cap,max1BTC,.001 step,.07% fee eachside,2ticks slip,.25ATR gap sizing allowance,5m stop-first bracket paths and actual carried-position funding",
+  "periods": [
+    {"name": "older", "archives": ["2020-01", "2022-12"], "evaluation": ["2021-01-01", "2023-01-01"], "baseline_net": -737.2561102442269, "minimum_positive_half_years": 3},
+    {"name": "recent", "archives": ["2023-01", "2026-09"], "evaluation": ["2024-01-01", "2026-10-01"], "baseline_net": 3955.553286673603, "minimum_positive_half_years": 4}
+  ],
+  "gates": {
+    "minimum_positions_each_period": 20,
+    "minimum_positions_total": 70,
+    "positive_net_each_period": true,
+    "net_exceeds_unchanged_baseline_each_period": true,
+    "profit_factor_each_period": 1.2,
+    "net_without_best_positive_each_period": true,
+    "maximum_5m_close_drawdown_fraction": 0.05,
+    "higher_fee_and_slippage_net_positive_each_period": true
+  },
+  "stresses": [
+    {"name": "fee_0.10_percent", "fee": 0.001, "slippage_ticks": 2},
+    {"name": "slippage_20_ticks", "fee": 0.0007, "slippage_ticks": 20}
+  ],
+  "publication": "Retain all failures, unchanged gates. Passing qualifies only for an experimental prototype; reused data and native/venue/prospective limitations remain. No optimized fallback timeout."
+}
