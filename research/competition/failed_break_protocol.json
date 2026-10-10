@@ -1,0 +1,10 @@
+{
+ "status":"Separate exploratory reversal design on known periods; not independent validation",
+ "hypothesis":"A structural break that reclaims its broken level and half of the impulse with opposite local momentum can signal reversal rather than trend continuation.",
+ "candidates":["existing live continuation control","failed-break reversal to61.8% impulse recovery","failed-break reversal to78.6% impulse recovery","failed-break reversal to100% origin recovery"],
+ "setup":"Same closed confirmedBOS in4h trend and causal running endpoint, minimum2ATR, first50% retracement. At touch or next candle, require opposite directional body, close across midpoint AND reclaim of broken structural level, plus completed5m price/EMA21/slope agreement in reversal direction. Failed break in an uptrend trades short; failed break in downtrend trades long.",
+ "entry":"Stop one tick beyond reversal candle extreme in reversal direction. Stop beyond same reversal candle opposite extreme plus0.15ATR. Target frozen recovery fraction from original endpoint toward original origin. Stop/target must pass original1.5 cost-adjustednetR gate. No same-bar fills. Pending entries cancel after3bars, stop/target touch, a worse reversal-candle extreme, lost midpoint reclaim, source origin break or original4h trend invalidation. No averaging or extended target beyond origin.",
+ "risk":"0.25% equity risk,95% notional,max1BTC,0.07% per-sidecost,2tick slip,0.25ATR sizinggap,actual funding,5m stop-first replay",
+ "periods":"Same seven already inspected independent accounts2024H1/H2,2025H1/H2,2026Q1/Q2/Q3; no parameter grid or retuning",
+ "decision":"Report every mode. Experimental Pine candidate only if net>continuation control, >=4 positive periods, positive net excluding best trade and worst period5m closing drawdown<=2xcontrol. Check qualifiers with fee0.10% and20tick slip. Separate script preserves current baseline and must remain labeled exploratory; no unused-validation claim."
+}
