@@ -1,0 +1,8 @@
+{
+ "status":"Post-hoc exploratory combination informed by observed standalone macro results; not independent validation",
+ "candidates":["15m baseline","shared setup pipeline: micro break priority, macro2 fallback","shared setup pipeline: macro2 break priority, micro fallback"],
+ "architecture":"One active setup, one pending order and one position across a single account. While idle, inspect15m and completed4h break events. If both occur, priority chooses one. While a setup/order/position is active, later source signals are ignored, not queued and not backdated. Macro episodes retain4h origin/initialextreme/breakATR and192bar expiry; micro episodes retain15m anchors/ATR and60bar expiry. Same first midpoint rejection, local15m stop and frozen endpoint target.",
+ "risk":"One shared equity account;0.25% risk per accepted order,95% notional,max1BTC. No leverage,no simultaneous sleeves or summed independent trades. Costs0.07%per side,2tick slip,actual funding and5m stop-first execution.",
+ "periods":"Same seven known independent-account folds2024H1/H2,2025H1/H2,2026Q1/Q2/Q3",
+ "decision":"No priority or parameter retuning beyond declared two modes. Publish every mode and setup-scale attribution. Qualifying exploratory candidate: aggregate net>baseline,>=4 positive folds,net without largest winner>0 and worstfold5m closing drawdown<5%initialequity. Rank eligible net/sumfold5mdrawdown; freeze before fee0.10% and20tick stress. If no qualifier, do not ship new trading defaults or claim improved profitability. Existing baseline retained; unused future validation needed."
+}
