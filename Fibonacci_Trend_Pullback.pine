@@ -1,0 +1,251 @@
+//@version=6
+// Independent Fibonacci trend-pullback strategy. Unoptimized starting settings.
+// Confirmed alternating pivots -> immutable impulse -> 50% rejection -> next-tick entry.
+// Structure stop beyond origin; fixed 127.2% extension objective; no trailing exit.
+// No external libraries. Fees/slippage inputs MUST match Strategy Properties.
+// Local formula checks are not native Pine compilation or a market backtest.
+strategy("Fibonacci Trend Pullback v1", shorttitle="Fib Pullback v1", overlay=true,
+     initial_capital=100000, pyramiding=1, calc_on_every_tick=false,
+     process_orders_on_close=false, use_bar_magnifier=true,
+     default_qty_type=strategy.fixed, default_qty_value=1,
+     commission_type=strategy.commission.percent, commission_value=0.06,
+     slippage=2, margin_long=100, margin_short=100, max_labels_count=100)
+
+G_SWING = "Confirmed swings"
+pivotBars = input.int(5, "Pivot left/right bars", minval=2, maxval=30, group=G_SWING)
+minImpulseATR = input.float(2.0, "Minimum impulse / ATR", minval=0.5, step=0.25, group=G_SWING)
+minLegBars = input.int(5, "Minimum bars between pivots", minval=1, group=G_SWING)
+setupBars = input.int(30, "Setup life after confirmation (bars)", minval=1, group=G_SWING)
+atrLength = input.int(14, "ATR length", minval=2, group=G_SWING)
+G_TREND = "Trend and entry"
+useTrend = input.bool(true, "Require EMA trend alignment", group=G_TREND)
+fastLength = input.int(50, "Fast EMA", minval=2, group=G_TREND)
+slowLength = input.int(200, "Slow EMA", minval=3, group=G_TREND)
+allowLong = input.bool(true, "Long entries", group=G_TREND)
+allowShort = input.bool(true, "Short entries", group=G_TREND)
+G_EXIT = "Structure exit"
+stopBufferATR = input.float(0.15, "Stop buffer beyond swing origin (ATR)", minval=0, step=0.05, group=G_EXIT)
+targetExtension = input.float(1.272, "Target extension from origin", minval=1.0, maxval=3.0, step=0.001, group=G_EXIT)
+minimumNetR = input.float(1.0, "Minimum estimated net reward / stopped risk", minval=0.1, step=0.1, group=G_EXIT)
+G_RISK = "Costs and account risk"
+riskPercent = input.float(0.25, "Equity risk per entry (%)", minval=0.01, maxval=2, step=0.01, group=G_RISK)
+exposurePercent = input.float(95, "Maximum notional / equity (%)", minval=1, maxval=100, group=G_RISK)
+quantityStep = input.float(0.001, "Quantity step (BTC defaults)", minval=0.000001, group=G_RISK)
+minimumQuantity = input.float(0.001, "Minimum quantity", minval=0.000001, group=G_RISK)
+maximumQuantity = input.float(1.0, "Maximum quantity", minval=0.000001, group=G_RISK)
+feePercent = input.float(0.06, "Modeled fee per side (%)", minval=0, maxval=5, step=0.01, group=G_RISK)
+slippageTicks = input.int(2, "Modeled slippage per side (ticks)", minval=0, group=G_RISK)
+gapAllowanceATR = input.float(0.25, "Stop-gap sizing allowance (ATR)", minval=0, step=0.05, group=G_RISK)
+dailyLossPercent = input.float(1.0, "Daily equity loss cutoff (%)", minval=0.1, maxval=10, step=0.1, group=G_RISK)
+G_DATES = "Entry dates"
+useDates = input.bool(false, "Restrict entry dates", group=G_DATES)
+firstDate = input.time(timestamp("2025-01-01 00:00 +0000"), "Start (inclusive)", group=G_DATES)
+lastDate = input.time(timestamp("2027-01-01 00:00 +0000"), "End (exclusive)", group=G_DATES)
+G_VIEW = "Chart"
+showEMAs = input.bool(true, "Show trend EMAs", group=G_VIEW)
+showPanel = input.bool(true, "Show status panel", group=G_VIEW)
+
+float atr = ta.atr(atrLength)
+float fastEMA = ta.ema(close, fastLength)
+float slowEMA = ta.ema(close, slowLength)
+float pivotHigh = ta.pivothigh(high, pivotBars, pivotBars)
+float pivotLow = ta.pivotlow(low, pivotBars, pivotBars)
+float tick = syminfo.mintick
+
+roundPrice(float price) =>
+    math.round(price / syminfo.mintick) * syminfo.mintick
+
+// These functions account for entry/exit fees at their respective prices.
+modeledUnitRisk(float entry, float stop, float atrValue) =>
+    float pv = syminfo.pointvalue
+    (math.abs(entry - stop) + 2.0 * slippageTicks * syminfo.mintick + gapAllowanceATR * atrValue) * pv + (math.abs(entry) + math.abs(stop)) * pv * feePercent / 100.0
+
+modeledNetReward(float entry, float target) =>
+    float pv = syminfo.pointvalue
+    (math.abs(target - entry) - 2.0 * slippageTicks * syminfo.mintick) * pv - (math.abs(entry) + math.abs(target)) * pv * feePercent / 100.0
+
+riskQuantity(float entry, float stop, float atrValue) =>
+    float equity = math.max(strategy.equity, 0.0)
+    float unitRisk = modeledUnitRisk(entry, stop, atrValue)
+    float riskQty = unitRisk > 0 ? equity * riskPercent / 100.0 / unitRisk : 0.0
+    float exposureQty = entry > 0 and syminfo.pointvalue > 0 ? equity * exposurePercent / 100.0 / (entry * syminfo.pointvalue) : 0.0
+    float rawQty = math.min(riskQty, math.min(exposureQty, maximumQuantity))
+    float qty = math.floor(rawQty / quantityStep) * quantityStep
+    qty >= minimumQuantity ? qty : 0.0
+
+// Track only confirmed, chronological pivots. A same-type stronger pivot updates
+// the tracker for FUTURE legs, never the anchors of an existing setup/trade.
+var int previousType = 0
+var float previousPrice = na
+var int previousBar = na
+var bool armed = false
+var int direction = 0
+var float origin = na
+var float endpoint = na
+var float midpoint = na
+var float shallow = na
+var float deep = na
+var float setupStop = na
+var float setupTarget = na
+var float impulseATR = na
+var int confirmedBar = na
+var string reason = "Waiting for confirmed alternating pivots"
+var float plannedQty = na
+var float plannedNetR = na
+
+// Trade exits have their own state and survive new pivots and trend changes.
+var float tradeStop = na
+var float tradeTarget = na
+var float tradeMidpoint = na
+var float tradeShallow = na
+var float tradeDeep = na
+var bool entryPending = false
+var int submittedBar = na
+var int observedClosed = 0
+if strategy.closedtrades > observedClosed
+    observedClosed := strategy.closedtrades
+    if strategy.position_size == 0
+        tradeStop := na
+        tradeTarget := na
+        tradeMidpoint := na
+        tradeShallow := na
+        tradeDeep := na
+        entryPending := false
+if strategy.position_size != 0
+    entryPending := false
+if entryPending and strategy.position_size == 0 and bar_index > submittedBar
+    strategy.cancel_all()
+    entryPending := false
+    reason := "Entry not filled; check margin/quantity settings"
+
+bool highEvent = not na(pivotHigh) and na(pivotLow)
+bool lowEvent = not na(pivotLow) and na(pivotHigh)
+// If both confirm together, their intrabar ordering is unknown: skip both.
+if barstate.isconfirmed and (highEvent or lowEvent)
+    int newType = highEvent ? 1 : -1
+    float newPrice = highEvent ? pivotHigh : pivotLow
+    int newBar = bar_index - pivotBars
+    if previousType != 0 and newType != previousType and newBar > previousBar
+        float legRange = math.abs(newPrice - previousPrice)
+        bool oriented = newType == 1 ? newPrice > previousPrice : newPrice < previousPrice
+        bool sufficient = not na(atr) and atr > 0 and legRange >= minImpulseATR * atr and newBar - previousBar >= minLegBars
+        if strategy.position_size == 0 and not entryPending
+            armed := false
+            plannedQty := na
+            plannedNetR := na
+            if oriented and sufficient
+                direction := newType
+                origin := previousPrice
+                endpoint := newPrice
+                midpoint := roundPrice(endpoint - direction * legRange * 0.5)
+                shallow := roundPrice(endpoint - direction * legRange * 0.382)
+                deep := roundPrice(endpoint - direction * legRange * 0.618)
+                setupStop := direction == 1 ? math.floor((origin - math.max(tick, stopBufferATR * atr)) / tick) * tick : math.ceil((origin + math.max(tick, stopBufferATR * atr)) / tick) * tick
+                setupTarget := direction == 1 ? math.floor((origin + legRange * targetExtension) / tick) * tick : math.ceil((origin - legRange * targetExtension) / tick) * tick
+                impulseATR := legRange / atr
+                confirmedBar := bar_index
+                armed := true
+                reason := "Impulse confirmed; waiting for 50% rejection"
+            else
+                reason := "New leg too small/short or invalid geometry"
+    bool stronger = previousType == newType and (newType == 1 ? newPrice > previousPrice : newPrice < previousPrice)
+    if previousType == 0 or newType != previousType or stronger
+        previousType := newType
+        previousPrice := newPrice
+        previousBar := newBar
+
+// Equity mark includes open PnL; reset at the symbol's exchange-calendar day.
+var float dayEquity = na
+var bool dayLocked = false
+if na(dayEquity) or timeframe.change("D")
+    dayEquity := math.max(nz(strategy.equity[1], strategy.equity), 0.0)
+    dayLocked := false
+if dayEquity > 0 and strategy.equity - dayEquity <= -dayEquity * dailyLossPercent / 100.0
+    dayLocked := true
+if dayLocked
+    strategy.cancel_all()
+    if strategy.position_size != 0
+        strategy.close_all(comment="Daily equity cutoff", immediately=true)
+
+bool datesValid = not useDates or lastDate > firstDate
+bool inDates = not useDates or (datesValid and time >= firstDate and time_close < lastDate)
+if useDates and datesValid and time_close >= lastDate
+    strategy.cancel_all()
+    if strategy.position_size != 0
+        strategy.close_all(comment="Date window end", immediately=true)
+
+bool longSignal = false
+bool shortSignal = false
+if armed and strategy.position_size == 0 and not entryPending
+    bool isLong = direction == 1
+    bool expired = bar_index - confirmedBar >= setupBars
+    bool stopCrossed = isLong ? low <= setupStop : high >= setupStop
+    bool tooDeep = isLong ? close < deep : close > deep
+    bool brokenEndpoint = isLong ? close > endpoint : close < endpoint
+    if expired or stopCrossed or tooDeep or brokenEndpoint
+        armed := false
+        reason := expired ? "Setup expired" : stopCrossed ? "Swing-origin stop crossed" : tooDeep ? "Closed beyond 61.8% retracement" : "Price resumed before entry; swing consumed"
+    else
+        bool trendOK = not useTrend or (bar_index + 1 >= slowLength and (isLong ? fastEMA > slowEMA and close > slowEMA : fastEMA < slowEMA and close < slowEMA))
+        bool sideOK = isLong ? allowLong : allowShort
+        bool rejection = barstate.isconfirmed and (isLong ? low <= midpoint and close > midpoint and close > open : high >= midpoint and close < midpoint and close < open)
+        bool notChasing = isLong ? close <= shallow : close >= shallow
+        float entryPrice = roundPrice(close)
+        bool geometryOK = isLong ? setupStop < entryPrice and entryPrice < setupTarget : setupTarget < entryPrice and entryPrice < setupStop
+        float unitRisk = modeledUnitRisk(entryPrice, setupStop, atr)
+        float netReward = modeledNetReward(entryPrice, setupTarget)
+        plannedNetR := unitRisk > 0 ? netReward / unitRisk : na
+        plannedQty := riskQuantity(entryPrice, setupStop, atr)
+        bool payoffOK = unitRisk > 0 and netReward > 0 and netReward >= minimumNetR * unitRisk
+        bool quantityOK = plannedQty > 0
+        reason := not datesValid ? "Invalid date window" : not inDates ? "Outside entry dates" : dayLocked ? "Daily equity cutoff" : not sideOK ? "Direction disabled" : not trendOK ? "EMA trend not aligned" : not rejection ? "Waiting for closed 50% rejection" : not notChasing ? "Rejection closed beyond 38.2%; no chase" : not geometryOK ? "Invalid price geometry" : not payoffOK ? "Insufficient net reward after costs" : not quantityOK ? "Quantity below minimum/risk cap" : "Rejection accepted; next-tick entry"
+        if datesValid and inDates and not dayLocked and sideOK and trendOK and rejection and notChasing and geometryOK and payoffOK and quantityOK
+            tradeStop := setupStop
+            tradeTarget := setupTarget
+            tradeMidpoint := midpoint
+            tradeShallow := shallow
+            tradeDeep := deep
+            strategy.entry("Fib", isLong ? strategy.long : strategy.short, qty=plannedQty, comment=isLong ? "Fib 50 rejection L" : "Fib 50 rejection S")
+            strategy.exit("Fib exit", "Fib", stop=tradeStop, limit=tradeTarget, comment_profit="Fib extension TP", comment_loss="Fib origin SL")
+            submittedBar := bar_index
+            entryPending := true
+            armed := false // one submission per confirmed impulse; never retry this leg
+            longSignal := isLong
+            shortSignal := not isLong
+
+if strategy.position_size != 0 and not na(tradeStop) and not na(tradeTarget)
+    strategy.exit("Fib exit", "Fib", stop=tradeStop, limit=tradeTarget, comment_profit="Fib extension TP", comment_loss="Fib origin SL")
+
+bool tradeVisible = strategy.position_size != 0 or entryPending
+bool setupVisible = armed and not tradeVisible
+plot(showEMAs ? fastEMA : na, "Fast EMA", color=color.orange)
+plot(showEMAs ? slowEMA : na, "Slow EMA", color=color.blue)
+plot(tradeVisible ? tradeMidpoint : setupVisible ? midpoint : na, "50% entry reference", color=color.yellow, linewidth=2, style=plot.style_linebr)
+shallowPlot = plot(tradeVisible ? tradeShallow : setupVisible ? shallow : na, "38.2% shallow boundary", color=color.new(color.yellow, 55), style=plot.style_linebr)
+deepPlot = plot(tradeVisible ? tradeDeep : setupVisible ? deep : na, "61.8% deep boundary", color=color.new(color.yellow, 55), style=plot.style_linebr)
+fill(shallowPlot, deepPlot, color=color.new(color.yellow, 92), title="Pullback zone")
+plot(tradeVisible ? tradeStop : setupVisible ? setupStop : na, "Structure stop", color=color.red, linewidth=2, style=plot.style_linebr)
+plot(tradeVisible ? tradeTarget : setupVisible ? setupTarget : na, "Fixed extension target", color=color.lime, linewidth=2, style=plot.style_linebr)
+plotshape(longSignal, title="Long rejection SIGNAL (not fill)", style=shape.triangleup, location=location.belowbar, color=color.lime, size=size.tiny)
+plotshape(shortSignal, title="Short rejection SIGNAL (not fill)", style=shape.triangledown, location=location.abovebar, color=color.red, size=size.tiny)
+
+var int firstLoaded = time
+var table status = table.new(position.top_right, 2, 8, bgcolor=color.new(color.black, 15), border_width=1)
+if showPanel and barstate.islast
+    string state = strategy.position_size != 0 ? (strategy.position_size > 0 ? "OPEN LONG" : "OPEN SHORT") : entryPending ? "ENTRY SUBMITTED" : armed ? (direction == 1 ? "LONG SETUP" : "SHORT SETUP") : "WAITING FOR IMPULSE"
+    status.cell(0, 0, "Fib Pullback v1", text_color=color.white)
+    status.cell(1, 0, state, text_color=color.yellow)
+    status.cell(0, 1, "Current reason", text_color=color.gray)
+    status.cell(1, 1, dayLocked ? "Daily equity cutoff" : reason, text_color=color.white)
+    status.cell(0, 2, "Impulse / ATR", text_color=color.gray)
+    status.cell(1, 2, na(impulseATR) ? "n/a" : str.tostring(impulseATR, "0.00"), text_color=color.white)
+    status.cell(0, 3, "Net R / planned qty", text_color=color.gray)
+    status.cell(1, 3, (na(plannedNetR) ? "n/a" : str.tostring(plannedNetR, "0.00")) + " / " + (na(plannedQty) ? "n/a" : str.tostring(plannedQty)), text_color=color.white)
+    status.cell(0, 4, "Stop / target", text_color=color.gray)
+    status.cell(1, 4, str.tostring(tradeVisible ? tradeStop : setupVisible ? setupStop : na, format.mintick) + " / " + str.tostring(tradeVisible ? tradeTarget : setupVisible ? setupTarget : na, format.mintick), text_color=color.white)
+    status.cell(0, 5, "Risk / exposure", text_color=color.gray)
+    status.cell(1, 5, str.tostring(riskPercent, "0.00") + "% / " + str.tostring(exposurePercent, "0") + "% equity", text_color=color.white)
+    status.cell(0, 6, "Chart run closed trades", text_color=color.gray)
+    status.cell(1, 6, str.tostring(strategy.closedtrades) + " | PF " + (strategy.grossloss > 0 ? str.tostring(strategy.grossprofit / strategy.grossloss, "0.00") : "n/a"), text_color=color.white)
+    status.cell(0, 7, "Loaded bars (Edmonton)", text_color=color.gray)
+    status.cell(1, 7, str.format_time(firstLoaded, "yyyy-MM-dd", "America/Edmonton") + " to " + str.format_time(last_bar_time, "yyyy-MM-dd", "America/Edmonton"), text_color=color.white)
