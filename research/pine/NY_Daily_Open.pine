@@ -1,0 +1,119 @@
+//@version=6
+// Research: one scheduled entry per NY weekday. No profitability claim.
+strategy("NY Weekday Opening Trade v1", shorttitle="NY Daily Open", overlay=true,
+     initial_capital=100000, pyramiding=0, calc_on_every_tick=false,
+     calc_on_order_fills=false, process_orders_on_close=false,
+     use_bar_magnifier=true, default_qty_type=strategy.fixed,
+     commission_type=strategy.commission.percent, commission_value=0.07,
+     slippage=2, margin_long=100, margin_short=100, max_labels_count=100)
+
+string CLOCK = "America/New_York"
+string directionMode = input.string("Prior 4h trend", "Daily Direction", options=["Prior 4h trend", "Long", "Short"])
+float riskPercent = input.float(0.25, "Account Risk (%)", minval=0.01, maxval=2.0, step=0.05)
+float stopAtr = input.float(1.5, "Stop Distance (ATR)", minval=0.1, step=0.1)
+float targetR = input.float(3.0, "Target / Stop Distance", minval=0.1, step=0.1)
+float feePercent = input.float(0.07, "Estimated Fee Per Side (%)", minval=0.0, step=0.01)
+int slipTicks = input.int(2, "Estimated Slippage Per Side (Ticks)", minval=0)
+bool showStatus = input.bool(true, "Show Status")
+bool useDates = input.bool(false, "Restrict Entry Dates")
+int firstDate = input.time(timestamp("2024-01-01 00:00 +0000"), "Start Inclusive")
+int lastDate = input.time(timestamp("2026-10-01 00:00 +0000"), "End Exclusive")
+if timeframe.in_seconds() != 900 or not chart.is_standard
+    runtime.error("Use standard 15-minute candles.")
+if syminfo.basecurrency != "BTC" or syminfo.currency != "USDT" or syminfo.pointvalue != 1
+    runtime.error("Use a linear BTCUSDT contract with point value 1.")
+if useDates and firstDate >= lastDate
+    runtime.error("Start must precede end.")
+
+// Closed 4h values only. Binary direction ensures no neutral-trend skip.
+[priorClose, priorEMA] = request.security(syminfo.tickerid, "240",
+     [close[1], ta.ema(close, 50)[1]], lookahead=barmerge.lookahead_on)
+float signalAtr = ta.atr(14)
+int openingDate = year(time_close, CLOCK) * 10000 + month(time_close, CLOCK) * 100 + dayofmonth(time_close, CLOCK)
+int closingWeekday = dayofweek(time_close, CLOCK)
+bool marketWeekday = closingWeekday >= dayofweek.monday and closingWeekday <= dayofweek.friday
+// 09:15 bar closes at 09:30; next-tick market entry is the 09:30 bar open.
+bool openingSignal = hour(time_close, CLOCK) == 9 and minute(time_close, CLOCK) == 30
+bool closingSignal = hour(time_close, CLOCK) == 16 and minute(time_close, CLOCK) == 0
+bool dateAllowed = not useDates or (time_close >= firstDate and time_close < lastDate)
+var int attemptedDate = na
+var int submittedBar = na
+var int closedAtSubmission = 0
+var int plannedStopTicks = na
+var int plannedTargetTicks = na
+var string decision = "Waiting for NY weekday open"
+bool submitted = false
+
+if barstate.isconfirmed
+    // Clear metadata only after a round trip; bracket orders protect same-bar fills.
+    if not na(submittedBar) and strategy.position_size == 0 and strategy.closedtrades > closedAtSubmission
+        submittedBar := na
+        plannedStopTicks := na
+        plannedTargetTicks := na
+    if closingSignal and strategy.position_size != 0
+        strategy.close_all(comment="NY 16:00")
+        decision := "Cash-close exit submitted"
+    if openingSignal and marketWeekday and dateAllowed and (na(attemptedDate) or attemptedDate != openingDate)
+        attemptedDate := openingDate
+        bool directionReady = directionMode != "Prior 4h trend" or (not na(priorClose) and not na(priorEMA))
+        bool indicatorsReady = not na(signalAtr) and signalAtr > 0 and directionReady
+        if strategy.position_size != 0 or not na(submittedBar)
+            decision := "Opening skipped: prior order/position remains"
+        else if not indicatorsReady
+            decision := "Opening skipped: indicator warm-up"
+        else
+            int d = directionMode == "Long" ? 1 : directionMode == "Short" ? -1 : priorClose >= priorEMA ? 1 : -1
+            int stopTicks = math.max(1, int(math.ceil(signalAtr * stopAtr / syminfo.mintick)))
+            int targetTicks = math.max(1, int(math.floor(stopTicks * targetR)))
+            float estimate = close + d * slipTicks * syminfo.mintick
+            float estimatedStop = estimate - d * stopTicks * syminfo.mintick
+            float estimatedTarget = estimate + d * targetTicks * syminfo.mintick
+            float unitLoss = stopTicks * syminfo.mintick + (estimate + estimatedStop) * feePercent / 100 + 2 * slipTicks * syminfo.mintick + 0.25 * signalAtr
+            float unitWin = targetTicks * syminfo.mintick - (estimate + estimatedTarget) * feePercent / 100 - 2 * slipTicks * syminfo.mintick
+            float equity = math.max(0, strategy.equity)
+            float qtyRaw = estimate > 0 and unitLoss > 0 ? math.min(1.0, math.min(equity * riskPercent / 100 / unitLoss, equity * 0.95 / estimate)) : 0
+            float qty = math.floor(qtyRaw / 0.001) * 0.001
+            bool valid = estimatedStop > 0 and estimatedTarget > 0 and qty >= 0.001
+            if valid
+                plannedStopTicks := stopTicks
+                plannedTargetTicks := targetTicks
+                submittedBar := bar_index
+                closedAtSubmission := strategy.closedtrades
+                string audit = "NY Open " + (d == 1 ? "L" : "S")
+                audit += " | Planned Entry " + str.tostring(estimate, format.mintick)
+                audit += " | StopTicks " + str.tostring(stopTicks)
+                audit += " | TargetTicks " + str.tostring(targetTicks)
+                audit += " | NetRR " + str.tostring(unitWin / unitLoss, "0.0000")
+                if d == 1
+                    strategy.entry("NY Long", strategy.long, qty=qty, comment=audit)
+                    strategy.exit("L bracket", "NY Long", loss=stopTicks, profit=targetTicks)
+                else
+                    strategy.entry("NY Short", strategy.short, qty=qty, comment=audit)
+                    strategy.exit("S bracket", "NY Short", loss=stopTicks, profit=targetTicks)
+                submitted := true
+                decision := "NY opening order submitted"
+            else
+                decision := "Opening skipped: invalid prices or minimum quantity"
+    // Retain brackets until the position actually closes, including the cash-close tick.
+    if not na(submittedBar)
+        strategy.exit("L bracket", "NY Long", loss=plannedStopTicks, profit=plannedTargetTicks)
+        strategy.exit("S bracket", "NY Short", loss=plannedStopTicks, profit=plannedTargetTicks)
+        if strategy.position_size == 0 and strategy.closedtrades == closedAtSubmission and bar_index - submittedBar > 2
+            strategy.cancel("NY Long")
+            strategy.cancel("NY Short")
+            strategy.cancel("L bracket")
+            strategy.cancel("S bracket")
+            submittedBar := na
+            decision := "No fill observed; no same-day retry"
+    if useDates and time_close >= lastDate
+        strategy.cancel_all()
+        strategy.close_all(comment="Comparison end", immediately=true)
+
+plot(priorEMA, "Prior Closed 4h EMA50", color=color.orange)
+plotshape(submitted, "Scheduled Opening Attempt", shape.diamond, location.abovebar, color=color.aqua, size=size.tiny)
+var table status = table.new(position.top_right, 1, 4)
+if barstate.islast and showStatus
+    table.cell(status, 0, 0, "RESEARCH NY weekday opening trade", text_color=color.orange)
+    table.cell(status, 0, 1, "09:30 entry / 16:00 exit / one attempt per date", text_color=color.white)
+    table.cell(status, 0, 2, decision, text_color=color.white)
+    table.cell(status, 0, 3, "Mon-Fri including holidays; funding excluded", text_color=color.orange)

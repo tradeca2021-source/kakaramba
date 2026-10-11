@@ -1,0 +1,14 @@
+{
+  "file": "research/pine/NY_Daily_Open.pine",
+  "sha256": "80f35871c5128a1fec22326853d8df3a3c36ba70ccc8e5d2465f5379dd037cf6",
+  "parser": {
+    "name": "pynescript",
+    "version": "0.3.0",
+    "exit_code": 0,
+    "ast_sha256": "46aab291d2236c93d94484a58c015c9c1bca2c6a50d75ad4e9a8e6b0231c2504"
+  },
+  "schedule": "One attempted entry each Monday-Friday at NY 09:30; holidays included",
+  "native_tradingview_compilation": false,
+  "native_execution_verified": false,
+  "performance_verified": false
+}
