@@ -1,3 +1,9 @@
+CFL v101: standalone multi-series reconstruction
+
+Use CFL_FibTrader_v101_Standalone.pine for the screenshot-reconstruction attempt, replacing the visible RBO/v100 instance. See CFL_FibTrader_v101_Standalone.md for its moving/frozen series, nested Fibs, stepped zones, source-like tick inputs, execution assumptions and validation limits. It uses the existing standalone v2 model rather than the RBO entry engine. No exact-match or performance claim is made. The repository's separate research strategies and their README.md recommendations are unchanged.
+
+The v100 and earlier notes below describe previous attempts and their limitations.
+
 RBO v100: correct the working trade geometry
 
 Latest full editor file: BTC_RBO_v100_Fib_50_382_618.pine. Replace the older strategy instance with this whole file and reset saved inputs. First line is //@version=6; last line is // END OF COMPLETE V100 SCRIPT.

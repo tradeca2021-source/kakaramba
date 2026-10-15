@@ -1,0 +1,16 @@
+{
+  "file": "CFL_FibTrader_v101_Standalone.pine",
+  "sha256": "18b4c15fa93b2340b17511310b10737ac96a1ea6878b89b5054d1ea461941979",
+  "parser": {
+    "name": "pynescript",
+    "version": "0.3.0",
+    "exit_code": 0,
+    "diagnostics": "none",
+    "ast_sha256": "8f06765ad4aa82c33ac4f9d16dde9a90c0455e4269b8ffb7120a7d5ac6962a78"
+  },
+  "local_source_formula_transition_checks": 25,
+  "native_tradingview_compilation": false,
+  "original_platform_parity": false,
+  "performance_verified": false,
+  "status": "Standalone v2 reconstruction model; original screenshot state-machine rules remain inferred"
+}
