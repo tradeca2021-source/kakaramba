@@ -1,6 +1,6 @@
-# EngineeringRobo: SL TP Levels r5
+# EngineeringRobo: SL TP Levels r6
 
-Paste `EngineeringRobo_Stop_TP_Strategy.pine` into TradingView Pine Editor, save, and add a fresh chart instance. Confirm the title is **EngineeringRobo - SL TP Levels r5**. This is an independent reconstruction, not the original proprietary EngineeringRobo indicator. Native Pine compilation and rendering of this revision remain unverified.
+Paste `EngineeringRobo_Stop_TP_Strategy.pine` into TradingView Pine Editor, save, and add a fresh chart instance. Confirm the title is **EngineeringRobo - SL TP Levels r6**. This is an independent reconstruction, not the original proprietary EngineeringRobo indicator. Native Pine compilation and rendering of this revision remain unverified.
 
 ## Orders
 
@@ -21,11 +21,11 @@ An opposite signal reverses an open position and captures new bracket distances.
 
 Each submitted entry creates dotted projected levels and a label saying **SUBMITTED / fill pending**. Gray is entry, red is SL, lime is TP. Pending projections use the signal close because the fill is not yet known; they are not absolute broker orders.
 
-After matching actual open/closed trade records, drawings become solid and use recorded fill prices. Open lines extend right. Closed lines end at the recorded exit and remain visible, with entry/SL/TP prices and the exit reason in their label. Superseded unfilled plans remain dotted and say **NOT FILLED / superseded**.
+After matching actual open/closed trade records, drawings become solid and use recorded fill prices. Open lines extend right. Closed lines end at the recorded exit and remain visible, with entry/SL/TP prices and the exit reason in their label. Unmatched plans remain dotted and say **FILL UNMATCHED / check trade records**. This is a drawing-reconciliation status, not proof that an order was rejected.
 
 Closed-trade records recover trades that open and close within one candle, even when the end-of-bar position is flat. Such trades receive a minimum one-bar-wide drawing for visibility; this does not mean they remained open for another bar. Multiple exits on a bar can produce only the latest custom exit marker; use List of Trades for every execution.
 
-**Trade level history** defaults to 30 plans, adjustable from 1 to 100. Older drawings are deleted at that cap, including unfilled plans. Plans match by direction and recorded entry bar, starting with the latest eligible signal preceding the entry. Native matching still requires verification. Deep Backtesting can use a different range from chart-visible history.
+**Trade level history** defaults to 30 plans, adjustable from 1 to 100. Older drawings are deleted at that cap, including unfilled plans. Plans match by direction and recorded entry timestamp. Known fills are matched first; otherwise the latest eligible signal at or before the entry time is used. Plan registration precedes reconciliation, so same-bar entry/exit records can be matched. Drawings use time coordinates rather than assuming identical chart bar indices. Native matching still requires verification. Deep Backtesting can use a different range from chart-visible history.
 
 The old fixed BTC screenshot levels have been removed. Optional pivot context lines are gray, disabled by default and explicitly named support/resistance context.
 
@@ -37,6 +37,11 @@ For strategy alerts, select order fills and use `{{strategy.order.alert_message}
 
 ## Verification
 
-Source-derived checks passed 13 order/bracket scenarios, six active-level calculations, four drawing-geometry scenarios and six plan/record-matching cases. They cover both entry/reversal directions, disabled directions, invalid ATR, same-direction repeats, tick rounding, fixed distances across ATR changes, gapped fills, shorts, same-bar closure and closed-history finalization. ASCII-only content and source delimiter checks also passed.
+Source-derived checks passed 13 order/bracket scenarios, six active-level calculations, four timestamp-drawing geometry scenarios and ten timestamp/plan-matching cases. They cover both entry/reversal directions, disabled directions, invalid ATR, same-direction repeats, tick rounding, fixed distances across ATR changes, gapped fills, shorts, same-bar closure and closed-history finalization. ASCII-only content and source delimiter checks also passed.
 
 These are limited source-expression and argument checks, not Pine compilation, native fill simulation, or a historical profitability test. Earlier screenshots/exported results from prior strategy revisions do not validate this revision. Compare the same symbol, timeframe, dates, order quantity and costs in Strategy Tester and inspect its List of Trades.
+
+
+## Correction from r5
+
+The user supplied a report showing 266 closed trades alongside many NOT FILLED drawings. That proved those labels were not reliable evidence of rejection. r5 required the entry bar index to be strictly later than the signal bar and processed fill records before registering the current bar's plan. r6 removes those assumptions and accepts matching timestamps on the signal bar, while giving already-known fills priority over new pending plans. Older unmatched plans remain available to match later records until removed by the history cap. Reconciliation occurs before unmatched plans are visually retired, and the history cap is applied last. These are visual bookkeeping changes; the prior screenshot's -$24,633.34 result and 0.211 profit factor are not improved or invalidated by them. Native validation of the corrected drawings remains outstanding.

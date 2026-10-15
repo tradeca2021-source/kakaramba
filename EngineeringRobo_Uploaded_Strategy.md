@@ -1,6 +1,6 @@
-# Current display revision: SL TP Levels r5
+# Current display revision: SL TP Levels r6
 
-The current source retains each submitted trade's SL/TP drawings and distinguishes pending projections from actual fills. It removes the old fixed screenshot prices. See `EngineeringRobo_Stop_TP_Strategy.md` for the current behavior; the older revision notes below are historical.
+The current source uses timestamp-based fill reconciliation, retains trade SL/TP drawings, and distinguishes unmatched projections from actual fills. It removes the old fixed screenshot prices. See `EngineeringRobo_Stop_TP_Strategy.md` for the current behavior; the older revision notes below are historical.
 
 ---
 

@@ -1,6 +1,6 @@
 //@version=6
 // Independent screenshot approximation. No original proprietary logic or AI model.
-strategy("EngineeringRobo - SL TP Levels r5", overlay=true, max_labels_count=500, max_lines_count=500,
+strategy("EngineeringRobo - SL TP Levels r6", overlay=true, max_labels_count=500, max_lines_count=500,
      initial_capital=100000, currency=currency.USD, pyramiding=0,
      default_qty_type=strategy.fixed, default_qty_value=1,
      commission_type=strategy.commission.percent, commission_value=0.07,
@@ -76,6 +76,7 @@ stopped = closedThisBar and strategy.closedtrades.exit_comment(strategy.closedtr
 // Filled plans become solid and stop at their recorded exit; history stays visible.
 type TradePlan
     int signalBar
+    int signalTime
     int tradeSide
     float stopTicks
     float targetTicks
@@ -85,17 +86,19 @@ type TradePlan
     label info
     bool filled
     bool done
-    int fillBar
+    int fillTime
 var array<TradePlan> tradePlans = array.new<TradePlan>()
-f_applyFill(TradePlan plan, int entryBar, float fillPrice, int endBar, bool isClosed, string exitReason) =>
+f_applyFill(TradePlan plan, int entryTime, float fillPrice, int endTime, bool isClosed, string exitReason) =>
+    // A minimum one-candle segment makes same-timestamp fills/exits visible.
+    int visualEnd = endTime > entryTime ? endTime : entryTime + math.max(1, nz(time_close - time, 60000))
     float sl = fillPrice - plan.tradeSide * plan.stopTicks * syminfo.mintick
     float tp = fillPrice + plan.tradeSide * plan.targetTicks * syminfo.mintick
-    line.set_xy1(plan.entryLine, entryBar, fillPrice)
-    line.set_xy2(plan.entryLine, math.max(entryBar + 1, endBar), fillPrice)
-    line.set_xy1(plan.stopLine, entryBar, sl)
-    line.set_xy2(plan.stopLine, math.max(entryBar + 1, endBar), sl)
-    line.set_xy1(plan.targetLine, entryBar, tp)
-    line.set_xy2(plan.targetLine, math.max(entryBar + 1, endBar), tp)
+    line.set_xy1(plan.entryLine, entryTime, fillPrice)
+    line.set_xy2(plan.entryLine, visualEnd, fillPrice)
+    line.set_xy1(plan.stopLine, entryTime, sl)
+    line.set_xy2(plan.stopLine, visualEnd, sl)
+    line.set_xy1(plan.targetLine, entryTime, tp)
+    line.set_xy2(plan.targetLine, visualEnd, tp)
     line.set_style(plan.entryLine, line.style_solid)
     line.set_style(plan.stopLine, line.style_solid)
     line.set_style(plan.targetLine, line.style_solid)
@@ -105,60 +108,76 @@ f_applyFill(TradePlan plan, int entryBar, float fillPrice, int endBar, bool isCl
     line.set_color(plan.entryLine, color.gray)
     line.set_color(plan.stopLine, color.red)
     line.set_color(plan.targetLine, color.lime)
-    label.set_xy(plan.info, entryBar, fillPrice)
-    string state = isClosed ? "CLOSED: " + exitReason : "FILLED / OPEN"
+    label.set_xy(plan.info, entryTime, fillPrice)
+    string state = isClosed ? "CLOSED: " + (na(exitReason) ? "Exit" : exitReason) : "FILLED / OPEN"
     label.set_text(plan.info, (plan.tradeSide == 1 ? "LONG " : "SHORT ") + state + "\nEntry " + str.tostring(fillPrice, format.mintick) + "\nSL " + str.tostring(sl, format.mintick) + " | TP " + str.tostring(tp, format.mintick))
     label.set_color(plan.info, plan.tradeSide == 1 ? color.new(color.green, 15) : color.new(color.red, 15))
     label.set_textcolor(plan.info, color.white)
     plan.filled := true
     plan.done := isClosed
-    plan.fillBar := entryBar
+    plan.fillTime := entryTime
 
-// Closed-trade records also capture entries and exits occurring within one bar.
-if showTradeLevels and closedThisBar and array.size(tradePlans) > 0
-    for trade = nz(strategy.closedtrades[1]) to strategy.closedtrades - 1
-        int entryBar = strategy.closedtrades.entry_bar_index(trade)
-        int tradeSide = strategy.closedtrades.size(trade) > 0 ? 1 : -1
-        for offset = 0 to array.size(tradePlans) - 1
-            TradePlan plan = array.get(tradePlans, array.size(tradePlans) - 1 - offset)
-            bool matches = not plan.done and plan.tradeSide == tradeSide and (plan.filled ? plan.fillBar == entryBar : plan.signalBar < entryBar)
-            if matches
-                f_applyFill(plan, entryBar, strategy.closedtrades.entry_price(trade), strategy.closedtrades.exit_bar_index(trade), true, strategy.closedtrades.exit_comment(trade))
-                break
-if showTradeLevels and strategy.opentrades > 0 and array.size(tradePlans) > 0
-    for trade = 0 to strategy.opentrades - 1
-        int entryBar = strategy.opentrades.entry_bar_index(trade)
-        int tradeSide = strategy.opentrades.size(trade) > 0 ? 1 : -1
-        for offset = 0 to array.size(tradePlans) - 1
-            TradePlan plan = array.get(tradePlans, array.size(tradePlans) - 1 - offset)
-            bool matches = not plan.done and plan.tradeSide == tradeSide and (plan.filled ? plan.fillBar == entryBar : plan.signalBar < entryBar)
-            if matches
-                f_applyFill(plan, entryBar, strategy.opentrades.entry_price(trade), bar_index + 1, false, "")
-                break
+// Prefer an already-recorded fill before matching the latest pending plan.
+// Use timestamps instead of assuming a later chart bar index.
+f_findPlan(int tradeSide, int entryTime) =>
+    int result = na
+    if array.size(tradePlans) > 0 and not na(entryTime)
+        for matchPass = 0 to 1
+            if na(result)
+                for offset = 0 to array.size(tradePlans) - 1
+                    int index = array.size(tradePlans) - 1 - offset
+                    TradePlan plan = array.get(tradePlans, index)
+                    bool recordMatch = matchPass == 0 ? plan.filled and plan.fillTime == entryTime : not plan.filled and plan.signalTime <= entryTime
+                    if not plan.done and plan.tradeSide == tradeSide and recordMatch
+                        result := index
+                        break
+    result
+
+// Register this bar's plan before reconciling fills. Some execution contexts
+// expose both entry and exit records on the signal bar itself.
 if showTradeLevels and (submittedLong or submittedShort)
-    // Superseded unfilled plans remain dotted and explicitly say NOT FILLED.
-    if array.size(tradePlans) > 0
-        for index = 0 to array.size(tradePlans) - 1
-            TradePlan old = array.get(tradePlans, index)
-            if not old.filled and not old.done
-                line.set_extend(old.entryLine, extend.none)
-                line.set_extend(old.stopLine, extend.none)
-                line.set_extend(old.targetLine, extend.none)
-                line.set_x2(old.entryLine, bar_index)
-                line.set_x2(old.stopLine, bar_index)
-                line.set_x2(old.targetLine, bar_index)
-                label.set_text(old.info, "NOT FILLED / superseded")
-                old.done := true
     int tradeSide = submittedLong ? 1 : -1
     float stopTicks = submittedLong ? longStopTicks : shortStopTicks
     float targetTicks = submittedLong ? longTargetTicks : shortTargetTicks
     float projectedSL = close - tradeSide * stopTicks * syminfo.mintick
     float projectedTP = close + tradeSide * targetTicks * syminfo.mintick
-    line e = line.new(bar_index, close, bar_index + 1, close, extend=extend.right, color=color.gray, style=line.style_dotted, force_overlay=true)
-    line sl = line.new(bar_index, projectedSL, bar_index + 1, projectedSL, extend=extend.right, color=color.new(color.red, 40), style=line.style_dotted, width=2, force_overlay=true)
-    line tp = line.new(bar_index, projectedTP, bar_index + 1, projectedTP, extend=extend.right, color=color.new(color.lime, 40), style=line.style_dotted, width=2, force_overlay=true)
-    label info = label.new(bar_index, close, (tradeSide == 1 ? "LONG" : "SHORT") + " SUBMITTED / fill pending\nProjected SL " + str.tostring(projectedSL, format.mintick) + " | TP " + str.tostring(projectedTP, format.mintick), style=label.style_label_left, color=color.gray, textcolor=color.white, size=size.small, force_overlay=true)
-    array.push(tradePlans, TradePlan.new(bar_index, tradeSide, stopTicks, targetTicks, e, sl, tp, info, false, false, na))
+    int visualEnd = nz(time_close, time + 60000)
+    line e = line.new(time, close, visualEnd, close, xloc=xloc.bar_time, extend=extend.right, color=color.gray, style=line.style_dotted, force_overlay=true)
+    line sl = line.new(time, projectedSL, visualEnd, projectedSL, xloc=xloc.bar_time, extend=extend.right, color=color.new(color.red, 40), style=line.style_dotted, width=2, force_overlay=true)
+    line tp = line.new(time, projectedTP, visualEnd, projectedTP, xloc=xloc.bar_time, extend=extend.right, color=color.new(color.lime, 40), style=line.style_dotted, width=2, force_overlay=true)
+    label info = label.new(time, close, (tradeSide == 1 ? "LONG" : "SHORT") + " SUBMITTED / fill unconfirmed\nProjected SL " + str.tostring(projectedSL, format.mintick) + " | TP " + str.tostring(projectedTP, format.mintick), xloc=xloc.bar_time, style=label.style_label_left, color=color.gray, textcolor=color.white, size=size.small, force_overlay=true)
+    array.push(tradePlans, TradePlan.new(bar_index, time, tradeSide, stopTicks, targetTicks, e, sl, tp, info, false, false, na))
+
+// Closed-trade records recover same-bar round trips even when position size is 0.
+if showTradeLevels and closedThisBar and array.size(tradePlans) > 0
+    for trade = nz(strategy.closedtrades[1]) to strategy.closedtrades - 1
+        int entryTime = strategy.closedtrades.entry_time(trade)
+        int tradeSide = strategy.closedtrades.size(trade) > 0 ? 1 : -1
+        int index = f_findPlan(tradeSide, entryTime)
+        if not na(index)
+            f_applyFill(array.get(tradePlans, index), entryTime, strategy.closedtrades.entry_price(trade), strategy.closedtrades.exit_time(trade), true, strategy.closedtrades.exit_comment(trade))
+if showTradeLevels and strategy.opentrades > 0 and array.size(tradePlans) > 0
+    for trade = 0 to strategy.opentrades - 1
+        int entryTime = strategy.opentrades.entry_time(trade)
+        int tradeSide = strategy.opentrades.size(trade) > 0 ? 1 : -1
+        int index = f_findPlan(tradeSide, entryTime)
+        if not na(index)
+            f_applyFill(array.get(tradePlans, index), entryTime, strategy.opentrades.entry_price(trade), nz(time_close, time + 60000), false, "")
+
+// A failed visual match is not evidence that the broker rejected the order.
+// Reconciliation runs first; older unmatched plans stay available for later records.
+if showTradeLevels and (submittedLong or submittedShort) and array.size(tradePlans) > 1
+    for index = 0 to array.size(tradePlans) - 2
+        TradePlan old = array.get(tradePlans, index)
+        if not old.filled and not old.done
+            line.set_extend(old.entryLine, extend.none)
+            line.set_extend(old.stopLine, extend.none)
+            line.set_extend(old.targetLine, extend.none)
+            line.set_x2(old.entryLine, math.max(old.signalTime + 1, time))
+            line.set_x2(old.stopLine, math.max(old.signalTime + 1, time))
+            line.set_x2(old.targetLine, math.max(old.signalTime + 1, time))
+            label.set_text(old.info, "FILL UNMATCHED / check trade records")
+if showTradeLevels
     while array.size(tradePlans) > retainedTrades
         TradePlan old = array.shift(tradePlans)
         line.delete(old.entryLine)
