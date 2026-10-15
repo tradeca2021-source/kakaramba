@@ -1,3 +1,11 @@
+RBO v99: screenshot extension-target reconstruction study
+
+Full editor copy: BTC_RBO_v99_FULL.pine (1,621 lines; same trading code, with start/end comments to detect incomplete pastes). Replace all Pine Editor text and confirm its final line is // END OF COMPLETE V99 SCRIPT. Canonical study file: BTC_RBO_v99_Extension_Fib_Study.pine. Read CFL_Fib_Reverse_Engineering.md for verified screenshot arithmetic and unresolved anchor/stop/sizing behavior. This is not a recovered copy of_CFL_s_FibTrader.
+
+The user confirmed the screenshot gold-23.6% extension target. Origin100%/terminal0% implies target progress1.236, replacing the previous0.618progress target. Target Fib Label defaults-0.236; choose0.382 for the prior target. Entry front-run2 chart ticks, target front-run4 chart ticks. No source-specific0.25tick or7599.25seed is hardcoded into BTC execution.
+
+Skip Opposing50% in Entry-to-Target Path defaultsON as an explicit, unverified interpretation of the source toggle. It checks the latest opposite confirmed midpoint within existing age/origin validity. Local swing anchoring, ATR stops, risk sizing, v98 quality floor and all prior confirmations/safety exits remain; screenshot reversal/extension reset semantics and20–150tick stop rules are not fabricated. Changing a target alone cannot reproduce the unknown source series engine.121 local checks passed; native compilation and performance unverified. Previous version notes follow:
+
 RBO v98: net-payoff quality candidate
 
 Latest file: BTC_RBO_v98_Net_Quality_Fib.pine. Minimum Net Reward / Net Risk defaults1.0 instead of0. This is an experimental floor, not a proven optimized setting: estimated net profit at the fixed target must at least match estimated net stopped loss. Costs include configured entry/exit fees and two-sided modeled slippage. Funding, spread and unexpected gaps are not modeled. Match fee/slippage inputs to Strategy Properties.
