@@ -1,0 +1,20 @@
+{
+  "source_file": "CFL_FibTrader_v105_Serial_Engine.pine",
+  "source_sha256": "e036b7e45ba2429798cc0d5e70b4479e94cf2078f7e3e5f61e63e9e256a0990f",
+  "lines": 234,
+  "parser": {
+    "name": "pynescript",
+    "version": "0.3.0",
+    "exit_code": 0,
+    "ast_sha256": "127a10ddbdc246feb4fd21209a4af32791414a8ef2235a832d685c9a5e4fca2e"
+  },
+  "checks": {
+    "command": "PYTHONDONTWRITEBYTECODE=1 python tests/test_cfl_v105_serial_engine.py -v",
+    "tests_passed": 18,
+    "random_risk_cases": 300,
+    "executes_pine": false
+  },
+  "native_compilation_verified": false,
+  "original_parity_verified": false,
+  "performance_verified": false
+}

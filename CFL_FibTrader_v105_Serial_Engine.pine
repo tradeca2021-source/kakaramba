@@ -1,0 +1,234 @@
+//@version=6
+// COMPLETE V105: serial Fib lifecycle reconstruction, not verified original-source parity.
+// Replaces v104's competing tracker/clone engines. One active Fib, one fill per series.
+// Quotes follow confirmed terminal freeze. Filled brackets never follow later Fib resets.
+strategy("CFL Serial Fib Reconstruction v105", shorttitle="CFL v105", overlay=true,
+     pyramiding=1, calc_on_every_tick=false, process_orders_on_close=false,
+     use_bar_magnifier=true, initial_capital=100000,
+     default_qty_type=strategy.fixed, default_qty_value=0.01,
+     margin_long=100, margin_short=100,
+     commission_type=strategy.commission.percent, commission_value=0.06, slippage=2,
+     max_boxes_count=450, max_labels_count=50)
+
+G_F = "Fib lifecycle"
+startTime = input.time(timestamp("2025-04-04 10:00 +0000"), "Start date (UTC)", group=G_F)
+startAnchor = input.float(0, "Starting origin (0 = first eligible candle)", minval=0, group=G_F)
+minMove = input.float(10, "Minimum developing leg (points before scaling)", minval=0.01, group=G_F)
+freezePoints = input.float(20, "Minimum freeze pullback (points before scaling)", minval=0, group=G_F)
+reversalLevel = input.float(0.236, "Terminal freeze retracement", minval=0.01, maxval=0.49, step=0.001, group=G_F)
+extensionLevel = input.float(-0.382, "Completed extension: reset same direction", minval=-2, maxval=-0.001, step=0.001, group=G_F)
+autoScale = input.bool(true, "Scale point/tick distances for BTC", group=G_F)
+scaleRefPx = input.float(7730, "Reference price for distance scaling", minval=1, group=G_F)
+
+G_O = "Fib orders"
+tradeLong = input.bool(true, "Long entries", group=G_O)
+tradeShort = input.bool(true, "Short entries", group=G_O)
+fr50Ticks = input.int(2, "Front-run midpoint (native ticks)", minval=0, group=G_O)
+frPtTicks = input.int(4, "Front-run target (native ticks)", minval=0, group=G_O)
+ptLevel = input.float(0.382, "Target label (origin=100%, terminal=0%)", minval=-2, maxval=0.499, step=0.001, group=G_O)
+stopLevel = input.float(0.618, "Stop label", minval=0.501, maxval=1.5, step=0.001, group=G_O)
+minSlTicks = input.int(20, "Minimum stop distance (ticks before scaling)", minval=0, group=G_O)
+maxSlTicks = input.int(150, "Maximum stop distance (ticks before scaling)", minval=1, group=G_O)
+
+G_R = "BTC account sizing and economics"
+riskPct = input.float(0.10, "Equity risk per trade (%)", minval=0.01, maxval=5, step=0.01, group=G_R)
+qtyStep = input.float(0.001, "Quantity step", minval=0.000001, group=G_R)
+minQty = input.float(0.001, "Minimum quantity", minval=0.000001, group=G_R)
+maxQty = input.float(1, "Maximum quantity", minval=0.000001, group=G_R)
+maxExposurePct = input.float(100, "Maximum notional / equity (%)", minval=1, maxval=100, group=G_R)
+feePct = input.float(0.06, "Modeled fee per side (%)", minval=0, step=0.01, group=G_R, tooltip="Match commission in Strategy Properties. Spread and funding excluded.")
+slippageTicks = input.int(2, "Modeled slippage per side (ticks)", minval=0, group=G_R, tooltip="Match Strategy Properties. Conservative allowance also applied to limit orders.")
+gapATR = input.float(0.25, "Sizing allowance for stop gaps (ATR)", minval=0, step=0.05, group=G_R)
+minNetRR = input.float(0, "Minimum modeled net reward/risk", minval=0, step=0.05, group=G_R)
+
+G_D = "Drawing"
+zoneHistory = input.int(400, "Zone steps retained", minval=10, maxval=440, group=G_D)
+showLevels = input.bool(true, "Show active Fib levels", group=G_D)
+showStatus = input.bool(true, "Show lifecycle and entry reason", group=G_D)
+
+float TICK = syminfo.mintick
+float ATR14 = nz(ta.atr(14))
+float PV = syminfo.pointvalue
+// Lock scaling when a series starts; changing price must not move its thresholds.
+scaleAt(float price) =>
+    autoScale ? price / scaleRefPx : 1.0
+
+levelFor(float origin, float terminal, float ratio) =>
+    terminal + ratio * (origin - terminal)
+
+terminalFor(int direction, float terminal, bool frozen, float candleHigh, float candleLow) =>
+    frozen ? terminal : direction == 1 ? math.max(terminal, candleHigh) : math.min(terminal, candleLow)
+
+freezeFor(int direction, float origin, float terminal, float candleClose, float minimum, float pullback, float ratio) =>
+    math.abs(terminal - origin) >= minimum and (terminal - candleClose) * direction >= math.max(pullback, ratio * math.abs(terminal - origin))
+
+// Origin invalidation takes priority. Extension requires a CLOSE beyond the level.
+// No synthetic OHLC price path, retroactive opposite wick or parallel clone spawning.
+eventFor(int direction, float origin, float terminal, bool frozen, float candleClose, float extension) =>
+    (candleClose - origin) * direction < 0 ? -1 : frozen and (candleClose - levelFor(origin, terminal, extension)) * direction >= 0 ? 1 : 0
+
+roundTick(float value) =>
+    math.round(value / TICK) * TICK
+
+riskFor(float entry, float stop) =>
+    (math.abs(entry - stop) + 2 * slippageTicks * TICK + gapATR * ATR14) * PV + (math.abs(entry) + math.abs(stop)) * PV * feePct / 100
+
+rewardFor(float entry, float target) =>
+    (math.abs(target - entry) - 2 * slippageTicks * TICK) * PV - (math.abs(entry) + math.abs(target)) * PV * feePct / 100
+
+qtyFor(float entry, float stop) =>
+    float equity = math.max(0, strategy.equity)
+    float unitRisk = riskFor(entry, stop)
+    float riskQty = unitRisk > 0 ? equity * riskPct / 100 / unitRisk : 0
+    float notionalQty = entry > 0 and PV > 0 ? equity * maxExposurePct / 100 / (entry * PV) : 0
+    float requested = math.min(riskQty, math.min(notionalQty, maxQty))
+    float rounded = math.floor(requested / qtyStep) * qtyStep
+    rounded >= minQty ? rounded : 0
+
+var int direction = 0
+var int seriesId = 0
+var float origin = na
+var float terminal = na
+var bool frozen = false
+var bool used = false
+var int bornBar = na
+var float seriesScale = 1
+var string lastReset = "Not started"
+var int processedClosed = 0
+var string pendingId = ""
+var int pendingSeries = 0
+var float pendingStop = na
+var float pendingTarget = na
+var float pendingEntry = na
+var float pendingQty = na
+var array<box> zones = array.new<box>()
+var box currentZone = na
+var bool zoneEnded = false
+
+// Attribute both open fills and same-candle roundtrips before lifecycle transitions.
+if strategy.closedtrades > processedClosed
+    for i = processedClosed to strategy.closedtrades - 1
+        if strategy.closedtrades.entry_id(i) == pendingId and pendingSeries == seriesId
+            used := true
+    processedClosed := strategy.closedtrades
+if strategy.opentrades > 0
+    if strategy.opentrades.entry_id(0) == pendingId and pendingSeries == seriesId
+        used := true
+
+bool reset = false
+bool active = time >= startTime
+if active and barstate.isconfirmed
+    if direction == 0
+        origin := startAnchor > 0 ? startAnchor : close >= open ? low : high
+        direction := close >= origin ? 1 : -1
+        terminal := direction == 1 ? math.max(origin, high) : math.min(origin, low)
+        seriesId += 1
+        seriesScale := scaleAt(close)
+        bornBar := bar_index
+        lastReset := "Initial seed"
+        reset := true
+    else
+        float nextTerminal = terminalFor(direction, terminal, frozen, high, low)
+        int event = eventFor(direction, origin, nextTerminal, frozen, close, extensionLevel)
+        if event != 0
+            // A new opposite series originates at the preceding directional extreme.
+            // A completed continuation starts at the preceding frozen 0% terminal.
+            origin := terminal
+            terminal := close
+            direction := event == -1 ? -direction : direction
+            frozen := false
+            used := false
+            seriesId += 1
+            seriesScale := scaleAt(close)
+            bornBar := bar_index
+            lastReset := event == -1 ? "Origin broken on close" : "Extension completed on close"
+            reset := true
+        else
+            terminal := nextTerminal
+            if not frozen and freezeFor(direction, origin, terminal, close, minMove * seriesScale, freezePoints * seriesScale, reversalLevel)
+                frozen := true
+
+float entry = direction == 0 ? na : roundTick(levelFor(origin, terminal, 0.5) + direction * fr50Ticks * TICK)
+float target = direction == 0 ? na : roundTick(levelFor(origin, terminal, ptLevel) - direction * frPtTicks * TICK)
+float stop = direction == 0 ? na : roundTick(levelFor(origin, terminal, stopLevel) - direction * TICK)
+float span = math.abs(terminal - origin)
+float tickScale = autoScale ? seriesScale * 0.25 / TICK : 1
+float stopTicks = math.abs(entry - stop) / TICK
+float netReward = direction == 0 ? na : rewardFor(entry, target)
+float unitRisk = direction == 0 ? na : riskFor(entry, stop)
+float quantity = direction == 0 ? 0 : qtyFor(entry, stop)
+bool shapeOk = direction != 0 and (target - entry) * direction > 0 and (entry - stop) * direction > 0
+bool distanceOk = span >= minMove * seriesScale and stopTicks >= minSlTicks * tickScale and stopTicks <= maxSlTicks * tickScale
+bool economicOk = netReward > 0 and unitRisk > 0 and netReward >= minNetRR * unitRisk
+bool sideOk = direction == 1 ? tradeLong : tradeShort
+bool beforeMidpoint = direction != 0 and (close - entry) * direction > 0
+bool positionOpen = strategy.opentrades > 0
+bool allow = active and barstate.isconfirmed and frozen and bar_index > bornBar and not used and not positionOpen and shapeOk and distanceOk and economicOk and quantity > 0 and sideOk and beforeMidpoint
+string desiredId = (direction == 1 ? "L" : "S") + str.tostring(seriesId)
+
+// Cancel obsolete quotes before replacement; keep a filled entry's bracket snapshot.
+if pendingId != "" and not positionOpen and (not allow or pendingId != desiredId)
+    strategy.cancel(pendingId)
+    strategy.cancel(pendingId + "X")
+if allow
+    pendingId := desiredId
+    pendingSeries := seriesId
+    pendingEntry := entry
+    pendingTarget := target
+    pendingStop := stop
+    pendingQty := quantity
+    strategy.entry(pendingId, direction == 1 ? strategy.long : strategy.short, qty=quantity, limit=entry,
+         oca_name="CFL single series", oca_type=strategy.oca.cancel, comment=direction == 1 ? "Fib 50 LONG" : "Fib 50 SHORT")
+    strategy.exit(pendingId + "X", from_entry=pendingId, limit=pendingTarget, stop=pendingStop, comment_profit="Fib PT", comment_loss="Fib SL")
+if positionOpen
+    strategy.exit(pendingId + "X", from_entry=pendingId, limit=pendingTarget, stop=pendingStop, comment_profit="Fib PT", comment_loss="Fib SL")
+
+// One connected staircase per series, including the developing leg before entry.
+// Boxes start when their levels are known, not at an earlier swing candle.
+if active and direction != 0
+    float top = math.max(entry, stop)
+    float bottom = math.min(entry, stop)
+    bool meaningful = span >= minMove * seriesScale
+    if reset
+        if not na(currentZone) and not zoneEnded
+            currentZone.set_right(bar_index)
+        currentZone := na
+        zoneEnded := false
+    bool moved = na(currentZone) or currentZone.get_top() != top or currentZone.get_bottom() != bottom
+    if meaningful and moved
+        if not na(currentZone) and not zoneEnded
+            currentZone.set_right(bar_index)
+        color zoneColor = direction == 1 ? color.new(color.lime, 82) : color.new(color.red, 78)
+        currentZone := box.new(bar_index, top, bar_index, bottom, border_color=color.new(zoneColor, 100), bgcolor=zoneColor)
+        zones.push(currentZone)
+        zoneEnded := false
+        while zones.size() > zoneHistory
+            box.delete(zones.shift())
+    if not na(currentZone) and not zoneEnded
+        currentZone.set_right(bar_index)
+        if (close - stop) * direction < 0
+            zoneEnded := true
+
+// Plots preserve all calculated historical levels beyond the bounded box archive.
+// A missing sample on reset separates successive series.
+bool draw = showLevels and direction != 0 and not reset and span >= minMove * seriesScale
+plot(draw ? origin : na, "Origin 100%", color=color.new(color.gray, 55), style=plot.style_linebr)
+plot(draw ? terminal : na, "Terminal 0%", color=color.new(color.gray, 55), style=plot.style_linebr)
+plot(draw ? entry : na, "Midpoint entry", color=color.lime, style=plot.style_linebr)
+plot(draw ? stop : na, "Stop", color=color.red, style=plot.style_linebr)
+plot(draw ? target : na, "Profit target", color=color.yellow, style=plot.style_linebr)
+plot(draw ? levelFor(origin, terminal, -0.236) : na, "Gold -23.6% context (not PT)", color=color.new(color.orange, 55), style=plot.style_linebr)
+plot(positionOpen ? pendingStop : na, "Filled position stop", color=color.red, linewidth=2, style=plot.style_linebr)
+plot(positionOpen ? pendingTarget : na, "Filled position target", color=color.yellow, linewidth=2, style=plot.style_linebr)
+
+string reason = not active ? "Waiting for start date" : positionOpen ? "Position open: fixed bracket" : used ? "Traded: waiting for series reset" : not sideOk ? "Direction disabled" : not frozen ? "Developing: waiting for terminal freeze" : not shapeOk ? "Invalid bracket geometry" : not distanceOk ? "Stop distance outside configured range" : not economicOk ? "Target insufficient after costs" : quantity <= 0 ? "Below tradable quantity / account budget" : not beforeMidpoint ? "Midpoint passed: no market chase" : bar_index <= bornBar ? "New series: wait for next candle" : "50% limit armed"
+var table status = table.new(position.bottom_right, 1, 5, bgcolor=color.new(color.black, 15))
+if barstate.islast
+    table.clear(status, 0, 0, 0, 4)
+    if showStatus
+        table.cell(status, 0, 0, "CFL v105 | serial reconstruction | not certified parity", text_color=color.silver)
+        table.cell(status, 0, 1, "Series " + str.tostring(seriesId) + " | " + (direction == 1 ? "UP" : direction == -1 ? "DOWN" : "WAIT") + " | " + (frozen ? "FROZEN" : "DEVELOPING"), text_color=direction == 1 ? color.lime : color.red)
+        table.cell(status, 0, 2, reason, text_color=allow ? color.lime : color.orange)
+        table.cell(status, 0, 3, "Origin " + str.tostring(origin, format.mintick) + " | Terminal " + str.tostring(terminal, format.mintick) + " | " + lastReset, text_color=color.silver)
+        table.cell(status, 0, 4, "Net reward/unit " + str.tostring(netReward, "#.##") + " | Risk/unit " + str.tostring(unitRisk, "#.##") + " | Qty " + str.tostring(quantity), text_color=color.silver)
+// END OF COMPLETE V105 SCRIPT

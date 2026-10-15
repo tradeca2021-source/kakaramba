@@ -1,3 +1,7 @@
+CFL v105: replacement serial Fib engine
+
+Use CFL_FibTrader_v105_Serial_Engine.pine and read its adjacent .md. One active series replaces competing trackers/clones. Terminal freeze, one fill per series, close-based origin/extension resets, connected zone steps and BTC account sizing are explicit. This is a new reconstruction hypothesis, not verified original-source parity. Previous versions and the separate research baseline remain available. Previous notes follow:
+
 CFL v104: BTC sizing and target-economics correction
 
 Use CFL_FibTrader_v104_BTC_Execution.pine for the BTC execution repair; read its adjacent .md. It removes minimum-one-BTC sizing and rejects fee-negative targets. The v103 series engine is unchanged: this is not a closer or exact original reconstruction. Previous versions and the separate research baseline remain available. Previous notes follow:
