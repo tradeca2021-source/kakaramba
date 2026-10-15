@@ -1,3 +1,19 @@
+RBO v100: correct the working trade geometry
+
+Latest full editor file: BTC_RBO_v100_Fib_50_382_618.pine. Replace the older strategy instance with this whole file and reset saved inputs. First line is //@version=6; last line is // END OF COMPLETE V100 SCRIPT.
+
+Per the user's fix request, default entry is50%, target is retracement label38.2%, and stop is retracement label61.8% plus one adverse tick. Origin is100%, terminal0%. Long target lies above midpoint and stop below; short is mirrored. Entry front-run2ticks, target front-run4ticks. All use the chart's tradable tick. The v99 gold-23.6% extension interpretation is preserved in the old file but is no longer the default working trade model.
+
+The close-up's approximate entry/upper-zone/PT spacing supports this model IF the upper zone is the61.8% stop boundary. Screenshot arithmetic alone does not prove that boundary or recover the original engine. The broad screenshot's gold extension labels remain valid drawings; they do not identify every executed order target. This is a corrected hypothesis, not a100% clone.
+
+Stop Placement now defaults Fib Level with Stop Fib Label0.618. ATR and impulse-origin stops remain optional. One shared stop function feeds execution and candidate diagnostics. Submitted stop/target remain fixed; no trend-reversal close or profit-maximizing stop movement is added. Previously enabled hard-risk/safety caps remain.
+
+Minimum Net Reward / Net Risk now defaults0 (OFF). Without costs the symmetric geometry has about1:1 gross payoff; front-runs and fees reduce it below1. Keeping v98's1.0 floor would reject ordinary default setups. Positive-net-target, risk sizing, minimum quantity/margin and other prior gates remain. This deliberately changes the floor to support the chosen trade method, not to claim higher profit factor. For the same reason, existing saved floor1 must be reset manually or use a fresh strategy instance.
+
+Example: low83000, high85000, tick0.1. Long limit84000.2, target84235.6, stop83763.9. Short limit83999.8, target83764.4, stop84236.1. Reward235.4 and risk236.3price units before fees. Chart tick rounding and optional hard-risk caps still apply. These examples are formula checks, not observed original trades.
+
+Local131 source/formula/lifecycle checks passed, including mirrored stop geometry, immutable exits, stop-side fee sizing and prevention of the impossible default1.0floor. Native TradingView compilation, chart parity and performance remain unverified. Swing anchoring and extra confirmations still differ from the unknown source; exact screenshot parity is unresolved. Previous version notes follow:
+
 RBO v99: screenshot extension-target reconstruction study
 
 Full editor copy: BTC_RBO_v99_FULL.pine (1,621 lines; same trading code, with start/end comments to detect incomplete pastes). Replace all Pine Editor text and confirm its final line is // END OF COMPLETE V99 SCRIPT. Canonical study file: BTC_RBO_v99_Extension_Fib_Study.pine. Read CFL_Fib_Reverse_Engineering.md for verified screenshot arithmetic and unresolved anchor/stop/sizing behavior. This is not a recovered copy of_CFL_s_FibTrader.
