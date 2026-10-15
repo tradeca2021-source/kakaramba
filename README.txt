@@ -1,3 +1,7 @@
+CFL v102: fix repeated origin-family entries and missing zone history
+
+Use CFL_FibTrader_v102_Lifecycle_Fix.pine instead of v101 for the current reconstruction repair. Read CFL_FibTrader_v102_Lifecycle_Fix.md. It adds filled-origin-family usage, one closed-candle tracker update and a bounded historical step-zone archive. These address the defects seen in the v101 screenshot; they do not certify original source rules. Both directions and fixed50/38.2/61.8 bracket behavior remain. The separate research baseline is unchanged. Previous notes follow:
+
 CFL v101: standalone multi-series reconstruction
 
 Use CFL_FibTrader_v101_Standalone.pine for the screenshot-reconstruction attempt, replacing the visible RBO/v100 instance. See CFL_FibTrader_v101_Standalone.md for its moving/frozen series, nested Fibs, stepped zones, source-like tick inputs, execution assumptions and validation limits. It uses the existing standalone v2 model rather than the RBO entry engine. No exact-match or performance claim is made. The repository's separate research strategies and their README.md recommendations are unchanged.

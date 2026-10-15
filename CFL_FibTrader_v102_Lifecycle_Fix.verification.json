@@ -1,0 +1,17 @@
+{
+  "file": "CFL_FibTrader_v102_Lifecycle_Fix.pine",
+  "sha256": "46d348319f27963f94d864db5e4c65f5e543d776c4b2ac5b7638a68787b4cd57",
+  "parser": {
+    "name": "pynescript",
+    "version": "0.3.0",
+    "exit_code": 0,
+    "diagnostics": "none",
+    "ast_sha256": "87673f336a3938736af9b0fe47f8a73e7d0ddb0ddf6e46432a92713c36603d9c"
+  },
+  "source_model_regression_checks": 22,
+  "native_tradingview_compilation": false,
+  "native_execution": false,
+  "original_platform_parity": false,
+  "performance_verified": false,
+  "status": "Lifecycle repair of inferred screenshot model; not a verified original clone"
+}
