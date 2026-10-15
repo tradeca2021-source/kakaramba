@@ -1,0 +1,20 @@
+{
+  "source_file": "CFL_FibTrader_v104_BTC_Execution.pine",
+  "source_sha256": "a8da00ee39f6875b6dd6828c47dc94395bf9e861ef73b14f56639f40625977be",
+  "third_party_parser": {
+    "name": "pynescript",
+    "version": "0.3.0",
+    "exit_code": 0,
+    "ast_sha256": "bb94478e041c3ba4148af74943d2d22e86de52ee6bd2c40695be0da96beebece"
+  },
+  "actual_expression_checks": {
+    "command": "PYTHONDONTWRITEBYTECODE=1 python tests/test_cfl_v104_btc_risk.py",
+    "passed": 1024,
+    "failed": 0,
+    "executes_pine": false
+  },
+  "series_engine_changed_from_v103": false,
+  "native_tradingview_compilation_verified": false,
+  "original_signal_parity_verified": false,
+  "performance_verified": false
+}
