@@ -1,0 +1,19 @@
+{
+  "source_file": "CFL_FibTrader_v103_Series_Repair.pine",
+  "source_sha256": "9ffb128409aa9a70ab6841db302b0adafe6890d9916199a2dff7ba14ed2620b7",
+  "third_party_parser": {
+    "name": "pynescript",
+    "version": "0.3.0",
+    "exit_code": 0,
+    "ast_sha256": "ade96fe3c427aea8e995877b9d26aa9f86620669ff3fd0d1dc9bbc8c584c4b41"
+  },
+  "source_model_regression_checks": {
+    "command": "python -m unittest discover -s tests -p test_cfl_v103_series_contract.py -v",
+    "passed": 13,
+    "failed": 0,
+    "executes_pine": false
+  },
+  "native_tradingview_compilation_verified": false,
+  "original_signal_parity_verified": false,
+  "performance_verified": false
+}

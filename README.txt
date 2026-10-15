@@ -1,3 +1,7 @@
+CFL v103: series minimums, expiry, clearance and chronological zones
+
+Use CFL_FibTrader_v103_Series_Repair.pine for the latest reconstruction repair. Read its adjacent .md for changed assumptions and validation limits. Prior versions and the separate research baseline remain available. Previous notes follow:
+
 CFL v102: fix repeated origin-family entries and missing zone history
 
 Use CFL_FibTrader_v102_Lifecycle_Fix.pine instead of v101 for the current reconstruction repair. Read CFL_FibTrader_v102_Lifecycle_Fix.md. It adds filled-origin-family usage, one closed-candle tracker update and a bounded historical step-zone archive. These address the defects seen in the v101 screenshot; they do not certify original source rules. Both directions and fixed50/38.2/61.8 bracket behavior remain. The separate research baseline is unchanged. Previous notes follow:
