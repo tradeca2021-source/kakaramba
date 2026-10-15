@@ -1,0 +1,129 @@
+//@version=6
+// Independent screenshot approximation. No original proprietary logic or AI model.
+strategy("EngineeringRobo — TP and Reverse Strategy", overlay=true, max_labels_count=300,
+     initial_capital=100000, currency=currency.USD, pyramiding=0,
+     default_qty_type=strategy.fixed, default_qty_value=1,
+     commission_type=strategy.commission.percent, commission_value=0.07,
+     slippage=2, margin_long=100, margin_short=100,
+     calc_on_every_tick=false, calc_on_order_fills=false, process_orders_on_close=false)
+// Direct conversion of the newly uploaded indicator; no MNQ tester/session filters.
+orderGroup = "Strategy orders"
+orderQty = input.float(1.0, "Order quantity (contracts / shares / units)", minval=0.00000001, group=orderGroup)
+allowLong = input.bool(true, "Enable BUY trades", group=orderGroup)
+allowShort = input.bool(true, "Enable SELL trades", group=orderGroup)
+swapSignals = input.bool(false, "Swap BUY/SELL signals", group=orderGroup)
+length = input.int(20, "SMA length", minval=2)
+slow = input.int(50, "Slow SMA length", minval=3)
+piv = input.int(5, "Confirmed pivot strength", minval=1)
+mult = input.float(2.5, "Reversal ATR multiplier", minval=0.1)
+showPanel = input.bool(true, "Dashboard")
+s1 = input.symbol("CRYPTOCAP:TOTAL", "Total market")
+s2 = input.symbol("TVC:DXY", "Dollar index")
+s3 = input.symbol("BINANCE:BTCUSDT", "BTC reference")
+manual = input.bool(false, "Use screenshot price levels (fixed BTC prices)")
+l1 = input.float(84220, "Resistance 1")
+l2 = input.float(83050, "Resistance 2")
+l3 = input.float(82320, "Resistance 3")
+l4 = input.float(81940, "Resistance 4")
+l5 = input.float(81470, "Support 1")
+l6 = input.float(81000, "Support 2")
+atr = ta.atr(14)
+ma = ta.sma(close, length)
+[st, direction] = ta.supertrend(mult, 10)
+rawBuy = ta.crossunder(direction, 0)
+rawSell = ta.crossover(direction, 0)
+buy = barstate.isconfirmed and (swapSignals ? rawSell : rawBuy)
+sell = barstate.isconfirmed and (swapSignals ? rawBuy : rawSell)
+// Confirmed pivots are displayed when detected, never backdated to the pivot bar.
+ph = ta.pivothigh(high, piv, piv)
+pl = ta.pivotlow(low, piv, piv)
+boostBuy = barstate.isconfirmed and not na(pl) and ta.rsi(close, 14) < 45
+boostSell = barstate.isconfirmed and not na(ph) and ta.rsi(close, 14) > 55
+var int side = 0
+var float entry = na
+var bool tookProfit = false
+if buy or sell
+    side := buy ? 1 : -1
+    entry := close
+    tookProfit := false
+// Keep the uploaded two-current-ATR marker formula, but only close a real,
+// direction-matched position. A new opposite signal takes precedence and reverses.
+profit = barstate.isconfirmed and not buy and not sell and not tookProfit and not na(entry) and ((side == 1 and strategy.position_size > 0 and close >= entry + 2 * atr) or (side == -1 and strategy.position_size < 0 and close <= entry - 2 * atr))
+if profit
+    tookProfit := true
+
+// Direct market orders: each confirmed main signal can trade, without dashboard gates.
+// TP closes are always enabled. Opposite entries reverse any position not yet closed by TP.
+// After a TP close, remain flat until a new main BUY/SELL signal.
+// A disabled direction still allows closing the other side.
+if buy
+    if allowLong
+        strategy.entry("Long", strategy.long, qty=orderQty, comment="AI BUY", alert_message="EngineeringRobo: target position LONG")
+    else if strategy.position_size < 0
+        strategy.close("Short", comment="BUY closes short", alert_message="EngineeringRobo: close SHORT")
+if sell
+    if allowShort
+        strategy.entry("Short", strategy.short, qty=orderQty, comment="AI SELL", alert_message="EngineeringRobo: target position SHORT")
+    else if strategy.position_size > 0
+        strategy.close("Long", comment="SELL closes long", alert_message="EngineeringRobo: close LONG")
+if profit
+    if side == 1 and strategy.position_size > 0
+        strategy.close("Long", comment="AI Take Profit", alert_message="EngineeringRobo: close LONG on profit marker")
+    if side == -1 and strategy.position_size < 0
+        strategy.close("Short", comment="AI Take Profit", alert_message="EngineeringRobo: close SHORT on profit marker")
+
+plotshape(buy, title="Buy", text="AI BUY 🤖", style=shape.labelup, location=location.belowbar, color=color.lime, textcolor=color.black, size=size.tiny)
+plotshape(sell, title="Sell", text="AI SELL 🤖", style=shape.labeldown, location=location.abovebar, color=color.red, textcolor=color.black, size=size.tiny)
+plotshape(boostBuy, title="Boost buy", text="Super Boost Buy", style=shape.triangleup, location=location.belowbar, color=color.lime, textcolor=color.blue, size=size.tiny)
+plotshape(boostSell, title="Boost sell", text="Super Boost Sell", style=shape.triangledown, location=location.abovebar, color=color.red, textcolor=color.blue, size=size.tiny)
+plotshape(profit, title="Profit distance", text="AI Take Profit", style=shape.labeldown, location=location.abovebar, color=color.orange, textcolor=color.white, size=size.tiny)
+var float resistance = na
+var float support = na
+if barstate.isconfirmed
+    if not na(ph)
+        resistance := ph
+    if not na(pl)
+        support := pl
+plot(manual ? l1 : resistance, "Resistance 1", color.red, 2, plot.style_stepline)
+plot(manual ? l2 : na, "Resistance 2", color.red, 2)
+plot(manual ? l3 : na, "Resistance 3", color.red, 2)
+plot(manual ? l4 : na, "Resistance 4", color.red, 2)
+plot(manual ? l5 : support, "Support 1", color.orange, 2, plot.style_stepline)
+plot(manual ? l6 : na, "Support 2", color.orange, 2)
+// Previous completed source bars; higher-timeframe values do not use future data.
+f_trend(string symbol, string tf) =>
+    request.security(symbol, tf, close[1] > ta.sma(close, slow)[1] ? 1 : -1, lookahead=barmerge.lookahead_on, ignore_invalid_symbol=true)
+f_metrics(string symbol) =>
+    request.security(symbol, timeframe.period, [100 * ta.atr(14)[1] / close[1], ta.rsi(close, 14)[1], volume[1] > ta.sma(volume, 96)[1] ? 1 : 0, ta.change(close)[1], ta.mfi(hlc3, 14)[1]], ignore_invalid_symbol=true)
+var table panel = table.new(position.middle_right, 5, 14, border_width=1, border_color=color.white)
+navy = color.rgb(61, 73, 116)
+f_cell(int col, int row, string txt, color bg) =>
+    table.cell(panel, col, row, txt, bgcolor=bg, text_color=bg == navy or bg == color.blue ? color.white : color.black, text_size=size.small)
+// Requests run on every bar so series history remains available.
+btcReturn = request.security(s3, timeframe.period, ta.change(close)[1], ignore_invalid_symbol=true)
+for col = 1 to 4
+    symbol = col == 1 ? syminfo.tickerid : col == 2 ? s1 : col == 3 ? s2 : s3
+    [volatility, rsi, volumeHigh, priceReturn, money] = f_metrics(symbol)
+    correlation = ta.correlation(priceReturn, btcReturn, 30)
+    int votes = 0
+    for row = 4 to 8
+        tf = row == 4 ? "1W" : row == 5 ? "1D" : row == 6 ? "180" : row == 7 ? "45" : "15"
+        trend = f_trend(symbol, tf)
+        votes += nz(trend)
+        if barstate.islast and showPanel
+            f_cell(col, row, na(trend) ? "N/A" : trend == 1 ? "BULLISH" : "BEARISH", na(trend) ? color.gray : trend == 1 ? color.green : color.red)
+    if barstate.islast and showPanel
+        f_cell(col, 0, col == 1 ? syminfo.ticker : col == 2 ? "TOTAL" : col == 3 ? "DXY" : "BTCUSDT", navy)
+        f_cell(col, 1, na(volumeHigh) ? "N/A" : volumeHigh == 1 ? "HIGH" : "LOW", color.yellow)
+        f_cell(col, 2, str.tostring(volatility, "#.##") + "%", color.yellow)
+        f_cell(col, 3, str.tostring(correlation, "#.##"), color.yellow)
+        f_cell(col, 9, votes > 0 ? "BULLISH" : "BEARISH", votes > 0 ? color.green : color.red)
+        f_cell(col, 10, (rsi > 70 ? "Overbought " : rsi < 30 ? "Oversold " : "Neutral ") + str.tostring(rsi, "#.#"), color.gray)
+        f_cell(col, 11, na(money) ? "N/A" : money > 50 ? "IN" : "OUT", na(money) ? color.gray : money > 50 ? color.green : color.red)
+if barstate.islast and showPanel
+    names = array.from("DASHBOARD", "Volume / 96 bars", "ATR volatility %", "Return corr to BTC", "1W", "1D", "3H", "45M", "15M", "Majority trend", "RSI", "MFI proxy", "Social score", "Approximation")
+    for row = 0 to 13
+        f_cell(0, row, array.get(names, row), navy)
+    f_cell(2, 12, "N/A: no social feed", color.gray)
+    f_cell(2, 13, "Independent rules", color.orange)
+// For strategy alerts, select order fills and use {{strategy.order.alert_message}}.

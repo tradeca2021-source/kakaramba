@@ -1,0 +1,16 @@
+//@version=6
+// Independent signal reconstruction. Signal-check rendering confirmed on a user BTC chart; original proprietary formulas remain unknown.
+indicator("EngineeringRobo AI — Signals", overlay=true, max_labels_count=300, behind_chart=false)
+power = input.float(2.5, "AI POWER", minval=0.1)
+showHold = input.bool(false, "HODL LINE 🔗")
+[trail, trend] = ta.supertrend(power, 10)
+up = ta.crossunder(trend, 0)
+down = ta.crossover(trend, 0)
+buy = up and barstate.isconfirmed
+sell = down and barstate.isconfirmed
+// Optional trailing line; signal calculations are independent of line visibility.
+plot(showHold ? trail : na, "HODL LINE", color=color.orange, linewidth=2, force_overlay=true)
+plotshape(buy, "BUY", shape.labelup, location.belowbar, color.lime, text="AI BUY 🤖", textcolor=color.black, size=size.small, force_overlay=true)
+plotshape(sell, "SELL", shape.labeldown, location.abovebar, color.red, text="AI SELL 🤖", textcolor=color.white, size=size.small, force_overlay=true)
+alertcondition(buy, "BUY", "Signal check: confirmed BUY")
+alertcondition(sell, "SELL", "Signal check: confirmed SELL")

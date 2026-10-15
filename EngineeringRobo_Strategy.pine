@@ -1,0 +1,26 @@
+//@version=6
+// Strategy conversion of EngineeringRobo_Signals.pine. Independent reconstruction; not the original proprietary strategy.
+// Signals confirm at bar close; market orders fill on the next available tick (normally the next bar open).
+strategy("EngineeringRobo AI — Signal Strategy", overlay=true, max_labels_count=300,
+     initial_capital=10000, currency=currency.USD,
+     default_qty_type=strategy.percent_of_equity, default_qty_value=10,
+     pyramiding=0, commission_type=strategy.commission.percent, commission_value=0.07,
+     slippage=2, margin_long=100, margin_short=100,
+     calc_on_every_tick=false, calc_on_order_fills=false, process_orders_on_close=false)
+power = input.float(2.5, "AI POWER", minval=0.1)
+showHold = input.bool(false, "HODL LINE 🔗")
+[trail, trend] = ta.supertrend(power, 10)
+up = ta.crossunder(trend, 0)
+down = ta.crossover(trend, 0)
+buy = up and barstate.isconfirmed
+sell = down and barstate.isconfirmed
+// Optional trailing line; signal calculations are independent of line visibility.
+plot(showHold ? trail : na, "HODL LINE", color=color.orange, linewidth=2, force_overlay=true)
+plotshape(buy, "BUY", shape.labelup, location.belowbar, color.lime, text="AI BUY 🤖", textcolor=color.black, size=size.small, force_overlay=true)
+plotshape(sell, "SELL", shape.labeldown, location.abovebar, color.red, text="AI SELL 🤖", textcolor=color.white, size=size.small, force_overlay=true)
+// strategy.entry reverses an existing opposite position automatically.
+// No stop/target is invented: the opposite confirmed signal is the exit.
+if buy
+    strategy.entry("Long", strategy.long, comment="AI BUY", alert_message="EngineeringRobo: target position LONG")
+if sell
+    strategy.entry("Short", strategy.short, comment="AI SELL", alert_message="EngineeringRobo: target position SHORT")

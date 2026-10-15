@@ -1,0 +1,266 @@
+//@version=6
+// Independent screenshot approximation. No original proprietary logic or AI model.
+indicator("EngineeringRobo AI — Signal Diagnostics v1", overlay=true, max_labels_count=300, max_lines_count=100, max_bars_back=1000, behind_chart=false)
+enabled = input.bool(true, ">>---------------- EngineeringRobo AI 🤖 ------------<<")
+mult = input.float(2.5, "AI POWER", minval=0.1)
+colorCandles = input.bool(true, "CHANGE CANDLE COLOR")
+showBoost = input.bool(true, "SUPER SIGNAL BOOSTER")
+showHold = input.bool(false, "HODL LINE 🔗")
+showBull = input.bool(false, "BULL 🐂")
+showCloud = input.bool(false, "BUY WITH GREEN CLOUD ☁️ SELL WITH RED CLOUD")
+showProfit = input.bool(true, "AI TAKE PROFIT SIGNAL")
+showEarly = input.bool(false, "EARLY BIRD 🦅")
+showPanel = input.bool(true, "DASHBOARD")
+showSocial = input.bool(true, "AI Social Intelligence SCORE")
+locationInput = input.string("Middle Right", "Dashboard Location", options=["Top Left", "Top Right", "Middle Left", "Middle Right", "Bottom Left", "Bottom Right"], group="TABLE STYLING")
+sizeInput = input.string("Normal", "Dashboard Size", options=["Tiny", "Small", "Normal", "Large"], group="TABLE STYLING")
+s1 = input.symbol("CRYPTOCAP:TOTAL", "Symbol 2", group="TABLE STYLING")
+s2 = input.symbol("TVC:DXY", "Symbol 3", group="TABLE STYLING")
+s3 = input.symbol("BINANCE:BTCUSDT", "Symbol 4", group="TABLE STYLING")
+selectedTF = input.timeframe("", "Multi-timeframe", group="TABLE STYLING")
+showInvestor = input.bool(false, "BEST BUY - BEST SELL LEVELS", group="FOR INVESTORS")
+showMA1 = input.bool(false, "MA", inline="ma1", group="MOVING AVERAGE")
+type1 = input.string("SMA", "", options=["SMA", "EMA", "WMA", "RMA"], inline="ma1", group="MOVING AVERAGE")
+length = input.int(20, "", minval=2, inline="ma1", group="MOVING AVERAGE")
+showMA2 = input.bool(false, "MA", inline="ma2", group="MOVING AVERAGE")
+type2 = input.string("SMA", "", options=["SMA", "EMA", "WMA", "RMA"], inline="ma2", group="MOVING AVERAGE")
+slow = input.int(50, "", minval=3, inline="ma2", group="MOVING AVERAGE")
+showEMA = input.bool(false, "EMA Trend Lines", group="MOVING AVERAGE")
+showSR = input.bool(true, "ORANGE SUPPORT AND RESISTANCE LINES" , group="MOVING AVERAGE")
+piv = input.int(5, "Channel", minval=1, maxval=100, inline="channel", group="MOVING AVERAGE")
+useChannel = input.bool(true, "", inline="channel", group="MOVING AVERAGE")
+periods = input.int(10, "Periods", minval=1, maxval=200, inline="periods", group="MOVING AVERAGE")
+usePeriods = input.bool(true, "", inline="periods", group="MOVING AVERAGE")
+levelCount = input.int(20, "Levels", minval=1, maxval=40, inline="levels", group="MOVING AVERAGE")
+useLevels = input.bool(true, "", inline="levels", group="MOVING AVERAGE")
+showTrend = input.bool(false, ">>------------- Trendlines -------------<<", group="MOVING AVERAGE")
+leftBars = input.int(30, "Change Left Lines", minval=1, maxval=200, group="MOVING AVERAGE")
+rightBars = input.int(30, "Change Right Lines", minval=1, maxval=200, group="MOVING AVERAGE")
+oldDashed = input.bool(false, "Show Old Trend Lines as Dashed", group="MOVING AVERAGE")
+simulation = input.bool(false, "Simulation", tooltip="Illustrative signal-entry line only. Does not simulate orders, fills or returns.", group="MOVING AVERAGE")
+atr = ta.atr(14)
+f_ma(int n, string kind) =>
+    switch kind
+        "EMA" => ta.ema(close, n)
+        "WMA" => ta.wma(close, n)
+        "RMA" => ta.rma(close, n)
+        => ta.sma(close, n)
+ma = f_ma(length, type1)
+ma2 = f_ma(slow, type2)
+rsiChart = ta.rsi(close, 14)
+ema20 = ta.ema(close, 20)
+ema50 = ta.ema(close, 50)
+ema100 = ta.ema(close, 100)
+ema200 = ta.ema(close, 200)
+[st, direction] = ta.supertrend(mult, 10)
+buyCross = ta.crossunder(direction, 0)
+buy = enabled and barstate.isconfirmed and buyCross
+sellCross = ta.crossover(direction, 0)
+sell = enabled and barstate.isconfirmed and sellCross
+// Confirmed pivots are displayed when detected, never backdated to the pivot bar.
+ph = ta.pivothigh(high, piv, piv)
+pl = ta.pivotlow(low, piv, piv)
+// Evaluate exhaustion at the pivot, then announce only on its confirmation bar.
+// Using detection-bar RSI discarded rebounds that had already recovered.
+boostBuy = enabled and showBoost and barstate.isconfirmed and not na(pl) and rsiChart[piv] < 45
+boostSell = enabled and showBoost and barstate.isconfirmed and not na(ph) and rsiChart[piv] > 55
+var int side = 0
+var float entry = na
+var bool tookProfit = false
+var float entryATR = na
+if buy or sell
+    side := buy ? 1 : -1
+    entry := close
+    entryATR := atr
+    tookProfit := false
+profit = enabled and barstate.isconfirmed and not tookProfit and not na(entry) and ((side == 1 and close >= entry + 2 * entryATR) or (side == -1 and close <= entry - 2 * entryATR))
+if profit
+    tookProfit := true
+var float resistance = na
+var float support = na
+if barstate.isconfirmed
+    if not na(ph)
+        resistance := ph
+    if not na(pl)
+        support := pl
+// All optional overlays are substitutes inferred from the visible controls.
+fastCrossUp = ta.crossover(close, ema20)
+fastCrossDown = ta.crossunder(close, ema20)
+periodHigh = ta.highest(high, periods)[1]
+periodLow = ta.lowest(low, periods)[1]
+var array<line> levels = array.new<line>()
+if enabled and showSR and useLevels and barstate.isconfirmed
+    if not na(ph)
+        array.push(levels, line.new(bar_index, ph, bar_index + 1, ph, extend=extend.right, color=color.red))
+    if not na(pl)
+        array.push(levels, line.new(bar_index, pl, bar_index + 1, pl, extend=extend.right, color=color.orange))
+    while array.size(levels) > levelCount
+        line.delete(array.shift(levels))
+trendHigh = ta.pivothigh(high, leftBars, rightBars)
+trendLow = ta.pivotlow(low, leftBars, rightBars)
+var float previousHigh = na
+var float previousLow = na
+var int highIndex = na
+var int lowIndex = na
+var line highLine = na
+var line lowLine = na
+var array<line> oldLines = array.new<line>()
+if enabled and showTrend and barstate.isconfirmed
+    if not na(trendHigh)
+        if not na(previousHigh)
+            if not na(highLine)
+                if oldDashed
+                    line.set_style(highLine, line.style_dashed)
+                    line.set_extend(highLine, extend.none)
+                    array.push(oldLines, highLine)
+                else
+                    line.delete(highLine)
+            // Start at detection time: no historical drawing before confirmation.
+            highLine := line.new(highIndex, previousHigh, bar_index, trendHigh, extend=extend.right, color=color.red)
+        previousHigh := trendHigh
+        highIndex := bar_index
+    if not na(trendLow)
+        if not na(previousLow)
+            if not na(lowLine)
+                if oldDashed
+                    line.set_style(lowLine, line.style_dashed)
+                    line.set_extend(lowLine, extend.none)
+                    array.push(oldLines, lowLine)
+                else
+                    line.delete(lowLine)
+            lowLine := line.new(lowIndex, previousLow, bar_index, trendLow, extend=extend.right, color=color.green)
+        previousLow := trendLow
+        lowIndex := bar_index
+    while array.size(oldLines) > 40
+        line.delete(array.shift(oldLines))
+
+// Style declarations follow the supplied screenshots. Calculations are independent proxies.
+teal = color.rgb(0, 137, 123)
+rose = color.rgb(255, 82, 82)
+blue = color.rgb(41, 98, 255)
+charcoal = color.rgb(54, 58, 69)
+confirmedEarly = enabled and showEarly and barstate.isconfirmed and ((fastCrossUp and direction > 0) or (fastCrossDown and direction < 0))
+plot(enabled and showHold ? st : na, title="Plot", color=color.orange, linewidth=2, style=plot.style_linebr, force_overlay=true)
+plotshape(enabled and showBull and buy, title="Shapes", style=shape.labelup, location=location.belowbar, color=teal, size=size.tiny, force_overlay=true)
+plotshape(enabled and showBull and barstate.isconfirmed and fastCrossUp and close > ema200, title="Shapes", style=shape.labelup, location=location.belowbar, color=teal, size=size.tiny, force_overlay=true)
+plotshape(enabled and showBull and sell, title="Shapes", style=shape.labeldown, location=location.abovebar, color=rose, size=size.tiny, force_overlay=true)
+plot(enabled and showInvestor ? periodLow : na, title="Plot", color=color.green, force_overlay=true)
+plot(enabled and showInvestor ? periodHigh : na, title="Plot", color=rose, force_overlay=true)
+plotshape(showProfit and profit, title="AI Take Profit", text="AI Take Profit", style=shape.labeldown, location=location.abovebar, color=rose, textcolor=color.yellow, size=size.small, force_overlay=true)
+plotshape(enabled and showCloud and buy and ema20 > ema50, title="Shapes", style=shape.labelup, location=location.belowbar, color=color.aqua, size=size.tiny, force_overlay=true)
+plotshape(enabled and showCloud and sell and ema20 < ema50, title="Shapes", style=shape.labeldown, location=location.abovebar, color=rose, size=size.tiny, force_overlay=true)
+plotshape(confirmedEarly, title="Early Bird", style=shape.xcross, location=location.abovebar, color=blue, size=size.tiny, force_overlay=true)
+plotshape(boostBuy, title="Shapes", text="Super Boost Buy", style=shape.triangleup, location=location.belowbar, color=color.lime, textcolor=blue, size=size.small, force_overlay=true)
+plotshape(boostSell, title="Shapes", text="Super Boost Sell", style=shape.triangledown, location=location.abovebar, color=color.red, textcolor=blue, size=size.small, force_overlay=true)
+plotshape(buy, title="Shapes", text="AI BUY 🤖", style=shape.labelup, location=location.belowbar, color=color.lime, textcolor=color.black, size=size.small, force_overlay=true)
+plotshape(sell, title="Shapes", text="AI SELL 🤖", style=shape.labeldown, location=location.abovebar, color=color.red, textcolor=color.black, size=size.small, force_overlay=true)
+barcolor(enabled and colorCandles ? na(direction) ? color.white : close == open ? color.gray : direction > 0 ? color.red : color.lime : na, title="AI Colors")
+// Price-valued money-flow overlays avoid putting oscillator values on the price scale.
+moneyFlow = ta.mfi(hlc3, 14)
+moneyColor = na(moneyFlow) ? color.new(charcoal, 65) : moneyFlow > 50 ? color.new(color.green, 65) : color.new(rose, 65)
+plot(enabled and showSR and useChannel ? support : na, title="Smart Money IN", color=moneyColor, style=plot.style_stepline, force_overlay=true)
+plot(enabled and showSR and useChannel ? resistance : na, title="Smart Money OUT", color=moneyColor, style=plot.style_stepline, force_overlay=true)
+plot(enabled and showSR and usePeriods ? periodHigh : na, title="Overbought", color=rsiChart > 70 ? color.red : rose, style=plot.style_stepline, force_overlay=true)
+plot(enabled and showSR and usePeriods ? periodLow : na, title="Oversold", color=rsiChart < 30 ? color.lime : color.green, style=plot.style_stepline, force_overlay=true)
+plot(enabled and showMA1 ? ma : na, title="MA №1", color=color.green, force_overlay=true)
+plot(enabled and showMA2 ? ma2 : na, title="MA №2", color=rose, force_overlay=true)
+p20 = plot(enabled and (showEMA or showCloud) ? ema20 : na, title="EMA20", color=blue, linewidth=2, force_overlay=true)
+p50 = plot(enabled and (showEMA or showCloud) ? ema50 : na, title="EMA50", color=color.yellow, linewidth=2, force_overlay=true)
+plot(enabled and showEMA ? ema100 : na, title="EMA100", color=color.aqua, linewidth=2, force_overlay=true)
+plot(enabled and showEMA ? ema200 : na, title="EMA200", color=charcoal, linewidth=2, force_overlay=true)
+fill(p20, p50, enabled and showCloud ? ema20 > ema50 ? color.new(color.green, 85) : color.new(rose, 85) : na, title="Plots Background")
+bgcolor(enabled and showBull ? close > ema200 ? color.new(color.green, 92) : close < ema200 ? color.new(rose, 92) : color.new(charcoal, 92) : na, title="Plots Background", force_overlay=true)
+bgcolor(enabled and showInvestor and rsiChart > 70 ? color.new(color.red, 88) : na, title="Plots Background", force_overlay=true)
+bgcolor(enabled and showInvestor and rsiChart < 30 ? color.new(color.lime, 88) : na, title="Plots Background", force_overlay=true)
+// Simulation is a drawing, so it adds no unmatched row to the Style tab.
+var line simulationLine = na
+if enabled and simulation and (buy or sell)
+    if not na(simulationLine)
+        line.delete(simulationLine)
+    simulationLine := line.new(bar_index, entry, bar_index + 1, entry, extend=extend.right, color=color.silver)
+
+// Cumulative confirmed signal counts distinguish a quiet window from hidden plots.
+var int buyCount = 0
+var int sellCount = 0
+if buy
+    buyCount += 1
+if sell
+    sellCount += 1
+
+// Previous completed source bars; higher-timeframe values do not use future data.
+f_trend(string symbol, string tf) =>
+    // Do not turn missing history into a bearish vote or sample lower timeframes.
+    float result = na
+    if timeframe.in_seconds(tf) >= timeframe.in_seconds()
+        result := request.security(symbol, tf, na(close[1]) or na(ta.sma(close, slow)[1]) ? float(na) : close[1] > ta.sma(close, slow)[1] ? 1.0 : -1.0, lookahead=barmerge.lookahead_on, ignore_invalid_symbol=true)
+    result
+f_metrics(string symbol) =>
+    request.security(symbol, timeframe.period, [100 * ta.atr(14)[1] / close[1], ta.rsi(close, 14)[1], na(volume[1]) or na(ta.sma(volume, 96)[1]) ? float(na) : volume[1] > ta.sma(volume, 96)[1] ? 1.0 : 0.0, ta.change(close)[1], ta.mfi(hlc3, 14)[1]], lookahead=barmerge.lookahead_on, ignore_invalid_symbol=true)
+panelPosition = switch locationInput
+    "Top Left" => position.top_left
+    "Top Right" => position.top_right
+    "Middle Left" => position.middle_left
+    "Bottom Left" => position.bottom_left
+    "Bottom Right" => position.bottom_right
+    => position.middle_right
+panelSize = switch sizeInput
+    "Tiny" => size.tiny
+    "Small" => size.small
+    "Large" => size.large
+    => size.normal
+var table panel = table.new(panelPosition, 5, 14, border_width=1, border_color=color.white, force_overlay=true)
+navy = color.rgb(61, 73, 116)
+f_cell(int col, int row, string txt, color bg) =>
+    table.cell(panel, col, row, txt, bgcolor=bg, text_color=bg == navy or bg == color.blue ? color.white : color.black, text_size=panelSize)
+// Requests run on every bar so series history remains available.
+btcReturn = request.security(s3, timeframe.period, ta.change(close)[1], lookahead=barmerge.lookahead_on, ignore_invalid_symbol=true)
+// Four written calls give each rolling correlation its own historical series.
+// A single rolling calculation in a symbol loop can share function-call state.
+f_column(int col, string symbol, string heading) =>
+    [volatility, rsi, volumeHigh, priceReturn, money] = f_metrics(symbol)
+    correlation = ta.correlation(priceReturn, btcReturn, 30)
+    for row = 4 to 8
+        tf = row == 4 ? "1W" : row == 5 ? "1D" : row == 6 ? "180" : row == 7 ? "45" : "15"
+        trend = f_trend(symbol, tf)
+        if barstate.islast and enabled and showPanel
+            f_cell(col, row, na(trend) ? "N/A" : trend == 1 ? "BULLISH" : "BEARISH", na(trend) ? color.gray : trend == 1 ? color.green : color.red)
+    if barstate.islast and enabled and showPanel
+        f_cell(col, 0, heading, navy)
+        f_cell(col, 1, na(volumeHigh) ? "N/A" : volumeHigh == 1 ? "HIGH" : "LOW", color.yellow)
+        f_cell(col, 2, na(volatility) ? "N/A" : str.tostring(volatility, "#.##") + "%", color.yellow)
+        f_cell(col, 3, na(correlation) ? "N/A" : str.tostring(correlation, "#.##"), color.yellow)
+    selectedTrend = f_trend(symbol, selectedTF == "" ? timeframe.period : selectedTF)
+    if barstate.islast and enabled and showPanel
+        f_cell(col, 9, na(selectedTrend) ? "N/A" : selectedTrend > 0 ? "BULLISH" : "BEARISH", na(selectedTrend) ? color.gray : selectedTrend > 0 ? color.green : color.red)
+        f_cell(col, 10, na(rsi) ? "N/A" : (rsi > 70 ? "Overbought " : rsi < 30 ? "Oversold " : "Neutral ") + str.tostring(rsi, "#.#"), color.gray)
+        f_cell(col, 11, na(money) ? "N/A" : money > 50 ? "IN" : "OUT", na(money) ? color.gray : money > 50 ? color.green : color.red)
+// Keep these calls unconditional so histories populate even while the panel is hidden.
+f_column(1, syminfo.tickerid, syminfo.ticker)
+f_column(2, s1, s1)
+f_column(3, s2, s2)
+f_column(4, s3, s3)
+if barstate.islast and enabled and showPanel
+    names = array.from("DASHBOARD", "Volume / 96 bars", "ATR volatility %", "Return corr to BTC", "1W", "1D", "3H", "45M", "15M", "Multi-timeframe", "RSI", "MFI proxy", showSocial ? "Social score" : "", "Confirmed signals")
+    for row = 0 to 13
+        f_cell(0, row, array.get(names, row), navy)
+    if showSocial
+        f_cell(2, 12, "N/A: no social feed", color.gray)
+    f_cell(2, 13, "B " + str.tostring(buyCount) + " / S " + str.tostring(sellCount), color.orange)
+alertcondition(buy, "Buy", "Approximation: confirmed buy")
+alertcondition(sell, "Sell", "Approximation: confirmed sell")
+alertcondition(boostBuy, "Super Boost Buy", "Approximation: confirmed pivot boost buy")
+alertcondition(boostSell, "Super Boost Sell", "Approximation: confirmed pivot boost sell")
+alertcondition(showProfit and profit, "AI Take Profit", "Approximation: confirmed two-ATR profit distance reached")
+
+// Diagnostic drawing is intentionally independent of Inputs and Style plot switches.
+// It reports real calculated conditions; it never injects synthetic trade signals.
+var label diagnostic = na
+if barstate.islast
+    if not na(diagnostic)
+        label.delete(diagnostic)
+    status = "DIAGNOSTICS v1 | " + syminfo.tickerid + " | TF " + timeframe.period
+    status += "\nMain: " + (enabled ? "ON" : "OFF") + " | Dashboard: " + (showPanel ? "ON" : "OFF")
+    status += "\nConfirmed BUY: " + str.tostring(buyCount) + " | SELL: " + str.tostring(sellCount)
+    status += "\nSupertrend: " + (na(st) ? "WARMING UP" : direction < 0 ? "UP" : "DOWN")
+    status += "\nIf counts are positive, check Style Shapes and visible date range."
+    diagnostic := label.new(bar_index, high + nz(atr, syminfo.mintick * 20) * 3, status, style=label.style_label_down, color=color.blue, textcolor=color.white, size=size.normal, force_overlay=true)

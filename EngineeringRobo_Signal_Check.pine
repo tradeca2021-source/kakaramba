@@ -1,0 +1,26 @@
+//@version=6
+// Isolated diagnostic for the reconstructed signal engine, not the original indicator.
+indicator("EngineeringRobo — Signal Check v2", overlay=true, max_labels_count=300, behind_chart=false)
+power = input.float(2.5, "AI POWER", minval=0.1)
+[trail, trend] = ta.supertrend(power, 10)
+up = ta.crossunder(trend, 0)
+down = ta.crossover(trend, 0)
+buy = up and barstate.isconfirmed
+sell = down and barstate.isconfirmed
+// Always-on price-scale output: this must be visible even without a reversal.
+plot(trail, "DIAGNOSTIC trailing line", color=color.orange, linewidth=2, force_overlay=true)
+plotshape(buy, "BUY", shape.labelup, location.belowbar, color.lime, text="BUY", textcolor=color.black, size=size.small, force_overlay=true)
+plotshape(sell, "SELL", shape.labeldown, location.abovebar, color.red, text="SELL", textcolor=color.white, size=size.small, force_overlay=true)
+// Duplicate events as drawing objects to isolate plot visibility from drawing visibility.
+if buy
+    label.new(bar_index, low, "BUY", yloc=yloc.belowbar, style=label.style_label_up, color=color.lime, textcolor=color.black, force_overlay=true)
+if sell
+    label.new(bar_index, high, "SELL", yloc=yloc.abovebar, style=label.style_label_down, color=color.red, textcolor=color.white, force_overlay=true)
+// Counters and execution flags remain available through TradingView's Data Window.
+plot(ta.cum(buy ? 1 : 0), "Confirmed BUY count", display=display.data_window)
+plot(ta.cum(sell ? 1 : 0), "Confirmed SELL count", display=display.data_window)
+plot(ta.cum(up or down ? 1 : 0), "Raw reversal count", display=display.data_window)
+plot(barstate.isconfirmed ? 1 : 0, "Bar confirmed flag", display=display.data_window)
+plot(barstate.islast ? 1 : 0, "Last bar flag", display=display.data_window)
+alertcondition(buy, "BUY", "Signal check: confirmed BUY")
+alertcondition(sell, "SELL", "Signal check: confirmed SELL")
