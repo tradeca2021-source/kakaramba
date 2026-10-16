@@ -1,0 +1,22 @@
+{
+  "status": "Exploratory follow-up defined after inspecting the earlier failed study; no untouched validation",
+  "signal": "Unchanged closed-bar Supertrend 2.5/10; next-open entry; ATR14 stop 1.5 and target 2",
+  "filters": ["unfiltered", "range_avoid_24h", "range_avoid_7d", "room_24h", "room_7d", "trend_ema200", "trend_4h_ema50", "adx20", "rsi_not_extended", "atr_covers_fees", "range_and_trend", "room_and_trend", "breakout_24h"],
+  "definitions": {
+    "range_avoid": "Exclude long above 80% or short below 20% of prior closed 24h/7d high-low range; include signal close for location only, not range bounds; exclude closes outside that range too",
+    "room": "Prior range extreme in trade direction must be at least 2 signal ATR from signal close; breakouts outside range rejected; next-open gap checked again",
+    "trend_ema200": "Long above rising EMA200, short below falling EMA200; slope over 4 closed 15m bars",
+    "trend_4h_ema50": "Same rule using only completed UTC 4h bars and EMA50 with 1-bar slope",
+    "adx20": "Wilder ADX14 >=20 at signal close",
+    "rsi_not_extended": "RSI14 <=65 for longs, >=35 for shorts",
+    "atr_covers_fees": "Gross 2 ATR target at signal close at least 3 times estimated round-trip commission plus market slippage; next-open economics checked again",
+    "combinations": "range_and_trend uses24h range and EMA200; room_and_trend uses24h room and EMA200",
+    "breakout_24h": "Long close exceeds prior24h high or short close below prior24h low; counter-hypothesis to fading range extremes"
+  },
+  "execution": "Filtered opposite signal still closes old position next open; rejected new direction stays flat. Same exits for all comparisons. No screenshot fixed levels or retrospective pivots. 0.1 BTC fixed primary size to avoid most capital blocking; report capital skips. Original1 BTC comparison retained separately.",
+  "periods": "Jan-Jun development; Jul-Aug comparison; September historical review, each independent100k account",
+  "costs": "0.07% each side, tick0.1/slippage2ticks, supplied historical funding using5m last-price proxy; stress0.1% fee and20tick slippage separately",
+  "selection": "Development only: >=30 trades, positive net, PF>=1.1 and drawdown<=unfiltered. No qualification means no selection. All filters and stresses published, no parameter search.",
+  "diagnostics": "Compare accepted and rejected unfiltered executed trades by signal timestamp, net expectancy, win rate and fees; diagnostics are conditional and not causal attribution. Counts of all signal accept/reject reported separately from capital skips.",
+  "limits": "Prior BTC periods inspected. Python execution not Pine verified.5m stop-first ties. Source exchange Binance proxy not Bitunix. Thresholds are hypotheses, not optimized settings. No claim these exhaust all options."
+}

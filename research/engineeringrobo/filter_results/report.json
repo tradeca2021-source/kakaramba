@@ -1,0 +1,3831 @@
+{
+  "status": "exploratory_completed",
+  "venue": "Binance USD-M BTCUSDT proxy, not Bitunix",
+  "fresh_validation": false,
+  "native_pine_parity": false,
+  "protocol_sha256": "fdd250edf7eeb8a7024efac54f259cbe0e90d3e50a6f3aed18f3d1b89c74b0af",
+  "source_sha256": {
+    "replay.py": "617bba4e2500450f686b3f45865299a27220650be0187b1d239ddb3632b874b8",
+    "filters.py": "35216302af2a01fa36c48d3b8102410f003dc5725a2d9f2d0d331f8460008ee0",
+    "filter_study.py": "564a15e9e9905cfc2d27beada0c2e376054eac684b3fe47ddcabb65aae9069b1"
+  },
+  "input_hashes": {
+    "BTCUSDT-15m-2025-12.zip": "d497e319364b0c13a0cd59e0192568ea1542e8f430844046189a8cf534895805",
+    "BTCUSDT-5m-2025-12.zip": "0e923a3d2ac4f6711d8c841220f4e5d2e479c1bdb40b41515eb250e16808304f",
+    "BTCUSDT-fundingRate-2025-12.zip": "35318b789f020b0e04c9043112480743855554e52e1d188437cbdaa67246d51d",
+    "BTCUSDT-15m-2026-01.zip": "065fc8cf21f51ad6bd043fa670ba2dbc8c6030efd5dff63d5d4a9d99e0b88d0b",
+    "BTCUSDT-5m-2026-01.zip": "c092f3b26036f203bb5b11c28958574aa8501315ed26dd0f8c017051b9fb3abf",
+    "BTCUSDT-fundingRate-2026-01.zip": "fcdc796484f395830d418588a34a26baed8849dbef0ff2b56173247e493ff51f",
+    "BTCUSDT-15m-2026-02.zip": "983c066f0cf0171466e89d7596433f5ac717ea8c805fe5b650a83b3176cd92c1",
+    "BTCUSDT-5m-2026-02.zip": "8be83befce2cd9bf0959c872d91108debd03e1b51a451bac3a56b8ddca196bb4",
+    "BTCUSDT-fundingRate-2026-02.zip": "80df1dd669dc1e3afc360c9da8b9a949a127fce088eedbf5bf708bd37b0a1f58",
+    "BTCUSDT-15m-2026-03.zip": "ea25e84ddffdcc8b7ba68fb47363daee6a9ef53941f152c9ebf6d4e165d32bf8",
+    "BTCUSDT-5m-2026-03.zip": "0302ccef9b3e5e38c35bc8667a1e890138c9136e89145688220eea99b748200e",
+    "BTCUSDT-fundingRate-2026-03.zip": "5c069d5e9597a44fd0e213395082e59ff223fb99c9eab3a2a5a2a5622ba7867c",
+    "BTCUSDT-15m-2026-04.zip": "0bc151133aa47be76f535539e25c04970bd6d0afd54e532951638dc8330fcc58",
+    "BTCUSDT-5m-2026-04.zip": "e2934467bdb6a000124948f4c8fef176e2066520a6b2e5a0522450fed51396f7",
+    "BTCUSDT-fundingRate-2026-04.zip": "51cdeb4de7d5ef1d4eece80b6115e391bdf7a2d0803bf9ad8371ab23340b22d3",
+    "BTCUSDT-15m-2026-05.zip": "1c0a865f62ddca9890f5d7bbe901b7261a3818785594d960f5fce36ee7ce81f5",
+    "BTCUSDT-5m-2026-05.zip": "b1a73378796bb62084c32ca5865903beeaf87d521d950d5e7776343f682dea93",
+    "BTCUSDT-fundingRate-2026-05.zip": "445b65fd6b17bfcfb5e4d035db29fad34f729fa078f0449024db42621be84e6e",
+    "BTCUSDT-15m-2026-06.zip": "54369ae74f8122e0d3c8152807f78ec3ced435a8b0ab59c5efcea2cbad878857",
+    "BTCUSDT-5m-2026-06.zip": "782c555963c852ca768335de21d5743147e5d50bff449600f8fceb9ebe5273de",
+    "BTCUSDT-fundingRate-2026-06.zip": "cff97ce688329592bccbbf5873b5c7021649e093f5f5806e332c5b4fb7fd6a00",
+    "BTCUSDT-15m-2026-07.zip": "10df439d8404a31fc55ed91fe0169b79db3fa3e7a8c83bc2eb704004eadea1c2",
+    "BTCUSDT-5m-2026-07.zip": "ec750f7aa69c8f842fa1464a90ad4aa92452cfa767df9e8d70dc484e466c8fc3",
+    "BTCUSDT-fundingRate-2026-07.zip": "e36fcc66f493d7d9ec348c852fc22e9f318c79cf7adae17398a3994ae0adc41e",
+    "BTCUSDT-15m-2026-08.zip": "0702d68a42de591fb39929d10327f1258ce1d59b9d81158c07e412029eb36306",
+    "BTCUSDT-5m-2026-08.zip": "14fd408e5d2902665c66b701e861b173568b66399e3fa462b94c766d209567d1",
+    "BTCUSDT-fundingRate-2026-08.zip": "7c108b3a02bd6dc7345ca7323e3a49664edcea0afdcf780ffb3b44762c45a964",
+    "BTCUSDT-15m-2026-09.zip": "e879fa6903fd905201bd1f59e456773638cdf8c13848da79331cee89b0046964",
+    "BTCUSDT-5m-2026-09.zip": "3a2d163a2bd28ca614fa0840a92ecbcde0d9c4962b278dd619d5bf81a9918e26",
+    "BTCUSDT-fundingRate-2026-09.zip": "913cd31b8f924a06717a2fac17f3df6132c24ccded209eb3e4ae7d83e1b247f2"
+  },
+  "costs": {
+    "fee": 0.0007,
+    "tick": 0.1,
+    "slippage_ticks": 2,
+    "quantity": 0.1,
+    "capital": 100000
+  },
+  "selected_on_development": null,
+  "results": {
+    "development": {
+      "base": {
+        "unfiltered": {
+          "name": "unfiltered",
+          "trades": 535,
+          "wins": 211,
+          "losses": 324,
+          "net": -7266.4642384716135,
+          "fees": 5571.64951,
+          "funding": 0.5652715284000005,
+          "profit_factor": 0.5078949399821036,
+          "maximum_drawdown_5m_close": 7339.796878159716,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0
+          },
+          "signals_accepted": 535,
+          "signals_total": 535
+        },
+        "range_avoid_24h": {
+          "name": "range_avoid_24h",
+          "trades": 421,
+          "wins": 162,
+          "losses": 259,
+          "net": -5641.636676428927,
+          "fees": 4390.264648,
+          "funding": 0.6879715711000005,
+          "profit_factor": 0.5106857197672341,
+          "maximum_drawdown_5m_close": 5722.819184859545,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 114
+          },
+          "signals_accepted": 421,
+          "signals_total": 535
+        },
+        "range_avoid_7d": {
+          "name": "range_avoid_7d",
+          "trades": 451,
+          "wins": 171,
+          "losses": 280,
+          "net": -6495.327280991638,
+          "fees": 4702.946325,
+          "funding": -4.9109559916,
+          "profit_factor": 0.4857393096505322,
+          "maximum_drawdown_5m_close": 6584.297768682329,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 84
+          },
+          "signals_accepted": 451,
+          "signals_total": 535
+        },
+        "room_24h": {
+          "name": "room_24h",
+          "trades": 403,
+          "wins": 157,
+          "losses": 246,
+          "net": -5278.558058048235,
+          "fees": 4185.765612,
+          "funding": -0.2524460481999995,
+          "profit_factor": 0.5113515139336322,
+          "maximum_drawdown_5m_close": 5490.458247481438,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 132
+          },
+          "signals_accepted": 403,
+          "signals_total": 535
+        },
+        "room_7d": {
+          "name": "room_7d",
+          "trades": 513,
+          "wins": 199,
+          "losses": 314,
+          "net": -7065.250117298332,
+          "fees": 5340.246905,
+          "funding": -0.13321229829999953,
+          "profit_factor": 0.49949820729095046,
+          "maximum_drawdown_5m_close": 7104.354476986438,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 22
+          },
+          "signals_accepted": 513,
+          "signals_total": 535
+        },
+        "trend_ema200": {
+          "name": "trend_ema200",
+          "trades": 224,
+          "wins": 91,
+          "losses": 133,
+          "net": -3226.8952895220427,
+          "fees": 2337.296584,
+          "funding": 6.421294477900001,
+          "profit_factor": 0.46592928601705624,
+          "maximum_drawdown_5m_close": 3296.130009496963,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 311
+          },
+          "signals_accepted": 224,
+          "signals_total": 535
+        },
+        "trend_4h_ema50": {
+          "name": "trend_4h_ema50",
+          "trades": 237,
+          "wins": 100,
+          "losses": 137,
+          "net": -3007.618917411659,
+          "fees": 2471.279468,
+          "funding": 8.580550588300001,
+          "profit_factor": 0.5161399904087496,
+          "maximum_drawdown_5m_close": 3183.9256209090818,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 298
+          },
+          "signals_accepted": 237,
+          "signals_total": 535
+        },
+        "adx20": {
+          "name": "adx20",
+          "trades": 309,
+          "wins": 123,
+          "losses": 186,
+          "net": -4066.485076956189,
+          "fees": 3194.775521,
+          "funding": 0.8404440439000004,
+          "profit_factor": 0.5419482443411705,
+          "maximum_drawdown_5m_close": 4205.69146189178,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 226
+          },
+          "signals_accepted": 309,
+          "signals_total": 535
+        },
+        "rsi_not_extended": {
+          "name": "rsi_not_extended",
+          "trades": 475,
+          "wins": 188,
+          "losses": 287,
+          "net": -6130.779146639805,
+          "fees": 4961.31902,
+          "funding": 0.29987336020000055,
+          "profit_factor": 0.5249645802846596,
+          "maximum_drawdown_5m_close": 6169.883506327911,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 60
+          },
+          "signals_accepted": 475,
+          "signals_total": 535
+        },
+        "atr_covers_fees": {
+          "name": "atr_covers_fees",
+          "trades": 401,
+          "wins": 160,
+          "losses": 241,
+          "net": -5584.615248124959,
+          "fees": 4090.284982,
+          "funding": -0.6502661248999996,
+          "profit_factor": 0.5477173186189548,
+          "maximum_drawdown_5m_close": 5721.001606033067,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 134
+          },
+          "signals_accepted": 401,
+          "signals_total": 535
+        },
+        "range_and_trend": {
+          "name": "range_and_trend",
+          "trades": 131,
+          "wins": 53,
+          "losses": 78,
+          "net": -1728.0435381666466,
+          "fees": 1378.050142,
+          "funding": 5.6066038333,
+          "profit_factor": 0.4743838684542082,
+          "maximum_drawdown_5m_close": 1896.516961581292,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 404
+          },
+          "signals_accepted": 131,
+          "signals_total": 535
+        },
+        "room_and_trend": {
+          "name": "room_and_trend",
+          "trades": 133,
+          "wins": 58,
+          "losses": 75,
+          "net": -1434.4096509794472,
+          "fees": 1395.991814,
+          "funding": 4.2421630205000005,
+          "profit_factor": 0.5350546585888918,
+          "maximum_drawdown_5m_close": 1654.8210450128827,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 402
+          },
+          "signals_accepted": 133,
+          "signals_total": 535
+        },
+        "breakout_24h": {
+          "name": "breakout_24h",
+          "trades": 20,
+          "wins": 6,
+          "losses": 14,
+          "net": -554.069518203105,
+          "fees": 199.402126,
+          "funding": 0.5926077969000001,
+          "profit_factor": 0.29339547478832145,
+          "maximum_drawdown_5m_close": 599.4640622031002,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 515
+          },
+          "signals_accepted": 20,
+          "signals_total": 535
+        }
+      },
+      "fee_stress": {
+        "unfiltered": {
+          "name": "unfiltered",
+          "trades": 535,
+          "wins": 207,
+          "losses": 328,
+          "net": -9654.314028471388,
+          "fees": 7959.4993,
+          "funding": 0.5652715284000005,
+          "profit_factor": 0.40506116681478355,
+          "maximum_drawdown_5m_close": 9654.314028471388,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0
+          },
+          "signals_accepted": 535,
+          "signals_total": 535
+        },
+        "range_avoid_24h": {
+          "name": "range_avoid_24h",
+          "trades": 421,
+          "wins": 159,
+          "losses": 262,
+          "net": -7523.178668428649,
+          "fees": 6271.806640000001,
+          "funding": 0.6879715711000005,
+          "profit_factor": 0.4074329527628385,
+          "maximum_drawdown_5m_close": 7538.216639859238,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 114
+          },
+          "signals_accepted": 421,
+          "signals_total": 535
+        },
+        "range_avoid_7d": {
+          "name": "range_avoid_7d",
+          "trades": 451,
+          "wins": 167,
+          "losses": 284,
+          "net": -8510.87570599145,
+          "fees": 6718.494750000001,
+          "funding": -4.9109559916,
+          "profit_factor": 0.3875400695427332,
+          "maximum_drawdown_5m_close": 8524.324430682129,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 84
+          },
+          "signals_accepted": 451,
+          "signals_total": 535
+        },
+        "room_24h": {
+          "name": "room_24h",
+          "trades": 403,
+          "wins": 154,
+          "losses": 249,
+          "net": -7072.457606047945,
+          "fees": 5979.6651600000005,
+          "funding": -0.2524460481999995,
+          "profit_factor": 0.40617348667976977,
+          "maximum_drawdown_5m_close": 7225.385586481119,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 132
+          },
+          "signals_accepted": 403,
+          "signals_total": 535
+        },
+        "room_7d": {
+          "name": "room_7d",
+          "trades": 513,
+          "wins": 195,
+          "losses": 318,
+          "net": -9353.927362298069,
+          "fees": 7628.924150000001,
+          "funding": -0.13321229829999953,
+          "profit_factor": 0.39779761859183127,
+          "maximum_drawdown_5m_close": 9353.927362298069,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 22
+          },
+          "signals_accepted": 513,
+          "signals_total": 535
+        },
+        "trend_ema200": {
+          "name": "trend_ema200",
+          "trades": 224,
+          "wins": 88,
+          "losses": 136,
+          "net": -4228.593825522097,
+          "fees": 3338.99512,
+          "funding": 6.421294477900001,
+          "profit_factor": 0.36349948512588764,
+          "maximum_drawdown_5m_close": 4271.785854496993,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 311
+          },
+          "signals_accepted": 224,
+          "signals_total": 535
+        },
+        "trend_4h_ema50": {
+          "name": "trend_4h_ema50",
+          "trades": 237,
+          "wins": 98,
+          "losses": 139,
+          "net": -4066.738689411606,
+          "fees": 3530.39924,
+          "funding": 8.580550588300001,
+          "profit_factor": 0.4049607039096502,
+          "maximum_drawdown_5m_close": 4213.41988590901,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 298
+          },
+          "signals_accepted": 237,
+          "signals_total": 535
+        },
+        "adx20": {
+          "name": "adx20",
+          "trades": 309,
+          "wins": 122,
+          "losses": 187,
+          "net": -5435.674585955901,
+          "fees": 4563.96503,
+          "funding": 0.8404440439000004,
+          "profit_factor": 0.4398857895423904,
+          "maximum_drawdown_5m_close": 5537.1871011115,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 226
+          },
+          "signals_accepted": 309,
+          "signals_total": 535
+        },
+        "rsi_not_extended": {
+          "name": "rsi_not_extended",
+          "trades": 475,
+          "wins": 184,
+          "losses": 291,
+          "net": -8257.058726639589,
+          "fees": 7087.5986,
+          "funding": 0.29987336020000055,
+          "profit_factor": 0.41872396308034776,
+          "maximum_drawdown_5m_close": 8257.058726639589,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 60
+          },
+          "signals_accepted": 475,
+          "signals_total": 535
+        },
+        "atr_covers_fees": {
+          "name": "atr_covers_fees",
+          "trades": 266,
+          "wins": 102,
+          "losses": 164,
+          "net": -5152.327033680413,
+          "fees": 3804.50435,
+          "funding": -0.7326836803999999,
+          "profit_factor": 0.4813691454568414,
+          "maximum_drawdown_5m_close": 5247.304786400404,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 134,
+            "filter_gap": 135
+          },
+          "signals_accepted": 401,
+          "signals_total": 535
+        },
+        "range_and_trend": {
+          "name": "range_and_trend",
+          "trades": 131,
+          "wins": 51,
+          "losses": 80,
+          "net": -2318.636456166656,
+          "fees": 1968.64306,
+          "funding": 5.6066038333,
+          "profit_factor": 0.3632213570070252,
+          "maximum_drawdown_5m_close": 2406.935698581263,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 404
+          },
+          "signals_accepted": 131,
+          "signals_total": 535
+        },
+        "room_and_trend": {
+          "name": "room_and_trend",
+          "trades": 133,
+          "wins": 56,
+          "losses": 77,
+          "net": -2032.6918569794507,
+          "fees": 1994.27402,
+          "funding": 4.2421630205000005,
+          "profit_factor": 0.4068609408086002,
+          "maximum_drawdown_5m_close": 2181.8780400128453,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 402
+          },
+          "signals_accepted": 133,
+          "signals_total": 535
+        },
+        "breakout_24h": {
+          "name": "breakout_24h",
+          "trades": 20,
+          "wins": 6,
+          "losses": 14,
+          "net": -639.5275722030783,
+          "fees": 284.86018,
+          "funding": 0.5926077969000001,
+          "profit_factor": 0.24204444318351492,
+          "maximum_drawdown_5m_close": 680.3254922030901,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 515
+          },
+          "signals_accepted": 20,
+          "signals_total": 535
+        }
+      },
+      "slippage_stress": {
+        "unfiltered": {
+          "name": "unfiltered",
+          "trades": 535,
+          "wins": 209,
+          "losses": 326,
+          "net": -7399.9643094716885,
+          "fees": 5571.699581,
+          "funding": 0.5652715284000005,
+          "profit_factor": 0.5027227609311646,
+          "maximum_drawdown_5m_close": 7471.857201159801,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0
+          },
+          "signals_accepted": 535,
+          "signals_total": 535
+        },
+        "range_avoid_24h": {
+          "name": "range_avoid_24h",
+          "trades": 421,
+          "wins": 160,
+          "losses": 261,
+          "net": -5763.076621428874,
+          "fees": 4390.314593,
+          "funding": 0.6879715711000005,
+          "profit_factor": 0.5045710576367884,
+          "maximum_drawdown_5m_close": 5843.179381859518,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 114
+          },
+          "signals_accepted": 421,
+          "signals_total": 535
+        },
+        "range_avoid_7d": {
+          "name": "range_avoid_7d",
+          "trades": 451,
+          "wins": 170,
+          "losses": 281,
+          "net": -6575.116579991678,
+          "fees": 4702.965624,
+          "funding": -4.9109559916,
+          "profit_factor": 0.4826090279490955,
+          "maximum_drawdown_5m_close": 6663.006563682386,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 84
+          },
+          "signals_accepted": 451,
+          "signals_total": 535
+        },
+        "room_24h": {
+          "name": "room_24h",
+          "trades": 403,
+          "wins": 155,
+          "losses": 248,
+          "net": -5397.117247048271,
+          "fees": 4185.814801,
+          "funding": -0.2524460481999995,
+          "profit_factor": 0.5049561620714121,
+          "maximum_drawdown_5m_close": 5608.2976884815,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 132
+          },
+          "signals_accepted": 403,
+          "signals_total": 535
+        },
+        "room_7d": {
+          "name": "room_7d",
+          "trades": 513,
+          "wins": 197,
+          "losses": 316,
+          "net": -7196.95018829839,
+          "fees": 5340.2969760000005,
+          "funding": -0.13321229829999953,
+          "profit_factor": 0.49422017576973215,
+          "maximum_drawdown_5m_close": 7234.614547986508,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 22
+          },
+          "signals_accepted": 513,
+          "signals_total": 535
+        },
+        "trend_ema200": {
+          "name": "trend_ema200",
+          "trades": 224,
+          "wins": 89,
+          "losses": 135,
+          "net": -3323.314352522182,
+          "fees": 2337.345647,
+          "funding": 6.421294477900001,
+          "profit_factor": 0.45699552098786933,
+          "maximum_drawdown_5m_close": 3392.1903324970917,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 311
+          },
+          "signals_accepted": 224,
+          "signals_total": 535
+        },
+        "trend_4h_ema50": {
+          "name": "trend_4h_ema50",
+          "trades": 237,
+          "wins": 99,
+          "losses": 138,
+          "net": -3078.06578341173,
+          "fees": 2471.306334,
+          "funding": 8.580550588300001,
+          "profit_factor": 0.5090574090920211,
+          "maximum_drawdown_5m_close": 3254.194376909145,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 298
+          },
+          "signals_accepted": 237,
+          "signals_total": 535
+        },
+        "adx20": {
+          "name": "adx20",
+          "trades": 309,
+          "wins": 123,
+          "losses": 186,
+          "net": -4102.125076956101,
+          "fees": 3194.775521,
+          "funding": 0.8404440439000004,
+          "profit_factor": 0.5397627221038266,
+          "maximum_drawdown_5m_close": 4240.611209891722,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 226
+          },
+          "signals_accepted": 309,
+          "signals_total": 535
+        },
+        "rsi_not_extended": {
+          "name": "rsi_not_extended",
+          "trades": 475,
+          "wins": 186,
+          "losses": 289,
+          "net": -6257.438209639891,
+          "fees": 4961.368083,
+          "funding": 0.29987336020000055,
+          "profit_factor": 0.5191757042880645,
+          "maximum_drawdown_5m_close": 6295.10256932801,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 60
+          },
+          "signals_accepted": 475,
+          "signals_total": 535
+        },
+        "atr_covers_fees": {
+          "name": "atr_covers_fees",
+          "trades": 388,
+          "wins": 153,
+          "losses": 235,
+          "net": -5575.755074498913,
+          "fees": 3947.953086,
+          "funding": -0.00198849879999966,
+          "profit_factor": 0.5421972863749042,
+          "maximum_drawdown_5m_close": 5667.956789109041,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 134,
+            "filter_gap": 13
+          },
+          "signals_accepted": 401,
+          "signals_total": 535
+        },
+        "range_and_trend": {
+          "name": "range_and_trend",
+          "trades": 131,
+          "wins": 51,
+          "losses": 80,
+          "net": -1814.3818451667175,
+          "fees": 1378.098449,
+          "funding": 5.6066038333,
+          "profit_factor": 0.4593185647283068,
+          "maximum_drawdown_5m_close": 1981.595394581338,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 404
+          },
+          "signals_accepted": 131,
+          "signals_total": 535
+        },
+        "room_and_trend": {
+          "name": "room_and_trend",
+          "trades": 133,
+          "wins": 56,
+          "losses": 77,
+          "net": -1519.8483359795937,
+          "fees": 1396.040499,
+          "funding": 4.2421630205000005,
+          "profit_factor": 0.5178594729400428,
+          "maximum_drawdown_5m_close": 1739.3598560130195,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 402
+          },
+          "signals_accepted": 133,
+          "signals_total": 535
+        },
+        "breakout_24h": {
+          "name": "breakout_24h",
+          "trades": 20,
+          "wins": 6,
+          "losses": 14,
+          "net": -556.5910302031261,
+          "fees": 199.403638,
+          "funding": 0.5926077969000001,
+          "profit_factor": 0.2924545788697075,
+          "maximum_drawdown_5m_close": 601.9853222031234,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 515
+          },
+          "signals_accepted": 20,
+          "signals_total": 535
+        }
+      },
+      "original_size": {
+        "unfiltered": {
+          "name": "unfiltered",
+          "trades": 274,
+          "wins": 105,
+          "losses": 169,
+          "net": -38289.1655532959,
+          "fees": 28255.284979390348,
+          "funding": 47.947126593,
+          "profit_factor": 0.5355332495114439,
+          "maximum_drawdown_5m_close": 38549.826560380905,
+          "skips": {
+            "capital": 261,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0
+          },
+          "signals_accepted": 535,
+          "signals_total": 535
+        },
+        "range_avoid_24h": {
+          "name": "range_avoid_24h",
+          "trades": 272,
+          "wins": 103,
+          "losses": 169,
+          "net": -36841.54324962457,
+          "fees": 28018.303317496455,
+          "funding": 44.756491378,
+          "profit_factor": 0.5417165226717524,
+          "maximum_drawdown_5m_close": 37393.042563930576,
+          "skips": {
+            "capital": 149,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 114
+          },
+          "signals_accepted": 421,
+          "signals_total": 535
+        },
+        "range_avoid_7d": {
+          "name": "range_avoid_7d",
+          "trades": 248,
+          "wins": 90,
+          "losses": 158,
+          "net": -38100.39275371075,
+          "fees": 25604.146419969555,
+          "funding": 17.182194193999997,
+          "profit_factor": 0.5017028621916562,
+          "maximum_drawdown_5m_close": 38519.06003082176,
+          "skips": {
+            "capital": 203,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 84
+          },
+          "signals_accepted": 451,
+          "signals_total": 535
+        },
+        "room_24h": {
+          "name": "room_24h",
+          "trades": 269,
+          "wins": 104,
+          "losses": 165,
+          "net": -34414.0537692707,
+          "fees": 27478.197678514694,
+          "funding": 42.656073094,
+          "profit_factor": 0.5494845283696755,
+          "maximum_drawdown_5m_close": 36412.375023602726,
+          "skips": {
+            "capital": 134,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 132
+          },
+          "signals_accepted": 403,
+          "signals_total": 535
+        },
+        "room_7d": {
+          "name": "room_7d",
+          "trades": 272,
+          "wins": 103,
+          "losses": 169,
+          "net": -38260.326385698296,
+          "fees": 27952.697008433934,
+          "funding": 48.468385497,
+          "profit_factor": 0.5341980711747409,
+          "maximum_drawdown_5m_close": 38520.9873927833,
+          "skips": {
+            "capital": 241,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 22
+          },
+          "signals_accepted": 513,
+          "signals_total": 535
+        },
+        "trend_ema200": {
+          "name": "trend_ema200",
+          "trades": 195,
+          "wins": 77,
+          "losses": 118,
+          "net": -29789.635880448026,
+          "fees": 20134.94717747632,
+          "funding": 67.964834627,
+          "profit_factor": 0.4524170545019816,
+          "maximum_drawdown_5m_close": 30481.98308019704,
+          "skips": {
+            "capital": 29,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 311
+          },
+          "signals_accepted": 224,
+          "signals_total": 535
+        },
+        "trend_4h_ema50": {
+          "name": "trend_4h_ema50",
+          "trades": 204,
+          "wins": 81,
+          "losses": 123,
+          "net": -29013.52984167605,
+          "fees": 21013.530164585925,
+          "funding": 82.006874233,
+          "profit_factor": 0.4864089028103098,
+          "maximum_drawdown_5m_close": 30776.59687665006,
+          "skips": {
+            "capital": 33,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 298
+          },
+          "signals_accepted": 237,
+          "signals_total": 535
+        },
+        "adx20": {
+          "name": "adx20",
+          "trades": 229,
+          "wins": 83,
+          "losses": 146,
+          "net": -35390.99048232544,
+          "fees": 23269.57078312313,
+          "funding": 15.156190981999998,
+          "profit_factor": 0.5083463514052485,
+          "maximum_drawdown_5m_close": 36677.29403388145,
+          "skips": {
+            "capital": 80,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 226
+          },
+          "signals_accepted": 309,
+          "signals_total": 535
+        },
+        "rsi_not_extended": {
+          "name": "rsi_not_extended",
+          "trades": 298,
+          "wins": 119,
+          "losses": 179,
+          "net": -37447.74374688414,
+          "fees": 30619.50989797525,
+          "funding": 42.963258593,
+          "profit_factor": 0.5687274717104212,
+          "maximum_drawdown_5m_close": 37447.74374688414,
+          "skips": {
+            "capital": 177,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 60
+          },
+          "signals_accepted": 475,
+          "signals_total": 535
+        },
+        "atr_covers_fees": {
+          "name": "atr_covers_fees",
+          "trades": 249,
+          "wins": 94,
+          "losses": 155,
+          "net": -38031.94455820251,
+          "fees": 25131.095686002882,
+          "funding": 42.616846202,
+          "profit_factor": 0.5417072054313151,
+          "maximum_drawdown_5m_close": 38742.97270774286,
+          "skips": {
+            "capital": 152,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 134
+          },
+          "signals_accepted": 401,
+          "signals_total": 535
+        },
+        "range_and_trend": {
+          "name": "range_and_trend",
+          "trades": 131,
+          "wins": 53,
+          "losses": 78,
+          "net": -17280.43538166693,
+          "fees": 13780.50142,
+          "funding": 56.066038333,
+          "profit_factor": 0.47438386845420827,
+          "maximum_drawdown_5m_close": 18965.16961581295,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 404
+          },
+          "signals_accepted": 131,
+          "signals_total": 535
+        },
+        "room_and_trend": {
+          "name": "room_and_trend",
+          "trades": 133,
+          "wins": 58,
+          "losses": 75,
+          "net": -14344.096509794865,
+          "fees": 13959.91814,
+          "funding": 42.421630205,
+          "profit_factor": 0.5350546585888918,
+          "maximum_drawdown_5m_close": 16548.21045012887,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 402
+          },
+          "signals_accepted": 133,
+          "signals_total": 535
+        },
+        "breakout_24h": {
+          "name": "breakout_24h",
+          "trades": 20,
+          "wins": 6,
+          "losses": 14,
+          "net": -5540.695182030962,
+          "fees": 1994.02126,
+          "funding": 5.9260779690000005,
+          "profit_factor": 0.29339547478832145,
+          "maximum_drawdown_5m_close": 5994.640622030973,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 515
+          },
+          "signals_accepted": 20,
+          "signals_total": 535
+        }
+      }
+    },
+    "comparison": {
+      "base": {
+        "unfiltered": {
+          "name": "unfiltered",
+          "trades": 195,
+          "wins": 70,
+          "losses": 125,
+          "net": -2191.319730654679,
+          "fees": 1807.167418,
+          "funding": -0.5323126548,
+          "profit_factor": 0.4251430897060136,
+          "maximum_drawdown_5m_close": 2403.4777488274995,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0
+          },
+          "signals_accepted": 195,
+          "signals_total": 195
+        },
+        "range_avoid_24h": {
+          "name": "range_avoid_24h",
+          "trades": 152,
+          "wins": 53,
+          "losses": 99,
+          "net": -1735.8358621846273,
+          "fees": 1406.492444,
+          "funding": 0.01658181530000001,
+          "profit_factor": 0.4203957852366114,
+          "maximum_drawdown_5m_close": 1999.5505810644681,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 43
+          },
+          "signals_accepted": 152,
+          "signals_total": 195
+        },
+        "range_avoid_7d": {
+          "name": "range_avoid_7d",
+          "trades": 149,
+          "wins": 61,
+          "losses": 88,
+          "net": -1353.2404566606856,
+          "fees": 1379.464702,
+          "funding": 2.4242453392000005,
+          "profit_factor": 0.5040473600902676,
+          "maximum_drawdown_5m_close": 1571.362681107581,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 46
+          },
+          "signals_accepted": 149,
+          "signals_total": 195
+        },
+        "room_24h": {
+          "name": "room_24h",
+          "trades": 145,
+          "wins": 50,
+          "losses": 95,
+          "net": -1712.111733770871,
+          "fees": 1343.816747,
+          "funding": 1.0150132291,
+          "profit_factor": 0.401407938744601,
+          "maximum_drawdown_5m_close": 1964.0410729436844,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 50
+          },
+          "signals_accepted": 145,
+          "signals_total": 195
+        },
+        "room_7d": {
+          "name": "room_7d",
+          "trades": 188,
+          "wins": 67,
+          "losses": 121,
+          "net": -2121.995550654712,
+          "fees": 1744.8832380000001,
+          "funding": -0.5323126548,
+          "profit_factor": 0.42250908728087405,
+          "maximum_drawdown_5m_close": 2373.9248898275255,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 7
+          },
+          "signals_accepted": 188,
+          "signals_total": 195
+        },
+        "trend_ema200": {
+          "name": "trend_ema200",
+          "trades": 75,
+          "wins": 25,
+          "losses": 50,
+          "net": -1003.5332924302347,
+          "fees": 693.2715370000001,
+          "funding": -2.3517554303000003,
+          "profit_factor": 0.3471283637977899,
+          "maximum_drawdown_5m_close": 1062.11919680344,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 120
+          },
+          "signals_accepted": 75,
+          "signals_total": 195
+        },
+        "trend_4h_ema50": {
+          "name": "trend_4h_ema50",
+          "trades": 86,
+          "wins": 26,
+          "losses": 60,
+          "net": -1116.0763588878617,
+          "fees": 800.441376,
+          "funding": -5.134982888000001,
+          "profit_factor": 0.3601700166572719,
+          "maximum_drawdown_5m_close": 1268.3992310176836,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 109
+          },
+          "signals_accepted": 86,
+          "signals_total": 195
+        },
+        "adx20": {
+          "name": "adx20",
+          "trades": 114,
+          "wins": 36,
+          "losses": 78,
+          "net": -1635.3803478737827,
+          "fees": 1051.156316,
+          "funding": 1.3359681261000003,
+          "profit_factor": 0.31193047464267387,
+          "maximum_drawdown_5m_close": 1750.465465673391,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 81
+          },
+          "signals_accepted": 114,
+          "signals_total": 195
+        },
+        "rsi_not_extended": {
+          "name": "rsi_not_extended",
+          "trades": 173,
+          "wins": 63,
+          "losses": 110,
+          "net": -1801.9189764182374,
+          "fees": 1599.662771,
+          "funding": -1.6862054183000001,
+          "profit_factor": 0.452058985833591,
+          "maximum_drawdown_5m_close": 2053.848315591051,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 22
+          },
+          "signals_accepted": 173,
+          "signals_total": 195
+        },
+        "atr_covers_fees": {
+          "name": "atr_covers_fees",
+          "trades": 106,
+          "wins": 39,
+          "losses": 67,
+          "net": -1293.8835485497548,
+          "fees": 996.5087860000001,
+          "funding": 0.12523745019999993,
+          "profit_factor": 0.5035009324318835,
+          "maximum_drawdown_5m_close": 1552.1215914296045,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 89
+          },
+          "signals_accepted": 106,
+          "signals_total": 195
+        },
+        "range_and_trend": {
+          "name": "range_and_trend",
+          "trades": 45,
+          "wins": 14,
+          "losses": 31,
+          "net": -631.4880569601664,
+          "fees": 417.025196,
+          "funding": -1.8028609602000003,
+          "profit_factor": 0.31992742054559786,
+          "maximum_drawdown_5m_close": 733.5791283333674,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 150
+          },
+          "signals_accepted": 45,
+          "signals_total": 195
+        },
+        "room_and_trend": {
+          "name": "room_and_trend",
+          "trades": 42,
+          "wins": 13,
+          "losses": 29,
+          "net": -591.6703082192835,
+          "fees": 390.893755,
+          "funding": -1.9065532193000003,
+          "profit_factor": 0.3027684902063755,
+          "maximum_drawdown_5m_close": 693.7613795924844,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 153
+          },
+          "signals_accepted": 42,
+          "signals_total": 195
+        },
+        "breakout_24h": {
+          "name": "breakout_24h",
+          "trades": 6,
+          "wins": 3,
+          "losses": 3,
+          "net": -33.62740147009026,
+          "fees": 53.168507000000005,
+          "funding": -0.5488944701,
+          "profit_factor": 0.6780616674517778,
+          "maximum_drawdown_5m_close": 64.20638499999768,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 189
+          },
+          "signals_accepted": 6,
+          "signals_total": 195
+        }
+      },
+      "fee_stress": {
+        "unfiltered": {
+          "name": "unfiltered",
+          "trades": 195,
+          "wins": 66,
+          "losses": 129,
+          "net": -2965.8200526546425,
+          "fees": 2581.6677400000003,
+          "funding": -0.5323126548,
+          "profit_factor": 0.3129325678954499,
+          "maximum_drawdown_5m_close": 3147.744301827479,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0
+          },
+          "signals_accepted": 195,
+          "signals_total": 195
+        },
+        "range_avoid_24h": {
+          "name": "range_avoid_24h",
+          "trades": 152,
+          "wins": 50,
+          "losses": 102,
+          "net": -2338.618338184533,
+          "fees": 2009.27492,
+          "funding": 0.01658181530000001,
+          "profit_factor": 0.31105816226245675,
+          "maximum_drawdown_5m_close": 2563.8116173573653,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 43
+          },
+          "signals_accepted": 152,
+          "signals_total": 195
+        },
+        "range_avoid_7d": {
+          "name": "range_avoid_7d",
+          "trades": 149,
+          "wins": 58,
+          "losses": 91,
+          "net": -1944.4396146606596,
+          "fees": 1970.66386,
+          "funding": 2.4242453392000005,
+          "profit_factor": 0.369164123511325,
+          "maximum_drawdown_5m_close": 2138.663430460292,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 46
+          },
+          "signals_accepted": 149,
+          "signals_total": 195
+        },
+        "room_24h": {
+          "name": "room_24h",
+          "trades": 145,
+          "wins": 47,
+          "losses": 98,
+          "net": -2288.0331967707607,
+          "fees": 1919.7382100000002,
+          "funding": 1.0150132291,
+          "profit_factor": 0.2948610079335903,
+          "maximum_drawdown_5m_close": 2513.226475943593,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 50
+          },
+          "signals_accepted": 145,
+          "signals_total": 195
+        },
+        "room_7d": {
+          "name": "room_7d",
+          "trades": 188,
+          "wins": 63,
+          "losses": 125,
+          "net": -2869.80265265466,
+          "fees": 2492.69034,
+          "funding": -0.5323126548,
+          "profit_factor": 0.31082750890490995,
+          "maximum_drawdown_5m_close": 3094.9959318274923,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 7
+          },
+          "signals_accepted": 188,
+          "signals_total": 195
+        },
+        "trend_ema200": {
+          "name": "trend_ema200",
+          "trades": 75,
+          "wins": 23,
+          "losses": 52,
+          "net": -1300.649665430261,
+          "fees": 990.38791,
+          "funding": -2.3517554303000003,
+          "profit_factor": 0.25323545104972073,
+          "maximum_drawdown_5m_close": 1346.771448803469,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 120
+          },
+          "signals_accepted": 75,
+          "signals_total": 195
+        },
+        "trend_4h_ema50": {
+          "name": "trend_4h_ema50",
+          "trades": 86,
+          "wins": 24,
+          "losses": 62,
+          "net": -1459.1226628879376,
+          "fees": 1143.4876800000002,
+          "funding": -5.134982888000001,
+          "profit_factor": 0.2658754274924606,
+          "maximum_drawdown_5m_close": 1576.9009320607438,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 109
+          },
+          "signals_accepted": 86,
+          "signals_total": 195
+        },
+        "adx20": {
+          "name": "adx20",
+          "trades": 114,
+          "wins": 33,
+          "losses": 81,
+          "net": -2085.87591187378,
+          "fees": 1501.6518800000001,
+          "funding": 1.3359681261000003,
+          "profit_factor": 0.22413590216811716,
+          "maximum_drawdown_5m_close": 2184.8531986734015,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 81
+          },
+          "signals_accepted": 114,
+          "signals_total": 195
+        },
+        "rsi_not_extended": {
+          "name": "rsi_not_extended",
+          "trades": 173,
+          "wins": 59,
+          "losses": 114,
+          "net": -2487.488735418199,
+          "fees": 2285.23253,
+          "funding": -1.6862054183000001,
+          "profit_factor": 0.33349122642875173,
+          "maximum_drawdown_5m_close": 2712.6820145910315,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 22
+          },
+          "signals_accepted": 173,
+          "signals_total": 195
+        },
+        "atr_covers_fees": {
+          "name": "atr_covers_fees",
+          "trades": 50,
+          "wins": 24,
+          "losses": 26,
+          "net": -541.636239196363,
+          "fees": 682.15875,
+          "funding": 1.9725108035,
+          "profit_factor": 0.6083800934146804,
+          "maximum_drawdown_5m_close": 927.187983999931,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter_gap": 56,
+            "filter": 89
+          },
+          "signals_accepted": 106,
+          "signals_total": 195
+        },
+        "range_and_trend": {
+          "name": "range_and_trend",
+          "trades": 45,
+          "wins": 12,
+          "losses": 33,
+          "net": -810.213140960157,
+          "fees": 595.7502800000001,
+          "funding": -1.8028609602000003,
+          "profit_factor": 0.2337286301590795,
+          "maximum_drawdown_5m_close": 899.6039543333609,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 150
+          },
+          "signals_accepted": 45,
+          "signals_total": 195
+        },
+        "room_and_trend": {
+          "name": "room_and_trend",
+          "trades": 42,
+          "wins": 11,
+          "losses": 31,
+          "net": -759.1962032192823,
+          "fees": 558.41965,
+          "funding": -1.9065532193000003,
+          "profit_factor": 0.21733877308330787,
+          "maximum_drawdown_5m_close": 848.5870165924862,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 153
+          },
+          "signals_accepted": 42,
+          "signals_total": 195
+        },
+        "breakout_24h": {
+          "name": "breakout_24h",
+          "trades": 6,
+          "wins": 3,
+          "losses": 3,
+          "net": -56.41390447008598,
+          "fees": 75.95501,
+          "funding": -0.5488944701,
+          "profit_factor": 0.5121045693974375,
+          "maximum_drawdown_5m_close": 77.17349423648557,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 189
+          },
+          "signals_accepted": 6,
+          "signals_total": 195
+        }
+      },
+      "slippage_stress": {
+        "unfiltered": {
+          "name": "unfiltered",
+          "trades": 195,
+          "wins": 70,
+          "losses": 125,
+          "net": -2214.0696816549025,
+          "fees": 1807.167369,
+          "funding": -0.5323126548,
+          "profit_factor": 0.42262077969256273,
+          "maximum_drawdown_5m_close": 2425.6875738277013,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0
+          },
+          "signals_accepted": 195,
+          "signals_total": 195
+        },
+        "range_avoid_24h": {
+          "name": "range_avoid_24h",
+          "trades": 152,
+          "wins": 53,
+          "losses": 99,
+          "net": -1754.0846791847289,
+          "fees": 1406.4912610000001,
+          "funding": 0.01658181530000001,
+          "profit_factor": 0.41784972100660256,
+          "maximum_drawdown_5m_close": 2016.3591460645257,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 43
+          },
+          "signals_accepted": 152,
+          "signals_total": 195
+        },
+        "range_avoid_7d": {
+          "name": "range_avoid_7d",
+          "trades": 149,
+          "wins": 61,
+          "losses": 88,
+          "net": -1370.0472576608736,
+          "fees": 1379.461503,
+          "funding": 2.4242453392000005,
+          "profit_factor": 0.5009616982703278,
+          "maximum_drawdown_5m_close": 1587.1338124604808,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 46
+          },
+          "signals_accepted": 149,
+          "signals_total": 195
+        },
+        "room_24h": {
+          "name": "room_24h",
+          "trades": 145,
+          "wins": 50,
+          "losses": 95,
+          "net": -1729.4604247709794,
+          "fees": 1343.815438,
+          "funding": 1.0150132291,
+          "profit_factor": 0.39898788356637893,
+          "maximum_drawdown_5m_close": 1981.029511943765,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 50
+          },
+          "signals_accepted": 145,
+          "signals_total": 195
+        },
+        "room_7d": {
+          "name": "room_7d",
+          "trades": 188,
+          "wins": 67,
+          "losses": 121,
+          "net": -2144.0252496549074,
+          "fees": 1744.882937,
+          "funding": -0.5323126548,
+          "profit_factor": 0.4199910846405823,
+          "maximum_drawdown_5m_close": 2395.5943368277076,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 7
+          },
+          "signals_accepted": 188,
+          "signals_total": 195
+        },
+        "trend_ema200": {
+          "name": "trend_ema200",
+          "trades": 75,
+          "wins": 25,
+          "losses": 50,
+          "net": -1012.1758124303306,
+          "fees": 693.2740570000001,
+          "funding": -2.3517554303000003,
+          "profit_factor": 0.34518676868137216,
+          "maximum_drawdown_5m_close": 1070.4017168035352,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 120
+          },
+          "signals_accepted": 75,
+          "signals_total": 195
+        },
+        "trend_4h_ema50": {
+          "name": "trend_4h_ema50",
+          "trades": 86,
+          "wins": 26,
+          "losses": 60,
+          "net": -1125.9807688879955,
+          "fees": 800.445786,
+          "funding": -5.134982888000001,
+          "profit_factor": 0.3581357617074895,
+          "maximum_drawdown_5m_close": 1277.0417510178086,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 109
+          },
+          "signals_accepted": 86,
+          "signals_total": 195
+        },
+        "adx20": {
+          "name": "adx20",
+          "trades": 114,
+          "wins": 36,
+          "losses": 78,
+          "net": -1649.240221873988,
+          "fees": 1051.1561900000002,
+          "funding": 1.3359681261000003,
+          "profit_factor": 0.3101218836068029,
+          "maximum_drawdown_5m_close": 1763.9653396735957,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 81
+          },
+          "signals_accepted": 114,
+          "signals_total": 195
+        },
+        "rsi_not_extended": {
+          "name": "rsi_not_extended",
+          "trades": 173,
+          "wins": 63,
+          "losses": 110,
+          "net": -1821.7889274183544,
+          "fees": 1599.662722,
+          "funding": -1.6862054183000001,
+          "profit_factor": 0.44934383237735503,
+          "maximum_drawdown_5m_close": 2073.35801459114,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 22
+          },
+          "signals_accepted": 173,
+          "signals_total": 195
+        },
+        "atr_covers_fees": {
+          "name": "atr_covers_fees",
+          "trades": 97,
+          "wins": 37,
+          "losses": 60,
+          "net": -1153.2053225498094,
+          "fees": 916.096279,
+          "funding": 0.7609564502,
+          "profit_factor": 0.5251232932967121,
+          "maximum_drawdown_5m_close": 1416.9369331100315,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter_gap": 9,
+            "filter": 89
+          },
+          "signals_accepted": 106,
+          "signals_total": 195
+        },
+        "range_and_trend": {
+          "name": "range_and_trend",
+          "trades": 45,
+          "wins": 14,
+          "losses": 31,
+          "net": -636.8888129601692,
+          "fees": 417.025952,
+          "funding": -1.8028609602000003,
+          "profit_factor": 0.3180770280231587,
+          "maximum_drawdown_5m_close": 738.6198843333696,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 150
+          },
+          "signals_accepted": 45,
+          "signals_total": 195
+        },
+        "room_and_trend": {
+          "name": "room_and_trend",
+          "trades": 42,
+          "wins": 13,
+          "losses": 29,
+          "net": -596.7110642193002,
+          "fees": 390.894511,
+          "funding": -1.9065532193000003,
+          "profit_factor": 0.3009800195501596,
+          "maximum_drawdown_5m_close": 698.4421355925006,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 153
+          },
+          "signals_accepted": 42,
+          "signals_total": 195
+        },
+        "breakout_24h": {
+          "name": "breakout_24h",
+          "trades": 6,
+          "wins": 3,
+          "losses": 3,
+          "net": -34.16752747011196,
+          "fees": 53.168633,
+          "funding": -0.5488944701,
+          "profit_factor": 0.6745726676567781,
+          "maximum_drawdown_5m_close": 64.3865109999897,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 189
+          },
+          "signals_accepted": 6,
+          "signals_total": 195
+        }
+      },
+      "original_size": {
+        "unfiltered": {
+          "name": "unfiltered",
+          "trades": 181,
+          "wins": 63,
+          "losses": 118,
+          "net": -21927.16554362644,
+          "fees": 16525.631511919662,
+          "funding": 21.882996382,
+          "profit_factor": 0.3812891131672064,
+          "maximum_drawdown_5m_close": 23500.43720535445,
+          "skips": {
+            "capital": 14,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0
+          },
+          "signals_accepted": 195,
+          "signals_total": 195
+        },
+        "range_avoid_24h": {
+          "name": "range_avoid_24h",
+          "trades": 152,
+          "wins": 53,
+          "losses": 99,
+          "net": -17358.358621846593,
+          "fees": 14064.92444,
+          "funding": 0.16581815299999864,
+          "profit_factor": 0.4203957852366114,
+          "maximum_drawdown_5m_close": 19995.50581064468,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 43
+          },
+          "signals_accepted": 152,
+          "signals_total": 195
+        },
+        "range_avoid_7d": {
+          "name": "range_avoid_7d",
+          "trades": 149,
+          "wins": 61,
+          "losses": 88,
+          "net": -13532.404566607584,
+          "fees": 13794.64702,
+          "funding": 24.242453392,
+          "profit_factor": 0.5040473600902677,
+          "maximum_drawdown_5m_close": 15713.626811076669,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 46
+          },
+          "signals_accepted": 149,
+          "signals_total": 195
+        },
+        "room_24h": {
+          "name": "room_24h",
+          "trades": 145,
+          "wins": 50,
+          "losses": 95,
+          "net": -17121.117337708667,
+          "fees": 13438.16747,
+          "funding": 10.150132291,
+          "profit_factor": 0.40140793874460107,
+          "maximum_drawdown_5m_close": 19640.4107294367,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 50
+          },
+          "signals_accepted": 145,
+          "signals_total": 195
+        },
+        "room_7d": {
+          "name": "room_7d",
+          "trades": 180,
+          "wins": 62,
+          "losses": 118,
+          "net": -21801.308299917553,
+          "fees": 16562.335232975278,
+          "funding": 2.5311834519999996,
+          "profit_factor": 0.3826418799829024,
+          "maximum_drawdown_5m_close": 23994.616954390993,
+          "skips": {
+            "capital": 8,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 7
+          },
+          "signals_accepted": 188,
+          "signals_total": 195
+        },
+        "trend_ema200": {
+          "name": "trend_ema200",
+          "trades": 75,
+          "wins": 25,
+          "losses": 50,
+          "net": -10035.332924302784,
+          "fees": 6932.71537,
+          "funding": -23.517554303,
+          "profit_factor": 0.34712836379778994,
+          "maximum_drawdown_5m_close": 10621.191968034807,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 120
+          },
+          "signals_accepted": 75,
+          "signals_total": 195
+        },
+        "trend_4h_ema50": {
+          "name": "trend_4h_ema50",
+          "trades": 86,
+          "wins": 26,
+          "losses": 60,
+          "net": -11160.763588879752,
+          "fees": 8004.41376,
+          "funding": -51.349828880000004,
+          "profit_factor": 0.36017001665727194,
+          "maximum_drawdown_5m_close": 12683.992310177811,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 109
+          },
+          "signals_accepted": 86,
+          "signals_total": 195
+        },
+        "adx20": {
+          "name": "adx20",
+          "trades": 114,
+          "wins": 36,
+          "losses": 78,
+          "net": -16353.803478738599,
+          "fees": 10511.56316,
+          "funding": 13.359681261000002,
+          "profit_factor": 0.31193047464267387,
+          "maximum_drawdown_5m_close": 17504.65465673461,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 81
+          },
+          "signals_accepted": 114,
+          "signals_total": 195
+        },
+        "rsi_not_extended": {
+          "name": "rsi_not_extended",
+          "trades": 173,
+          "wins": 63,
+          "losses": 110,
+          "net": -18019.189764182476,
+          "fees": 15996.62771,
+          "funding": -16.862054183,
+          "profit_factor": 0.452058985833591,
+          "maximum_drawdown_5m_close": 20538.483155910508,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 22
+          },
+          "signals_accepted": 173,
+          "signals_total": 195
+        },
+        "atr_covers_fees": {
+          "name": "atr_covers_fees",
+          "trades": 106,
+          "wins": 39,
+          "losses": 67,
+          "net": -12938.835485497664,
+          "fees": 9965.08786,
+          "funding": 1.2523745019999981,
+          "profit_factor": 0.5035009324318835,
+          "maximum_drawdown_5m_close": 15521.215914295724,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 89
+          },
+          "signals_accepted": 106,
+          "signals_total": 195
+        },
+        "range_and_trend": {
+          "name": "range_and_trend",
+          "trades": 45,
+          "wins": 14,
+          "losses": 31,
+          "net": -6314.880569601839,
+          "fees": 4170.25196,
+          "funding": -18.028609602000003,
+          "profit_factor": 0.31992742054559786,
+          "maximum_drawdown_5m_close": 7335.791283333849,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 150
+          },
+          "signals_accepted": 45,
+          "signals_total": 195
+        },
+        "room_and_trend": {
+          "name": "room_and_trend",
+          "trades": 42,
+          "wins": 13,
+          "losses": 29,
+          "net": -5916.7030821929075,
+          "fees": 3908.93755,
+          "funding": -19.065532193000003,
+          "profit_factor": 0.3027684902063755,
+          "maximum_drawdown_5m_close": 6937.613795924917,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 153
+          },
+          "signals_accepted": 42,
+          "signals_total": 195
+        },
+        "breakout_24h": {
+          "name": "breakout_24h",
+          "trades": 6,
+          "wins": 3,
+          "losses": 3,
+          "net": -336.2740147010045,
+          "fees": 531.68507,
+          "funding": -5.488944700999999,
+          "profit_factor": 0.6780616674517779,
+          "maximum_drawdown_5m_close": 642.0638500000059,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 189
+          },
+          "signals_accepted": 6,
+          "signals_total": 195
+        }
+      }
+    },
+    "historical_review": {
+      "base": {
+        "unfiltered": {
+          "name": "unfiltered",
+          "trades": 90,
+          "wins": 45,
+          "losses": 45,
+          "net": -416.10632335777336,
+          "fees": 1012.8870850000001,
+          "funding": -1.2692383580000002,
+          "profit_factor": 0.7592412142504376,
+          "maximum_drawdown_5m_close": 655.5010395813151,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0
+          },
+          "signals_accepted": 90,
+          "signals_total": 90
+        },
+        "range_avoid_24h": {
+          "name": "range_avoid_24h",
+          "trades": 69,
+          "wins": 33,
+          "losses": 36,
+          "net": -430.648138220844,
+          "fees": 776.819057,
+          "funding": -2.2990812210000002,
+          "profit_factor": 0.6865334121699515,
+          "maximum_drawdown_5m_close": 659.6110984443803,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 21
+          },
+          "signals_accepted": 69,
+          "signals_total": 90
+        },
+        "range_avoid_7d": {
+          "name": "range_avoid_7d",
+          "trades": 74,
+          "wins": 34,
+          "losses": 40,
+          "net": -521.9295470568468,
+          "fees": 834.325968,
+          "funding": -1.8835790570000002,
+          "profit_factor": 0.6521214153833765,
+          "maximum_drawdown_5m_close": 726.6351982803608,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 16
+          },
+          "signals_accepted": 74,
+          "signals_total": 90
+        },
+        "room_24h": {
+          "name": "room_24h",
+          "trades": 64,
+          "wins": 30,
+          "losses": 34,
+          "net": -432.2164419752953,
+          "fees": 721.992663,
+          "funding": -1.3337789754000002,
+          "profit_factor": 0.6668421147311498,
+          "maximum_drawdown_5m_close": 661.1794021988317,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 26
+          },
+          "signals_accepted": 64,
+          "signals_total": 90
+        },
+        "room_7d": {
+          "name": "room_7d",
+          "trades": 86,
+          "wins": 42,
+          "losses": 44,
+          "net": -499.75411335779063,
+          "fees": 967.694875,
+          "funding": -1.2692383580000002,
+          "profit_factor": 0.7012030302217125,
+          "maximum_drawdown_5m_close": 762.4031035813241,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 4
+          },
+          "signals_accepted": 86,
+          "signals_total": 90
+        },
+        "trend_ema200": {
+          "name": "trend_ema200",
+          "trades": 36,
+          "wins": 18,
+          "losses": 18,
+          "net": -193.9604831868637,
+          "fees": 405.052277,
+          "funding": 1.041793813,
+          "profit_factor": 0.7229311208651745,
+          "maximum_drawdown_5m_close": 338.80134618688317,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 54
+          },
+          "signals_accepted": 36,
+          "signals_total": 90
+        },
+        "trend_4h_ema50": {
+          "name": "trend_4h_ema50",
+          "trades": 37,
+          "wins": 18,
+          "losses": 19,
+          "net": -286.51246682790224,
+          "fees": 416.21056400000003,
+          "funding": 0.798097172,
+          "profit_factor": 0.602716902838037,
+          "maximum_drawdown_5m_close": 318.7985668278998,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 53
+          },
+          "signals_accepted": 37,
+          "signals_total": 90
+        },
+        "adx20": {
+          "name": "adx20",
+          "trades": 45,
+          "wins": 21,
+          "losses": 24,
+          "net": -292.7410380498186,
+          "fees": 506.671011,
+          "funding": -0.48002704989999995,
+          "profit_factor": 0.7190570742212601,
+          "maximum_drawdown_5m_close": 461.31803728529485,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 45
+          },
+          "signals_accepted": 45,
+          "signals_total": 90
+        },
+        "rsi_not_extended": {
+          "name": "rsi_not_extended",
+          "trades": 79,
+          "wins": 38,
+          "losses": 41,
+          "net": -496.158361521826,
+          "fees": 889.803621,
+          "funding": -1.6847405220000002,
+          "profit_factor": 0.680986368392147,
+          "maximum_drawdown_5m_close": 766.2906517453666,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 11
+          },
+          "signals_accepted": 79,
+          "signals_total": 90
+        },
+        "atr_covers_fees": {
+          "name": "atr_covers_fees",
+          "trades": 60,
+          "wins": 35,
+          "losses": 25,
+          "net": 55.20870497566648,
+          "fees": 675.95248,
+          "funding": -0.7388150245000001,
+          "profit_factor": 1.0479761271256558,
+          "maximum_drawdown_5m_close": 315.37363212487253,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 30
+          },
+          "signals_accepted": 60,
+          "signals_total": 90
+        },
+        "range_and_trend": {
+          "name": "range_and_trend",
+          "trades": 17,
+          "wins": 7,
+          "losses": 10,
+          "net": -226.1262440499413,
+          "fees": 192.548195,
+          "funding": 0.01195095,
+          "profit_factor": 0.3875309174130906,
+          "maximum_drawdown_5m_close": 328.44636004995846,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 73
+          },
+          "signals_accepted": 17,
+          "signals_total": 90
+        },
+        "room_and_trend": {
+          "name": "room_and_trend",
+          "trades": 14,
+          "wins": 7,
+          "losses": 7,
+          "net": -125.98624604995712,
+          "fees": 158.348197,
+          "funding": 0.01195095,
+          "profit_factor": 0.5317616425057632,
+          "maximum_drawdown_5m_close": 228.30636204997427,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 76
+          },
+          "signals_accepted": 14,
+          "signals_total": 90
+        },
+        "breakout_24h": {
+          "name": "breakout_24h",
+          "trades": 5,
+          "wins": 4,
+          "losses": 1,
+          "net": 94.43817500000296,
+          "fees": 56.391825,
+          "funding": 0.0,
+          "profit_factor": 3.1575859838276705,
+          "maximum_drawdown_5m_close": 43.7702949999948,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 85
+          },
+          "signals_accepted": 5,
+          "signals_total": 90
+        }
+      },
+      "fee_stress": {
+        "unfiltered": {
+          "name": "unfiltered",
+          "trades": 90,
+          "wins": 42,
+          "losses": 48,
+          "net": -850.2007883579936,
+          "fees": 1446.9815500000002,
+          "funding": -1.2692383580000002,
+          "profit_factor": 0.565089209668761,
+          "maximum_drawdown_5m_close": 1039.482583581499,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0
+          },
+          "signals_accepted": 90,
+          "signals_total": 90
+        },
+        "range_avoid_24h": {
+          "name": "range_avoid_24h",
+          "trades": 69,
+          "wins": 31,
+          "losses": 38,
+          "net": -763.5705912209669,
+          "fees": 1109.74151,
+          "funding": -2.2990812210000002,
+          "profit_factor": 0.5085081627273346,
+          "maximum_drawdown_5m_close": 952.8523864444724,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 21
+          },
+          "signals_accepted": 69,
+          "signals_total": 90
+        },
+        "range_avoid_7d": {
+          "name": "range_avoid_7d",
+          "trades": 74,
+          "wins": 31,
+          "losses": 43,
+          "net": -879.4978190569818,
+          "fees": 1191.89424,
+          "funding": -1.8835790570000002,
+          "profit_factor": 0.4834482307334114,
+          "maximum_drawdown_5m_close": 1039.4577442804875,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 16
+          },
+          "signals_accepted": 74,
+          "signals_total": 90
+        },
+        "room_24h": {
+          "name": "room_24h",
+          "trades": 64,
+          "wins": 29,
+          "losses": 35,
+          "net": -741.6418689753627,
+          "fees": 1031.4180900000001,
+          "funding": -1.3337789754000002,
+          "profit_factor": 0.49354428342798995,
+          "maximum_drawdown_5m_close": 930.9236641988682,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 26
+          },
+          "signals_accepted": 64,
+          "signals_total": 90
+        },
+        "room_7d": {
+          "name": "room_7d",
+          "trades": 86,
+          "wins": 39,
+          "losses": 47,
+          "net": -914.4804883579636,
+          "fees": 1382.42125,
+          "funding": -1.2692383580000002,
+          "profit_factor": 0.5172053985216387,
+          "maximum_drawdown_5m_close": 1111.9841035814607,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 4
+          },
+          "signals_accepted": 86,
+          "signals_total": 90
+        },
+        "trend_ema200": {
+          "name": "trend_ema200",
+          "trades": 36,
+          "wins": 16,
+          "losses": 20,
+          "net": -367.55431618703005,
+          "fees": 578.64611,
+          "funding": 1.041793813,
+          "profit_factor": 0.5372970774704257,
+          "maximum_drawdown_5m_close": 492.243126187037,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 54
+          },
+          "signals_accepted": 36,
+          "signals_total": 90
+        },
+        "trend_4h_ema50": {
+          "name": "trend_4h_ema50",
+          "trades": 37,
+          "wins": 16,
+          "losses": 21,
+          "net": -464.88842282802216,
+          "fees": 594.5865200000001,
+          "funding": 0.798097172,
+          "profit_factor": 0.4331973440207027,
+          "maximum_drawdown_5m_close": 494.81142282803194,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 53
+          },
+          "signals_accepted": 37,
+          "signals_total": 90
+        },
+        "adx20": {
+          "name": "adx20",
+          "trades": 45,
+          "wins": 21,
+          "losses": 24,
+          "net": -509.8857570498949,
+          "fees": 723.81573,
+          "funding": -0.48002704989999995,
+          "profit_factor": 0.5595466243333818,
+          "maximum_drawdown_5m_close": 654.1152900499001,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 45
+          },
+          "signals_accepted": 45,
+          "signals_total": 90
+        },
+        "rsi_not_extended": {
+          "name": "rsi_not_extended",
+          "trades": 79,
+          "wins": 36,
+          "losses": 43,
+          "net": -877.5027705219982,
+          "fees": 1271.14803,
+          "funding": -1.6847405220000002,
+          "profit_factor": 0.5011586752342698,
+          "maximum_drawdown_5m_close": 1082.525385745481,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 11
+          },
+          "signals_accepted": 79,
+          "signals_total": 90
+        },
+        "atr_covers_fees": {
+          "name": "atr_covers_fees",
+          "trades": 23,
+          "wins": 12,
+          "losses": 11,
+          "net": -97.37399183808884,
+          "fees": 370.65768,
+          "funding": 0.3636881619000001,
+          "profit_factor": 0.8347397474278799,
+          "maximum_drawdown_5m_close": 237.73328000001493,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter_gap": 37,
+            "filter": 30
+          },
+          "signals_accepted": 60,
+          "signals_total": 90
+        },
+        "range_and_trend": {
+          "name": "range_and_trend",
+          "trades": 17,
+          "wins": 6,
+          "losses": 11,
+          "net": -308.6468990500143,
+          "fees": 275.06885,
+          "funding": 0.01195095,
+          "profit_factor": 0.26816887767267633,
+          "maximum_drawdown_5m_close": 395.59996905001753,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 73
+          },
+          "signals_accepted": 17,
+          "signals_total": 90
+        },
+        "room_and_trend": {
+          "name": "room_and_trend",
+          "trades": 14,
+          "wins": 6,
+          "losses": 8,
+          "net": -193.84975905000465,
+          "fees": 226.21171,
+          "funding": 0.01195095,
+          "profit_factor": 0.36846250074903664,
+          "maximum_drawdown_5m_close": 280.80282905000786,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 76
+          },
+          "signals_accepted": 14,
+          "signals_total": 90
+        },
+        "breakout_24h": {
+          "name": "breakout_24h",
+          "trades": 5,
+          "wins": 4,
+          "losses": 1,
+          "net": 70.2702499999723,
+          "fees": 80.55975000000001,
+          "funding": 0.0,
+          "profit_factor": 2.4506103709912437,
+          "maximum_drawdown_5m_close": 48.44185000000289,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 85
+          },
+          "signals_accepted": 5,
+          "signals_total": 90
+        }
+      },
+      "slippage_stress": {
+        "unfiltered": {
+          "name": "unfiltered",
+          "trades": 90,
+          "wins": 45,
+          "losses": 45,
+          "net": -425.2849373578938,
+          "fees": 1012.885699,
+          "funding": -1.2692383580000002,
+          "profit_factor": 0.7551293015425442,
+          "maximum_drawdown_5m_close": 664.3199055814039,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0
+          },
+          "signals_accepted": 90,
+          "signals_total": 90
+        },
+        "range_avoid_24h": {
+          "name": "range_avoid_24h",
+          "trades": 69,
+          "wins": 33,
+          "losses": 36,
+          "net": -438.20713022090786,
+          "fees": 776.818049,
+          "funding": -2.2990812210000002,
+          "profit_factor": 0.6826116485236107,
+          "maximum_drawdown_5m_close": 666.9902164444065,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 21
+          },
+          "signals_accepted": 69,
+          "signals_total": 90
+        },
+        "range_avoid_7d": {
+          "name": "range_avoid_7d",
+          "trades": 74,
+          "wins": 34,
+          "losses": 40,
+          "net": -530.2095470569038,
+          "fees": 834.325968,
+          "funding": -1.8835790570000002,
+          "profit_factor": 0.6483747628086489,
+          "maximum_drawdown_5m_close": 734.5546942804067,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 16
+          },
+          "signals_accepted": 74,
+          "signals_total": 90
+        },
+        "room_24h": {
+          "name": "room_24h",
+          "trades": 64,
+          "wins": 30,
+          "losses": 34,
+          "net": -439.05467797536403,
+          "fees": 721.990899,
+          "funding": -1.3337789754000002,
+          "profit_factor": 0.6632532517846982,
+          "maximum_drawdown_5m_close": 667.8377641988627,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 26
+          },
+          "signals_accepted": 64,
+          "signals_total": 90
+        },
+        "room_7d": {
+          "name": "room_7d",
+          "trades": 86,
+          "wins": 42,
+          "losses": 44,
+          "net": -508.75260135788994,
+          "fees": 967.693363,
+          "funding": -1.2692383580000002,
+          "profit_factor": 0.6973216291801866,
+          "maximum_drawdown_5m_close": 770.8617175814143,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 4
+          },
+          "signals_accepted": 86,
+          "signals_total": 90
+        },
+        "trend_ema200": {
+          "name": "trend_ema200",
+          "trades": 36,
+          "wins": 18,
+          "losses": 18,
+          "net": -197.19922318693716,
+          "fees": 405.051017,
+          "funding": 1.041793813,
+          "profit_factor": 0.7196027017213991,
+          "maximum_drawdown_5m_close": 342.0749871869484,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 54
+          },
+          "signals_accepted": 36,
+          "signals_total": 90
+        },
+        "trend_4h_ema50": {
+          "name": "trend_4h_ema50",
+          "trades": 37,
+          "wins": 18,
+          "losses": 19,
+          "net": -290.2938528279774,
+          "fees": 416.21195,
+          "funding": 0.798097172,
+          "profit_factor": 0.5993743374152581,
+          "maximum_drawdown_5m_close": 322.39982682796835,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 53
+          },
+          "signals_accepted": 37,
+          "signals_total": 90
+        },
+        "adx20": {
+          "name": "adx20",
+          "trades": 45,
+          "wins": 21,
+          "losses": 24,
+          "net": -297.78028204986185,
+          "fees": 506.670255,
+          "funding": -0.48002704989999995,
+          "profit_factor": 0.7154987963403666,
+          "maximum_drawdown_5m_close": 464.01841528525983,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 45
+          },
+          "signals_accepted": 45,
+          "signals_total": 90
+        },
+        "rsi_not_extended": {
+          "name": "rsi_not_extended",
+          "trades": 79,
+          "wins": 38,
+          "losses": 41,
+          "net": -504.6169755219016,
+          "fees": 889.802235,
+          "funding": -1.6847405220000002,
+          "profit_factor": 0.6771546526966005,
+          "maximum_drawdown_5m_close": 774.2096437454165,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 11
+          },
+          "signals_accepted": 79,
+          "signals_total": 90
+        },
+        "atr_covers_fees": {
+          "name": "atr_covers_fees",
+          "trades": 59,
+          "wins": 34,
+          "losses": 25,
+          "net": 26.48493397558923,
+          "fees": 664.5862510000001,
+          "funding": -0.7388150245000001,
+          "profit_factor": 1.0229184840539585,
+          "maximum_drawdown_5m_close": 317.53312812488,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 30,
+            "filter_gap": 1
+          },
+          "signals_accepted": 60,
+          "signals_total": 90
+        },
+        "range_and_trend": {
+          "name": "range_and_trend",
+          "trades": 17,
+          "wins": 7,
+          "losses": 10,
+          "net": -227.92574004996277,
+          "fees": 192.54769100000001,
+          "funding": 0.01195095,
+          "profit_factor": 0.3856525112634342,
+          "maximum_drawdown_5m_close": 330.42623404996993,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 73
+          },
+          "signals_accepted": 17,
+          "signals_total": 90
+        },
+        "room_and_trend": {
+          "name": "room_and_trend",
+          "trades": 14,
+          "wins": 7,
+          "losses": 7,
+          "net": -127.24536404998798,
+          "fees": 158.347315,
+          "funding": 0.01195095,
+          "profit_factor": 0.5292861089598078,
+          "maximum_drawdown_5m_close": 229.74585804999515,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 76
+          },
+          "signals_accepted": 14,
+          "signals_total": 90
+        },
+        "breakout_24h": {
+          "name": "breakout_24h",
+          "trades": 5,
+          "wins": 4,
+          "losses": 1,
+          "net": 94.25754499998584,
+          "fees": 56.392455,
+          "funding": 0.0,
+          "profit_factor": 3.1446334950921506,
+          "maximum_drawdown_5m_close": 43.95042100000137,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 85
+          },
+          "signals_accepted": 5,
+          "signals_total": 90
+        }
+      },
+      "original_size": {
+        "unfiltered": {
+          "name": "unfiltered",
+          "trades": 90,
+          "wins": 45,
+          "losses": 45,
+          "net": -4161.063233579815,
+          "fees": 10128.87085,
+          "funding": -12.69238358,
+          "profit_factor": 0.7592412142504376,
+          "maximum_drawdown_5m_close": 6555.01039581481,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0
+          },
+          "signals_accepted": 90,
+          "signals_total": 90
+        },
+        "range_avoid_24h": {
+          "name": "range_avoid_24h",
+          "trades": 69,
+          "wins": 33,
+          "losses": 36,
+          "net": -4306.48138220988,
+          "fees": 7768.19057,
+          "funding": -22.990812209999998,
+          "profit_factor": 0.6865334121699515,
+          "maximum_drawdown_5m_close": 6596.110984444866,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 21
+          },
+          "signals_accepted": 69,
+          "signals_total": 90
+        },
+        "range_avoid_7d": {
+          "name": "range_avoid_7d",
+          "trades": 74,
+          "wins": 34,
+          "losses": 40,
+          "net": -5219.295470569894,
+          "fees": 8343.25968,
+          "funding": -18.83579057,
+          "profit_factor": 0.6521214153833766,
+          "maximum_drawdown_5m_close": 7266.351982804888,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 16
+          },
+          "signals_accepted": 74,
+          "signals_total": 90
+        },
+        "room_24h": {
+          "name": "room_24h",
+          "trades": 64,
+          "wins": 30,
+          "losses": 34,
+          "net": -4322.164419753884,
+          "fees": 7219.92663,
+          "funding": -13.337789754,
+          "profit_factor": 0.6668421147311498,
+          "maximum_drawdown_5m_close": 6611.79402198887,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 26
+          },
+          "signals_accepted": 64,
+          "signals_total": 90
+        },
+        "room_7d": {
+          "name": "room_7d",
+          "trades": 86,
+          "wins": 42,
+          "losses": 44,
+          "net": -4997.541133579842,
+          "fees": 9676.94875,
+          "funding": -12.69238358,
+          "profit_factor": 0.7012030302217125,
+          "maximum_drawdown_5m_close": 7624.031035814842,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 4
+          },
+          "signals_accepted": 86,
+          "signals_total": 90
+        },
+        "trend_ema200": {
+          "name": "trend_ema200",
+          "trades": 36,
+          "wins": 18,
+          "losses": 18,
+          "net": -1939.6048318699031,
+          "fees": 4050.52277,
+          "funding": 10.41793813,
+          "profit_factor": 0.7229311208651745,
+          "maximum_drawdown_5m_close": 3388.013461869923,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 54
+          },
+          "signals_accepted": 36,
+          "signals_total": 90
+        },
+        "trend_4h_ema50": {
+          "name": "trend_4h_ema50",
+          "trades": 37,
+          "wins": 18,
+          "losses": 19,
+          "net": -2865.1246682799247,
+          "fees": 4162.10564,
+          "funding": 7.980971720000001,
+          "profit_factor": 0.602716902838037,
+          "maximum_drawdown_5m_close": 3187.985668279929,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 53
+          },
+          "signals_accepted": 37,
+          "signals_total": 90
+        },
+        "adx20": {
+          "name": "adx20",
+          "trades": 45,
+          "wins": 21,
+          "losses": 24,
+          "net": -2927.41038049887,
+          "fees": 5066.71011,
+          "funding": -4.800270498999998,
+          "profit_factor": 0.7190570742212601,
+          "maximum_drawdown_5m_close": 4613.180372852963,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 45
+          },
+          "signals_accepted": 45,
+          "signals_total": 90
+        },
+        "rsi_not_extended": {
+          "name": "rsi_not_extended",
+          "trades": 79,
+          "wins": 38,
+          "losses": 41,
+          "net": -4961.583615219875,
+          "fees": 8898.03621,
+          "funding": -16.84740522,
+          "profit_factor": 0.6809863683921471,
+          "maximum_drawdown_5m_close": 7662.906517454874,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 11
+          },
+          "signals_accepted": 79,
+          "signals_total": 90
+        },
+        "atr_covers_fees": {
+          "name": "atr_covers_fees",
+          "trades": 60,
+          "wins": 35,
+          "losses": 25,
+          "net": 552.0870497551223,
+          "fees": 6759.5248,
+          "funding": -7.388150244999999,
+          "profit_factor": 1.0479761271256558,
+          "maximum_drawdown_5m_close": 3153.7363212489145,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 30
+          },
+          "signals_accepted": 60,
+          "signals_total": 90
+        },
+        "range_and_trend": {
+          "name": "range_and_trend",
+          "trades": 17,
+          "wins": 7,
+          "losses": 10,
+          "net": -2261.262440499995,
+          "fees": 1925.4819499999999,
+          "funding": 0.1195095,
+          "profit_factor": 0.3875309174130906,
+          "maximum_drawdown_5m_close": 3284.4636005000066,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 73
+          },
+          "signals_accepted": 17,
+          "signals_total": 90
+        },
+        "room_and_trend": {
+          "name": "room_and_trend",
+          "trades": 14,
+          "wins": 7,
+          "losses": 7,
+          "net": -1259.8624604999786,
+          "fees": 1583.48197,
+          "funding": 0.1195095,
+          "profit_factor": 0.5317616425057631,
+          "maximum_drawdown_5m_close": 2283.06362049999,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 76
+          },
+          "signals_accepted": 14,
+          "signals_total": 90
+        },
+        "breakout_24h": {
+          "name": "breakout_24h",
+          "trades": 5,
+          "wins": 4,
+          "losses": 1,
+          "net": 944.381750000015,
+          "fees": 563.91825,
+          "funding": 0.0,
+          "profit_factor": 3.1575859838276705,
+          "maximum_drawdown_5m_close": 437.7029499999917,
+          "skips": {
+            "capital": 0,
+            "economics": 0,
+            "invalid_atr": 0,
+            "confirmation": 0,
+            "filter": 85
+          },
+          "signals_accepted": 5,
+          "signals_total": 90
+        }
+      }
+    }
+  },
+  "baseline_trade_diagnostics": {
+    "development": {
+      "unfiltered": {
+        "accepted": {
+          "trades": 535,
+          "net": -7266.464238471505,
+          "mean_net": -13.58217614667571,
+          "fees": 5571.64951,
+          "wins": 211
+        },
+        "rejected": {
+          "trades": 0,
+          "net": 0,
+          "mean_net": null,
+          "fees": 0,
+          "wins": 0
+        }
+      },
+      "range_avoid_24h": {
+        "accepted": {
+          "trades": 421,
+          "net": -5641.636676428822,
+          "mean_net": -13.400562176790551,
+          "fees": 4390.264648,
+          "wins": 162
+        },
+        "rejected": {
+          "trades": 114,
+          "net": -1624.827562042683,
+          "mean_net": -14.252873351251605,
+          "fees": 1181.384862,
+          "wins": 49
+        }
+      },
+      "range_avoid_7d": {
+        "accepted": {
+          "trades": 451,
+          "net": -6495.32728099152,
+          "mean_net": -14.402056055413569,
+          "fees": 4702.946325,
+          "wins": 171
+        },
+        "rejected": {
+          "trades": 84,
+          "net": -771.1369574799854,
+          "mean_net": -9.180201874761732,
+          "fees": 868.7031850000001,
+          "wins": 40
+        }
+      },
+      "room_24h": {
+        "accepted": {
+          "trades": 403,
+          "net": -5278.558058048127,
+          "mean_net": -13.098158952973021,
+          "fees": 4185.765612,
+          "wins": 157
+        },
+        "rejected": {
+          "trades": 132,
+          "net": -1987.9061804233784,
+          "mean_net": -15.059895306237715,
+          "fees": 1385.883898,
+          "wins": 54
+        }
+      },
+      "room_7d": {
+        "accepted": {
+          "trades": 513,
+          "net": -7065.25011729821,
+          "mean_net": -13.772417382647584,
+          "fees": 5340.246905,
+          "wins": 199
+        },
+        "rejected": {
+          "trades": 22,
+          "net": -201.2141211732955,
+          "mean_net": -9.146096416967977,
+          "fees": 231.402605,
+          "wins": 12
+        }
+      },
+      "trend_ema200": {
+        "accepted": {
+          "trades": 224,
+          "net": -3226.8952895220696,
+          "mean_net": -14.40578254250924,
+          "fees": 2337.296584,
+          "wins": 91
+        },
+        "rejected": {
+          "trades": 311,
+          "net": -4039.568948949436,
+          "mean_net": -12.988967681509441,
+          "fees": 3234.352926,
+          "wins": 120
+        }
+      },
+      "trend_4h_ema50": {
+        "accepted": {
+          "trades": 237,
+          "net": -3007.6189174116657,
+          "mean_net": -12.690375178952175,
+          "fees": 2471.279468,
+          "wins": 100
+        },
+        "rejected": {
+          "trades": 298,
+          "net": -4258.84532105984,
+          "mean_net": -14.291427251878657,
+          "fees": 3100.370042,
+          "wins": 111
+        }
+      },
+      "adx20": {
+        "accepted": {
+          "trades": 309,
+          "net": -4066.48507695604,
+          "mean_net": -13.160145880116634,
+          "fees": 3194.775521,
+          "wins": 123
+        },
+        "rejected": {
+          "trades": 226,
+          "net": -3199.9791615154654,
+          "mean_net": -14.15919982971445,
+          "fees": 2376.873989,
+          "wins": 88
+        }
+      },
+      "rsi_not_extended": {
+        "accepted": {
+          "trades": 475,
+          "net": -6130.779146639712,
+          "mean_net": -12.90690346660992,
+          "fees": 4961.31902,
+          "wins": 188
+        },
+        "rejected": {
+          "trades": 60,
+          "net": -1135.6850918317932,
+          "mean_net": -18.92808486386322,
+          "fees": 610.33049,
+          "wins": 23
+        }
+      },
+      "atr_covers_fees": {
+        "accepted": {
+          "trades": 401,
+          "net": -5584.615248124823,
+          "mean_net": -13.926721317019508,
+          "fees": 4090.284982,
+          "wins": 160
+        },
+        "rejected": {
+          "trades": 134,
+          "net": -1681.8489903466825,
+          "mean_net": -12.551111868258825,
+          "fees": 1481.364528,
+          "wins": 51
+        }
+      },
+      "range_and_trend": {
+        "accepted": {
+          "trades": 131,
+          "net": -1728.0435381666834,
+          "mean_net": -13.19117204707392,
+          "fees": 1378.050142,
+          "wins": 53
+        },
+        "rejected": {
+          "trades": 404,
+          "net": -5538.420700304822,
+          "mean_net": -13.708962129467382,
+          "fees": 4193.599368,
+          "wins": 158
+        }
+      },
+      "room_and_trend": {
+        "accepted": {
+          "trades": 133,
+          "net": -1434.409650979484,
+          "mean_net": -10.785034969770557,
+          "fees": 1395.991814,
+          "wins": 58
+        },
+        "rejected": {
+          "trades": 402,
+          "net": -5832.054587492022,
+          "mean_net": -14.507598476348313,
+          "fees": 4175.657696,
+          "wins": 153
+        }
+      },
+      "breakout_24h": {
+        "accepted": {
+          "trades": 20,
+          "net": -554.0695182030955,
+          "mean_net": -27.703475910154776,
+          "fees": 199.402126,
+          "wins": 6
+        },
+        "rejected": {
+          "trades": 515,
+          "net": -6712.39472026841,
+          "mean_net": -13.033776155860991,
+          "fees": 5372.247384,
+          "wins": 205
+        }
+      }
+    },
+    "comparison": {
+      "unfiltered": {
+        "accepted": {
+          "trades": 195,
+          "net": -2191.3197306547604,
+          "mean_net": -11.237537080280823,
+          "fees": 1807.167418,
+          "wins": 70
+        },
+        "rejected": {
+          "trades": 0,
+          "net": 0,
+          "mean_net": null,
+          "fees": 0,
+          "wins": 0
+        }
+      },
+      "range_avoid_24h": {
+        "accepted": {
+          "trades": 152,
+          "net": -1735.835862184668,
+          "mean_net": -11.419972777530711,
+          "fees": 1406.492444,
+          "wins": 53
+        },
+        "rejected": {
+          "trades": 43,
+          "net": -455.48386847009266,
+          "mean_net": -10.592648103955643,
+          "fees": 400.674974,
+          "wins": 17
+        }
+      },
+      "range_avoid_7d": {
+        "accepted": {
+          "trades": 149,
+          "net": -1353.2404566607674,
+          "mean_net": -9.082150715844076,
+          "fees": 1379.464702,
+          "wins": 61
+        },
+        "rejected": {
+          "trades": 46,
+          "net": -838.0792739939932,
+          "mean_net": -18.21911465204333,
+          "fees": 427.702716,
+          "wins": 9
+        }
+      },
+      "room_24h": {
+        "accepted": {
+          "trades": 145,
+          "net": -1712.1117337708702,
+          "mean_net": -11.807667129454277,
+          "fees": 1343.816747,
+          "wins": 50
+        },
+        "rejected": {
+          "trades": 50,
+          "net": -479.2079968838905,
+          "mean_net": -9.584159937677809,
+          "fees": 463.35067100000003,
+          "wins": 20
+        }
+      },
+      "room_7d": {
+        "accepted": {
+          "trades": 188,
+          "net": -2121.9955506547617,
+          "mean_net": -11.2872103758232,
+          "fees": 1744.8832380000001,
+          "wins": 67
+        },
+        "rejected": {
+          "trades": 7,
+          "net": -69.3241799999987,
+          "mean_net": -9.903454285714101,
+          "fees": 62.284180000000006,
+          "wins": 3
+        }
+      },
+      "trend_ema200": {
+        "accepted": {
+          "trades": 75,
+          "net": -1003.5332924302904,
+          "mean_net": -13.380443899070539,
+          "fees": 693.2715370000001,
+          "wins": 25
+        },
+        "rejected": {
+          "trades": 120,
+          "net": -1187.7864382244702,
+          "mean_net": -9.898220318537252,
+          "fees": 1113.8958810000001,
+          "wins": 45
+        }
+      },
+      "trend_4h_ema50": {
+        "accepted": {
+          "trades": 86,
+          "net": -1116.076358887984,
+          "mean_net": -12.977632080092837,
+          "fees": 800.441376,
+          "wins": 26
+        },
+        "rejected": {
+          "trades": 109,
+          "net": -1075.2433717667766,
+          "mean_net": -9.864618089603455,
+          "fees": 1006.726042,
+          "wins": 44
+        }
+      },
+      "adx20": {
+        "accepted": {
+          "trades": 114,
+          "net": -1635.3803478738753,
+          "mean_net": -14.34544164801645,
+          "fees": 1051.156316,
+          "wins": 36
+        },
+        "rejected": {
+          "trades": 81,
+          "net": -555.9393827808854,
+          "mean_net": -6.863449170134387,
+          "fees": 756.011102,
+          "wins": 34
+        }
+      },
+      "rsi_not_extended": {
+        "accepted": {
+          "trades": 173,
+          "net": -1801.9189764182627,
+          "mean_net": -10.41571662669516,
+          "fees": 1599.662771,
+          "wins": 63
+        },
+        "rejected": {
+          "trades": 22,
+          "net": -389.40075423649785,
+          "mean_net": -17.700034283477176,
+          "fees": 207.504647,
+          "wins": 7
+        }
+      },
+      "atr_covers_fees": {
+        "accepted": {
+          "trades": 106,
+          "net": -1293.8835485497775,
+          "mean_net": -12.206448571224316,
+          "fees": 996.5087860000001,
+          "wins": 39
+        },
+        "rejected": {
+          "trades": 89,
+          "net": -897.436182104983,
+          "mean_net": -10.083552607921158,
+          "fees": 810.658632,
+          "wins": 31
+        }
+      },
+      "range_and_trend": {
+        "accepted": {
+          "trades": 45,
+          "net": -631.4880569601941,
+          "mean_net": -14.033067932448757,
+          "fees": 417.025196,
+          "wins": 14
+        },
+        "rejected": {
+          "trades": 150,
+          "net": -1559.8316736945665,
+          "mean_net": -10.398877824630443,
+          "fees": 1390.1422220000002,
+          "wins": 56
+        }
+      },
+      "room_and_trend": {
+        "accepted": {
+          "trades": 42,
+          "net": -591.6703082192954,
+          "mean_net": -14.087388290935605,
+          "fees": 390.893755,
+          "wins": 13
+        },
+        "rejected": {
+          "trades": 153,
+          "net": -1599.649422435465,
+          "mean_net": -10.455224983238335,
+          "fees": 1416.2736630000002,
+          "wins": 57
+        }
+      },
+      "breakout_24h": {
+        "accepted": {
+          "trades": 6,
+          "net": -33.627401470099144,
+          "mean_net": -5.60456691168319,
+          "fees": 53.168507000000005,
+          "wins": 3
+        },
+        "rejected": {
+          "trades": 189,
+          "net": -2157.6923291846615,
+          "mean_net": -11.416361530077575,
+          "fees": 1753.9989110000001,
+          "wins": 67
+        }
+      }
+    },
+    "historical_review": {
+      "unfiltered": {
+        "accepted": {
+          "trades": 90,
+          "net": -416.10632335798255,
+          "mean_net": -4.623403592866473,
+          "fees": 1012.8870850000001,
+          "wins": 45
+        },
+        "rejected": {
+          "trades": 0,
+          "net": 0,
+          "mean_net": null,
+          "fees": 0,
+          "wins": 0
+        }
+      },
+      "range_avoid_24h": {
+        "accepted": {
+          "trades": 69,
+          "net": -430.64813822098716,
+          "mean_net": -6.241277365521553,
+          "fees": 776.819057,
+          "wins": 33
+        },
+        "rejected": {
+          "trades": 21,
+          "net": 14.541814863004651,
+          "mean_net": 0.6924673744287929,
+          "fees": 236.06802800000003,
+          "wins": 12
+        }
+      },
+      "range_avoid_7d": {
+        "accepted": {
+          "trades": 74,
+          "net": -521.9295470569866,
+          "mean_net": -7.053101987256576,
+          "fees": 834.325968,
+          "wins": 34
+        },
+        "rejected": {
+          "trades": 16,
+          "net": 105.82322369900409,
+          "mean_net": 6.6139514811877556,
+          "fees": 178.56111700000002,
+          "wins": 11
+        }
+      },
+      "room_24h": {
+        "accepted": {
+          "trades": 64,
+          "net": -432.2164419753892,
+          "mean_net": -6.7533819058654565,
+          "fees": 721.992663,
+          "wins": 30
+        },
+        "rejected": {
+          "trades": 26,
+          "net": 16.110118617406684,
+          "mean_net": 0.619619946823334,
+          "fees": 290.894422,
+          "wins": 15
+        }
+      },
+      "room_7d": {
+        "accepted": {
+          "trades": 86,
+          "net": -499.7541133579834,
+          "mean_net": -5.811094341371899,
+          "fees": 967.694875,
+          "wins": 42
+        },
+        "rejected": {
+          "trades": 4,
+          "net": 83.64779000000087,
+          "mean_net": 20.911947500000217,
+          "fees": 45.19221,
+          "wins": 3
+        }
+      },
+      "trend_ema200": {
+        "accepted": {
+          "trades": 36,
+          "net": -193.96048318699127,
+          "mean_net": -5.387791199638646,
+          "fees": 405.052277,
+          "wins": 18
+        },
+        "rejected": {
+          "trades": 54,
+          "net": -222.14584017099128,
+          "mean_net": -4.113811855018357,
+          "fees": 607.8348080000001,
+          "wins": 27
+        }
+      },
+      "trend_4h_ema50": {
+        "accepted": {
+          "trades": 37,
+          "net": -286.5124668279927,
+          "mean_net": -7.743580184540343,
+          "fees": 416.21056400000003,
+          "wins": 18
+        },
+        "rejected": {
+          "trades": 53,
+          "net": -129.59385652998984,
+          "mean_net": -2.445167104339431,
+          "fees": 596.6765210000001,
+          "wins": 27
+        }
+      },
+      "adx20": {
+        "accepted": {
+          "trades": 45,
+          "net": -292.74103804989363,
+          "mean_net": -6.505356401108747,
+          "fees": 506.671011,
+          "wins": 21
+        },
+        "rejected": {
+          "trades": 45,
+          "net": -123.36528530808891,
+          "mean_net": -2.741450784624198,
+          "fees": 506.216074,
+          "wins": 24
+        }
+      },
+      "rsi_not_extended": {
+        "accepted": {
+          "trades": 79,
+          "net": -496.1583615219837,
+          "mean_net": -6.2804855888858695,
+          "fees": 889.803621,
+          "wins": 38
+        },
+        "rejected": {
+          "trades": 11,
+          "net": 80.05203816400116,
+          "mean_net": 7.277458014909197,
+          "fees": 123.083464,
+          "wins": 7
+        }
+      },
+      "atr_covers_fees": {
+        "accepted": {
+          "trades": 60,
+          "net": 55.20870497550875,
+          "mean_net": 0.9201450829251459,
+          "fees": 675.95248,
+          "wins": 35
+        },
+        "rejected": {
+          "trades": 30,
+          "net": -471.3150283334913,
+          "mean_net": -15.71050094444971,
+          "fees": 336.93460500000003,
+          "wins": 10
+        }
+      },
+      "range_and_trend": {
+        "accepted": {
+          "trades": 17,
+          "net": -226.1262440499965,
+          "mean_net": -13.301543767646853,
+          "fees": 192.548195,
+          "wins": 7
+        },
+        "rejected": {
+          "trades": 73,
+          "net": -189.98007930798605,
+          "mean_net": -2.6024668398354254,
+          "fees": 820.33889,
+          "wins": 38
+        }
+      },
+      "room_and_trend": {
+        "accepted": {
+          "trades": 14,
+          "net": -125.98624604999708,
+          "mean_net": -8.999017574999792,
+          "fees": 158.348197,
+          "wins": 7
+        },
+        "rejected": {
+          "trades": 76,
+          "net": -290.12007730798547,
+          "mean_net": -3.8173694382629666,
+          "fees": 854.538888,
+          "wins": 38
+        }
+      },
+      "breakout_24h": {
+        "accepted": {
+          "trades": 5,
+          "net": 94.43817500000176,
+          "mean_net": 18.88763500000035,
+          "fees": 56.391825,
+          "wins": 4
+        },
+        "rejected": {
+          "trades": 85,
+          "net": -510.5444983579843,
+          "mean_net": -6.006405863035109,
+          "fees": 956.49526,
+          "wins": 41
+        }
+      }
+    }
+  },
+  "limitations": "Prior BTC periods inspected. Python execution not Pine verified.5m stop-first ties. Source exchange Binance proxy not Bitunix. Thresholds are hypotheses, not optimized settings. No claim these exhaust all options."
+}

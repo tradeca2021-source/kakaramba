@@ -1,0 +1,14 @@
+{
+ "status":"Exploratory follow-up defined after the failed entry-filter study; no untouched validation",
+ "hypothesis":"A direction-changing signal is an alert to wait for a break and successful retest of a previously known boundary, rather than a reason to enter immediately.",
+ "level":"Highest high / lowest low of96 completed15m candles strictly before the main signal candle; level remains frozen for that setup.",
+ "setup":"A closed Supertrend2.5/10 flip arms its direction. Signal candle can break level. Otherwise breakout close must occur within next8 bars inclusive. Opposite main signal cancels prior setup before evaluating retest, and can arm a new setup.",
+ "retest":"Within next8 bars after breakout, long candle low must touch level+0.25*signalATR or below, close above level and above its own open; short symmetric. Close beyond level opposite direction by more than0.25signalATR invalidates setup. Breakout candle cannot confirm its own retest. First successful retest only, enter next15m open.",
+ "comparisons":["original_control_1.5ATR_stop_2ATR_target","retest_same_ATR_bracket","retest_structure_stop_2R"],
+ "structure_stop":"Long stop below confirming retest candle low by0.25signalATR; short above high by same. Freeze absolute stop, compute risk from actual adverse-slipped next-open fill rounded outward to tick; reject wrong-side stops. Target2times initial price risk from fill. Require gross target>=3times modeled commission both sides plus2market slippages. Recheck costs and gap at actual fill. No trailing, no breakeven.",
+ "execution":"Same5m conservative stop-first replay,0.1BTC/$100k primary size,0.07% commission eachside/tick0.1/slippage2ticks; historical funding with last-price proxy. Opposite ORIGINAL signal closes old position next open even without a new retest entry. No additional reentry until another setup. No carry of pre-period setups into independent accounts.",
+ "periods":"Jan-Jun development; Jul-Aug comparison; September historical review. December2025warmup; official Binance BTCUSDT perpetual proxy archives. All previously inspected, exploratory.",
+ "stresses":"Separate0.1%commission and20tickslippage, plus1BTC original-size diagnostic; cost gate can change eligible trades under stress.",
+ "selection":"Development only:>=30trades,positive net,PF>=1.1,drawdown<=control; rank net/DD. No eligible candidate means none; publish all comparisons without parameter tuning.",
+ "limits":"Python not verified native Pine fills. Signal is reconstructed Supertrend, not original proprietary EngineeringRobo.5m ties stop-first; no intra5m ordering. Funding uses actual rates/last-price mark proxy. Conservative full margin closure, sampled5m drawdown. Thresholds not optimized. No positive finding is forward validation."
+}

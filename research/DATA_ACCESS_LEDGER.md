@@ -19,3 +19,9 @@ The [five NY session designs](SESSION_STRATEGY_RESEARCH.md) further reuse the sa
 The 2021–2022 test was a backward historical generalization test, not prospective evidence. Both the fixed channel design and the existing Fibonacci baseline lost on its base cost assumptions. Positive known-period outcomes do not establish a durable edge.
 
 References: [channel historical report](results/channel/historical.json), [channel development freeze](results/channel/frozen_selection.json), [failed regime results](results/regime/development.json) and [earlier structural research](results/competition/STRUCTURAL_RESEARCH.md). Actual archive and source checksums are published in those reports. Cache files reside outside Git at `/workspace/fibonacci-competition-data`.
+
+EngineeringRobo study, 15 October 2026: December 2025 warm-up and January–September 2026 Binance USD-M BTCUSDT 15m/5m/funding archives reused for 12 predefined configurations and two cost stresses. All outcomes are now inspected and exploratory. None qualified. See [study report](engineeringrobo/README.md); archive/source hashes are retained in its JSON. October screenshots through 15 October were also inspected; this interval is not automatically fresh.
+
+EngineeringRobo entry-filter follow-up,15October2026: reused the same December2025–September2026 archives for thirteen configurations including control, three cost scenarios and the original-size diagnostic. No new untouched history. See [entry filter review](engineeringrobo/FILTER_REVIEW.md).
+
+EngineeringRobo breakout/retest follow-up,15October2026: reused December2025–September2026 archives, testing unchanged control, delayed retest with original ATR exits, and retest with structural stop/2R exits. No qualified candidate and no fresh validation. See [retest review](engineeringrobo/RETEST_REVIEW.md).

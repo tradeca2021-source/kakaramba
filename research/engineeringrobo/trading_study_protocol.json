@@ -1,0 +1,26 @@
+{
+  "purpose": "Bounded exploratory comparison of ways to trade the reconstructed EngineeringRobo Supertrend signal; no profitable default promotion without evidence",
+  "signal": {"timeframe_seconds": 900, "supertrend_factor": 2.5, "supertrend_atr": 10, "risk_atr": 14, "direction": "normal", "entry": "next 15m open after confirmed signal, adverse 2 ticks"},
+  "data": {"preferred_venue": "Bitunix BTCUSDT perpetual", "quality_requirement": "complete ordered closed candles, valid OHLCV, agreement on overlaps and 15m/5m aggregation; quarantine conflicts", "proxy_if_needed": "official Binance USD-M BTCUSDT archives with SHA256 checks", "first_month": "2026-01", "last_month": "2026-09", "warmup_month": "2025-12"},
+  "periods": {"development": ["2026-01-01T00:00:00Z", "2026-07-01T00:00:00Z"], "comparison": ["2026-07-01T00:00:00Z", "2026-09-01T00:00:00Z"], "historical_review": ["2026-09-01T00:00:00Z", "2026-10-01T00:00:00Z"], "fresh_validation": false, "reason": "These BTC periods were already inspected by this repository; changing venue does not make them untouched."},
+  "costs": {"fee_per_side": 0.0007, "slippage_ticks": 2, "tick": 0.1, "funding": "use actual venue settlement history when available; never substitute today's funding for past settlements", "initial_equity": 100000, "quantity_btc": 1, "maximum_exposure_multiple": 1},
+  "comparisons": [
+    {"name": "reverse_only", "family": "baseline", "stop_atr": null, "target_atr": null},
+    {"name": "current_bracket", "family": "fixed", "stop_atr": 1.5, "target_atr": 2},
+    {"name": "tight_fixed_05", "family": "fixed", "stop_atr": 0.5, "target_atr": 2},
+    {"name": "tight_fixed_075", "family": "fixed", "stop_atr": 0.75, "target_atr": 2},
+    {"name": "tight_fixed_10", "family": "fixed", "stop_atr": 1, "target_atr": 2},
+    {"name": "tight_trail_05", "family": "trailing", "stop_atr": 0.5, "activate_atr": 1.5, "trail_atr": 1},
+    {"name": "tight_trail_075", "family": "trailing", "stop_atr": 0.75, "activate_atr": 1.5, "trail_atr": 1},
+    {"name": "tight_trail_10", "family": "trailing", "stop_atr": 1, "activate_atr": 1.5, "trail_atr": 1},
+    {"name": "confirm_fixed_05", "family": "confirmation", "stop_atr": 0.5, "target_atr": 2},
+    {"name": "confirm_fixed_075", "family": "confirmation", "stop_atr": 0.75, "target_atr": 2},
+    {"name": "confirm_fixed_10", "family": "confirmation", "stop_atr": 1, "target_atr": 2},
+    {"name": "cost_gate_fixed_075", "family": "fixed", "stop_atr": 0.75, "target_atr": 2, "minimum_net_reward_risk": 1}
+  ],
+  "execution": {"intrabar": "5m replay; adverse opening gaps; stop wins if both stop/TP hit in same 5m candle", "trailing": "new stop calculated only after a closed 15m bar and effective from the next bar; never trail retrospectively within a candle", "confirmation": "exactly the next bar must close beyond the signal candle high for long or low for short; enter on following open, otherwise discard", "reversal": "opposite signal closes open position and enters opposite direction if eligible", "period_boundary": "close at last available period candle with adverse slippage; independent fresh account per period; no cross-split positions", "stop_target": "freeze signal ATR; relative distances rounded outward to tick, anchored to fill"},
+  "event_study": {"horizons_bars": [12, 48, 96], "measure": ["MAE", "MFE", "end return after costs", "time to first 0.5/0.75/1 ATR adverse move versus first 2 ATR favorable move"], "overlap": "labels overlap; descriptive only, no independent-trade significance claim"},
+  "selection": {"development_only": true, "minimum_closed_trades": 30, "positive_net_required": true, "minimum_profit_factor": 1.1, "maximum_drawdown_vs_baseline": "must not exceed current_bracket on development", "ranking": "net PnL / maximum drawdown among eligible candidates", "no_qualification": "publish no qualified candidate; do not select least-bad losing setting", "robustness": "show every comparison, period and predeclared cost stress; untested parameter neighborhoods remain unknown"},
+  "stresses": [{"fee_per_side": 0.001, "slippage_ticks": 2}, {"fee_per_side": 0.0007, "slippage_ticks": 20}],
+  "limits": ["Python reproduction is not native Pine parity", "No claim of best possible strategy", "Proxy results do not establish Bitunix fills/performance", "If candle/funding access is blocked or invalid, synthetic tests establish mechanics only, not profitability"]
+}
